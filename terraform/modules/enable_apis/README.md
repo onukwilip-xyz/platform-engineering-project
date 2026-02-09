@@ -1,6 +1,6 @@
 # Enable APIs Module (`enable_apis`)
 
-This module **turns on (enables) the Google Cloud APIs** your platform needs *before* Terraform tries to create resources. If an API is not enabled, Terraform will usually fail with errors like “API not enabled” or “permission denied”. ([Google Cloud Documentation][1])
+This module **turns on (enables) the Google Cloud APIs** your platform needs *before* Terraform tries to create resources. If an API is not enabled, Terraform will usually fail with errors like “API not enabled” or “permission denied”.
 
 ---
 
@@ -11,7 +11,7 @@ It enables a **set of APIs in two projects**:
 * **Host project** (usually: Shared VPC host + networking)
 * **Service project** (usually: GKE + VMs + Artifact Registry + Storage)
 
-Terraform enables APIs using `google_project_service`. ([Google Cloud Documentation][1])
+Terraform enables APIs using `google_project_service`.
 
 ---
 
@@ -24,7 +24,7 @@ Google Cloud features are “behind” APIs. For example:
 * **Artifact Registry** → uses `artifactregistry.googleapis.com`
 * **Storage buckets** → use `storage.googleapis.com`
 
-If those APIs aren’t enabled first, Terraform can’t create those resources. ([Google Cloud Documentation][1])
+If those APIs aren’t enabled first, Terraform can’t create those resources.
 
 ---
 
@@ -46,7 +46,7 @@ Then it converts the lists to sets (`toset(...)`) so duplicates are removed.
 
 ### 2) It enables each API using `for_each`
 
-Terraform loops through each API name and creates a `google_project_service` resource for it. ([Google Cloud Documentation][1])
+Terraform loops through each API name and creates a `google_project_service` resource for it.
 
 ### 3) It uses two providers
 
@@ -61,11 +61,11 @@ This is useful when you run Terraform with **different service accounts** for ne
 
 ### `google_project_service.host_project_services`
 
-Enables every API in `local.host_services` for `var.host_project`. ([Google Cloud Documentation][1])
+Enables every API in `local.host_services` for `var.host_project`.
 
 ### `google_project_service.service_project_services`
 
-Enables every API in `local.service_services` for `var.service_project`. ([Google Cloud Documentation][1])
+Enables every API in `local.service_services` for `var.service_project`.
 
 ---
 
@@ -82,7 +82,7 @@ Why this is often helpful:
 * Disabling APIs can break other resources during a destroy.
 * Some teams prefer leaving APIs enabled to avoid churn.
 
-If you want Terraform to disable APIs on teardown, change it to `true` (but expect some “in use” friction in real projects). ([Google Cloud Documentation][1])
+If you want Terraform to disable APIs on teardown, change it to `true` (but expect some “in use” friction in real projects).
 
 ---
 
