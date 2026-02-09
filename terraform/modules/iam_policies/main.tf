@@ -56,11 +56,11 @@ resource "google_project_iam_member" "service_usage_admin_platform" {
     role = "roles/serviceusage.serviceUsageAdmin"
 }
 
-resource "google_compute_subnetwork_iam_member" "platform_subnet_user" {
-  project    = var.host_project
-  region     = var.region
-  subnetwork = var.gke_subnet
+# resource "google_compute_subnetwork_iam_member" "platform_subnet_user" {
+#   project    = var.host_project
+#   region     = var.region
+#   subnetwork = var.gke_subnet
 
-  member = "serviceAccount:${var.tf_platform_sa_email}"
-  role   = "roles/compute.networkUser"
-}
+#   member = "serviceAccount:${var.tf_platform_sa_email}"
+#   role   = "roles/compute.networkUser"
+# }

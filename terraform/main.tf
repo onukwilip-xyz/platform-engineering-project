@@ -1,4 +1,4 @@
-module projects {
+module "projects" {
     source = "./modules/projects"
     providers = {
       google = google.net
@@ -10,7 +10,7 @@ module projects {
     billing_account_id = var.billing_account_id
 }
 
-module iam_policies {
+module "iam_policies" {
     source = "./modules/iam_policies"
     providers = {
       google = google.net

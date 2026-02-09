@@ -38,11 +38,6 @@ variable "region" {
   description = "Default region for Google provider operations."
 }
 
-variable "tf_state_bucket" {
-  type        = string
-  description = "GCS bucket name used for the Terraform remote state backend."
-}
-
 variable "gke_subnet" {
   type        = string
   description = "Default subnet for GKE cluster."
