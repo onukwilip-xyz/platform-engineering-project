@@ -90,6 +90,7 @@ If you want Terraform to disable APIs on teardown, change it to `true` (but expe
 
 ### Host project defaults
 
+* `container.googleapis.com` (GKE API) ([Google Cloud Documentation][3])
 * `compute.googleapis.com` (VPC, subnet, router, NAT; Cloud NAT is part of Compute Engine) ([Google Cloud Documentation][2])
 * `serviceusage.googleapis.com` (so Terraform can enable other APIs)
 * `iam.googleapis.com` (safe to enable; helps if you ever manage IAM-related resources in host)
