@@ -1,9 +1,9 @@
-variable "host_project" {
+variable "host_project_id" {
   type        = string
   description = "The ID of the host project where Shared VPC will be created."
 }
 
-variable "service_project" {
+variable "service_project_id" {
   type        = string
   description = "The ID of the service project where Compute resources will be created."
 }
@@ -21,9 +21,4 @@ variable "tf_platform_sa_email" {
 variable "region" {
   type        = string
   description = "Default region for Google provider operations."
-}
-
-variable "gke_subnet" {
-  type        = string
-  description = "Default subnet for GKE cluster."
 }

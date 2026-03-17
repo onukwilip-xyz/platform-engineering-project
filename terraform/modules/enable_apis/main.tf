@@ -1,5 +1,6 @@
 locals {
   host_services_list = concat([
+    "container.googleapis.com",
     "compute.googleapis.com",
     "serviceusage.googleapis.com",
     "iam.googleapis.com",
