@@ -95,6 +95,7 @@ If you want Terraform to disable APIs on teardown, change it to `true` (but expe
 * `serviceusage.googleapis.com` (so Terraform can enable other APIs)
 * `iam.googleapis.com` (safe to enable; helps if you ever manage IAM-related resources in host)
 * `cloudresourcemanager.googleapis.com` (safe to enable; project/org operations)
+* `dns.googleapis.com` (for DNS management)
 
 ### Service project defaults
 

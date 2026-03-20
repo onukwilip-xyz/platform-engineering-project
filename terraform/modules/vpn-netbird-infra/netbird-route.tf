@@ -11,6 +11,7 @@ resource "netbird_route" "vpc_subnet" {
   metric      = 9999
 
   peer_groups = [ netbird_group.routing_peers.id ]
+  groups = [ data.netbird_group.all.id ]
 
   depends_on = [ netbird_group.routing_peers ]
 }

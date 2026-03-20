@@ -84,7 +84,7 @@ PROJECT_ID=$(curl -sf \
   "http://metadata.google.internal/computeMetadata/v1/project/project-id")
 
 curl -sf -X POST \
-  "https://secretmanager.googleapis.com/v1/projects/$PROJECT_ID/secrets/${PAT_SECRET_ID}/versions:add" \
+  "https://secretmanager.googleapis.com/v1/projects/$PROJECT_ID/secrets/$PAT_SECRET_ID/versions:add" \
   -H "Authorization: Bearer $METADATA_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"payload\": {\"data\": \"$(echo -n "$NETBIRD_PAT" | base64 -w0)\"}}"

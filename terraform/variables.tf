@@ -98,3 +98,78 @@ variable "gke_resource_labels" {
   description = "Resource labels to apply to the GKE cluster."
   default     = {}
 }
+
+variable "cloudflare_api_token" {
+  type        = string
+  description = "Cloudflare API token with DNS edit permissions"
+  sensitive   = true
+}
+
+variable "cloudflare_zone_id" {
+  type        = string
+  description = "The Cloudflare Zone ID for your root domain"
+}
+
+variable "root_domain" {
+  type        = string
+  description = "Your root domain"
+  default     = "onukwilip.xyz"
+}
+
+variable "subdomain" {
+  type        = string
+  description = "Subdomain to delegate to Google Cloud DNS from Cloudflare (e.g. 'pe' for pe.onukwilip.xyz)"
+  default     = "pe"
+}
+
+variable "private_subdomain" {
+  type        = string
+  description = "Private subdomain for internal DNS records (e.g. 'internal' for internal.pe.onukwilip.xyz)"
+  default     = "internal"
+}
+
+# VPN Configuration
+variable "netbird_server_instance_name" {
+  type        = string
+  description = "Name of the Netbird server instance"
+}
+
+variable "netbird_routing_peer_instance_name" {
+  type        = string
+  description = "Name of the Netbird routing peer instance"
+}
+
+variable "netbird_domain" {
+  type        = string
+  description = "Domain name for Netbird"
+}
+
+variable "dns_managed_zone_name" {
+  type        = string
+  description = "Name of the existing Google Cloud DNS managed zone to use for the Netbird domain"
+}
+
+variable "letsencrypt_email" {
+  type        = string
+  description = "Email address for Let's Encrypt certificate registration"
+}
+
+variable "netbird_pat_secret_id" {
+  type        = string
+  description = "The ID for the Secret Manager secret that will store the Netbird Personal Access Token (PAT)"
+}
+
+variable "netbird_routing_peer_setup_key_secret_id" {
+  type        = string
+  description = "The ID for the Secret Manager secret that will store the Netbird routing peer setup key"
+}
+
+variable "netbird_routing_peer_setup_key_name" {
+  description = "The name of the Netbird setup key to create for the routing peer"
+  type        = string
+}
+
+variable "netbird_routing_peer_group_name" {
+  description = "The name of the Netbird group to which the routing peer will be added"
+  type        = string
+}

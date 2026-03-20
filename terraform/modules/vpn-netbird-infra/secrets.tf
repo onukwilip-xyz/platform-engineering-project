@@ -1,17 +1,7 @@
-resource "google_secret_manager_secret" "netbird_pat" {
-  secret_id = var.netbird_pat_secret_id
-
-  labels = {
-    usage = "netbird-pat"
-  }
-
-  replication {
-    auto {}
-  }
-}
-
 resource "google_secret_manager_secret" "netbird_routing_peer_setup_key" {
   secret_id = var.netbird_routing_peer_setup_key_secret_id
+  project   = var.service_project_id
+
   replication {
     auto {}
   }

@@ -6,7 +6,7 @@ resource "null_resource" "wait_for_pat" {
       for i in $(seq 1 40); do
         if gcloud secrets versions access latest \
             --secret="netbird-terraform-pat" \
-            --project="${var.project_id}" > /dev/null 2>&1; then
+            --project="${var.service_project_id}" > /dev/null 2>&1; then
           echo "PAT is available."
           exit 0
         fi
@@ -16,8 +16,6 @@ resource "null_resource" "wait_for_pat" {
       echo "Timed out waiting for PAT." && exit 1
     EOT
   }
-
-  depends_on = [ google_compute_instance.netbird_server ]
 }
 
 output "setup_key_ready" {

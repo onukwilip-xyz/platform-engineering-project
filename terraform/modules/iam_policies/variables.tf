@@ -8,6 +8,11 @@ variable "service_project_id" {
   description = "The ID of the service project where Compute resources will be created."
 }
 
+variable "service_project_number" {
+  type        = string
+  description = "The number of the service project where Compute resources will be created."
+}
+
 variable "tf_network_sa_email" {
   type        = string
   description = "Service account email to impersonate for the tf-network provider."
