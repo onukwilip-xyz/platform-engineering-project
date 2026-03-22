@@ -1,11 +1,11 @@
 terraform {
   required_providers {
     google = {
-      source  = "hashicorp/google"
-    }
-
-    netbird = {
-      source  = "netbirdio/netbird"
+      source = "hashicorp/google"
+      configuration_aliases = [
+        google.net,
+        google.platform
+      ]
     }
   }
 }

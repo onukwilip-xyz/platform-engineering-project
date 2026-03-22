@@ -105,6 +105,8 @@ If you want Terraform to disable APIs on teardown, change it to `true` (but expe
 * `storage.googleapis.com` (backup bucket)
 * `serviceusage.googleapis.com`
 * `iam.googleapis.com`, `iamcredentials.googleapis.com` (SA ops + impersonation flows)
+* `secretmanager.googleapis.com` (Create and manage secrets in Google Secrets Manager)
+* `parametermanager.googleapis.com` (Create and manage config values and parameters in Google Parameter Manager)
 
 Recommended (to avoid “surprise missing API” later):
 

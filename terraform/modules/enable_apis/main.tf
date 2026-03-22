@@ -16,6 +16,8 @@ locals {
     "serviceusage.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
+    "secretmanager.googleapis.com",
+    "parametermanager.googleapis.com",
 
     # Nice-to-have for your setup:
     "logging.googleapis.com",

@@ -1,17 +1,20 @@
-resource "netbird_route" "vpc_subnet" {
-  description = "Route VPC subnet traffic through routing peer"
-  network_id  = "vpc-internal-route"    # Logical ID within Netbird
-  enabled     = true
+resource "null_resource" "netbird_route" {
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash"]
+    command     = "${path.module}/scripts/create_route.sh"
+    environment = {
+      PAT_SECRET_ID  = var.netbird_pat_secret_id
+      PROJECT_ID     = var.service_project_id
+      NETBIRD_DOMAIN = var.netbird_domain
+      PARAMETER_ID   = var.netbird_group_id_parameter_id
+      VPC_CIDR       = var.vpc_subnet_cidr
+    }
+  }
 
-  # The CIDR you want VPN clients to reach via the routing peer
-  network     = var.vpc_subnet_cidr
+  triggers = {
+    vpc_cidr  = var.vpc_subnet_cidr
+    setup_key = null_resource.netbird_setup_key.id
+  }
 
-  # Masquerade = the peer NATs traffic so responses route back correctly
-  masquerade  = true
-  metric      = 9999
-
-  peer_groups = [ netbird_group.routing_peers.id ]
-  groups = [ data.netbird_group.all.id ]
-
-  depends_on = [ netbird_group.routing_peers ]
+  depends_on = [null_resource.netbird_setup_key]
 }

@@ -134,9 +134,19 @@ variable "netbird_server_instance_name" {
   description = "Name of the Netbird server instance"
 }
 
-variable "netbird_routing_peer_instance_name" {
+variable "netbird_server_service_account_id" {
+  description = "Service account ID for the Netbird server"
   type        = string
-  description = "Name of the Netbird routing peer instance"
+}
+
+variable "netbird_server_service_account_name" {
+  description = "Display name for the Netbird server service account"
+  type        = string
+}
+
+variable "netbird_server_service_account_description" {
+  description = "Description for the Netbird server service account"
+  type        = string
 }
 
 variable "netbird_domain" {
@@ -159,6 +169,11 @@ variable "netbird_pat_secret_id" {
   description = "The ID for the Secret Manager secret that will store the Netbird Personal Access Token (PAT)"
 }
 
+variable "netbird_routing_peer_instance_name" {
+  type        = string
+  description = "Name of the Netbird routing peer instance"
+}
+
 variable "netbird_routing_peer_setup_key_secret_id" {
   type        = string
   description = "The ID for the Secret Manager secret that will store the Netbird routing peer setup key"
@@ -171,5 +186,35 @@ variable "netbird_routing_peer_setup_key_name" {
 
 variable "netbird_routing_peer_group_name" {
   description = "The name of the Netbird group to which the routing peer will be added"
+  type        = string
+}
+
+variable "netbird_group_id_parameter_id" {
+  description = "The ID for the Parameter Manager parameter that will store the Netbird group ID"
+  type        = string
+}
+
+variable "netbird_routing_peer_service_account_id" {
+  description = "Service account ID for the Netbird routing peer"
+  type        = string
+}
+
+variable "netbird_routing_peer_service_account_name" {
+  description = "Display name for the Netbird routing peer service account"
+  type        = string
+}
+
+variable "netbird_routing_peer_service_account_description" {
+  description = "Description for the Netbird routing peer service account"
+  type        = string
+}
+
+variable "ssh_network_tag" {
+  description = "Network tag for SSH firewall rule"
+  type        = string
+}
+
+variable "netbird_server_network_tag" {
+  description = "Network tag for the Netbird server instance"
   type        = string
 }

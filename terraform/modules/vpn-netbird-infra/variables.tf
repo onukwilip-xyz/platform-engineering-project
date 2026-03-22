@@ -52,3 +52,28 @@ variable "netbird_domain" {
   description = "Domain name for Netbird"
   type        = string
 }
+
+variable "netbird_pat_secret_id" {
+  description = "The ID for the Secret Manager secret that will store the Netbird Personal Access Token (PAT) for the routing peer to authenticate with the Netbird management server"
+  type        = string
+}
+
+variable "netbird_group_id_parameter_id" {
+  description = "The ID for the Parameter Manager parameter that will store the Netbird group ID"
+  type        = string
+}
+
+variable "netbird_routing_peer_service_account_id" {
+  description = "Service account ID for the Netbird routing peer"
+  type        = string
+}
+
+variable "netbird_routing_peer_service_account_name" {
+  description = "Display name for the Netbird routing peer service account"
+  type        = string
+}
+
+variable "netbird_routing_peer_service_account_description" {
+  description = "Description for the Netbird routing peer service account"
+  type        = string
+}

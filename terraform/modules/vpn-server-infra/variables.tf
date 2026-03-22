@@ -52,3 +52,28 @@ variable "netbird_pat_secret_id" {
   description = "The ID for the Secret Manager secret that will store the Netbird Personal Access Token (PAT)"
   type        = string
 }
+
+variable "netbird_server_service_account_id" {
+  description = "Service account ID for the Netbird server"
+  type        = string
+}
+
+variable "netbird_server_service_account_name" {
+  description = "Display name for the Netbird server service account"
+  type        = string
+}
+
+variable "netbird_server_service_account_description" {
+  description = "Description for the Netbird server service account"
+  type        = string
+}
+
+variable "ssh_network_tag" {
+  description = "Network tag for SSH firewall rule"
+  type        = string
+}
+
+variable "netbird_server_network_tag" {
+  description = "Network tag for the Netbird server instance"
+  type        = string
+}

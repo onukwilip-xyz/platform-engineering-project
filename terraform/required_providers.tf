@@ -5,11 +5,6 @@ terraform {
       version = ">= 7.19.0"
     }
 
-    netbird = {
-      source  = "netbirdio/netbird"
-      version = ">= 0.0.9"
-    }
-
     cloudflare = {
       source  = "cloudflare/cloudflare"
       version = ">= 5.18.0"

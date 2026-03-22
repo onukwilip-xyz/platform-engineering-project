@@ -69,7 +69,7 @@ resource "google_compute_firewall" "allow_ssh_iap" {
 
   source_ranges = ["35.235.240.0/20"]
 
-  target_tags = ["ssh"]
+  target_tags = [var.ssh_network_tag]
 
   allow {
     protocol = "tcp"

@@ -2,91 +2,160 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
+# ── Install base dependencies ──────────────────────────────────────────────
 apt-get update -q
-apt-get install -y docker.io docker-compose-plugin curl jq python3
+apt-get install -y curl jq ca-certificates gnupg expect
+
+# ── Install Docker (skip if already installed) ────────────────────────────
+if ! command -v docker &> /dev/null; then
+  echo "Docker not found, installing..."
+  install -m 0755 -d /etc/apt/keyrings
+
+  # ✅ --batch and --no-tty prevent gpg from trying to open /dev/tty
+  curl -fsSL https://download.docker.com/linux/debian/gpg \
+    | gpg --batch --no-tty --dearmor -o /etc/apt/keyrings/docker.gpg
+  chmod a+r /etc/apt/keyrings/docker.gpg
+
+  echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+    https://download.docker.com/linux/debian \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+    | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+  apt-get update -q
+  apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+else
+  echo "Docker already installed, skipping."
+fi
 
 systemctl enable docker && systemctl start docker
 
-mkdir -p /opt/netbird && cd /opt/netbird
-
-# ── Run Netbird installer ──────────────────────────────────────────────────
+# ── Terraform templatefile interpolations ─────────────────────────────────
 export NETBIRD_DOMAIN="${domain}"
-export NETBIRD_LETSENCRYPT_EMAIL="${letsencrypt_email}"
+export LETSENCRYPT_EMAIL="${letsencrypt_email}"
+export NETBIRD_LETSENCRYPT_EMAIL="${letsencrypt_email}"  # explicit export matching setup.env key
 export PAT_SECRET_ID="${pat_secret_id}"
 
-curl -fsSL https://github.com/netbirdio/netbird/releases/latest/download/netbird_install.sh \
-  | bash -s -- --domain "$NETBIRD_DOMAIN" --letsencrypt-email "$NETBIRD_LETSENCRYPT_EMAIL"
+# ── Get project ID via gcloud (uses instance service account automatically) 
+PROJECT_ID=$(gcloud config get-value core/project)
 
-# ── Wait for Zitadel to be healthy ────────────────────────────────────────
-echo "Waiting for Zitadel..."
-until curl -sf "https://${domain}/auth/v1/health" > /dev/null 2>&1; do
-  sleep 10
+# ── Run Netbird installer (non-interactively) ─────────────────────────────
+mkdir -p /opt/netbird && cd /opt/netbird
+
+# Write setup.env — the installer reads these automatically, no prompts needed
+# for domain and email
+cat > /opt/netbird/setup.env <<EOF
+NETBIRD_DOMAIN=$NETBIRD_DOMAIN
+NETBIRD_LETSENCRYPT_EMAIL=$LETSENCRYPT_EMAIL
+EOF
+
+curl -fsSL https://github.com/netbirdio/netbird/releases/latest/download/getting-started.sh \
+  -o /opt/netbird/getting-started.sh
+
+chmod +x /opt/netbird/getting-started.sh
+
+expect <<EXPECT
+  set timeout 120
+  spawn bash /opt/netbird/getting-started.sh
+  expect "Enter choice*"    { send "0\r" }
+  expect "Email address*"   { send "$LETSENCRYPT_EMAIL\r" }
+  expect "Enable proxy?"    { send "N\r" }
+  expect eof
+EXPECT
+
+# ── Wait for Netbird management API to be healthy ─────────────────────────
+echo "Waiting for Netbird to be healthy..."
+MAX_ATTEMPTS=60
+for i in $(seq 1 $MAX_ATTEMPTS); do
+  if curl -sfk "https://$NETBIRD_DOMAIN/" -o /dev/null 2>&1; then
+    echo "Netbird API is up after attempt $i."
+    break
+  fi
+  if [ "$i" -eq "$MAX_ATTEMPTS" ]; then
+    echo "Timed out waiting for Netbird." && exit 1
+  fi
+  echo "Attempt $i/$MAX_ATTEMPTS — waiting 15s..."
+  sleep 15
 done
-echo "Zitadel is up."
 
-# ── Extract Zitadel initial admin credentials from installer output ───────
-# The installer writes these to zitadel.env
-source /opt/netbird/zitadel.env   # Provides ZITADEL_FIRSTINSTANCE vars
+# ── Extract initial admin credentials ─────────────────────────────────────
+# The installer writes credentials to different files depending on version.
+# Try both locations — new combined installer vs older Zitadel-based installer.
+if [ -f /opt/netbird/config.yaml ]; then
+  # New combined netbird-server installer (post ~v0.29)
+  # Credentials are embedded in config.yaml
+  ADMIN_USER=$(grep -A2 'initialUser' /opt/netbird/config.yaml \
+    | grep 'email' | awk '{print $2}' | tr -d '"')
+  ADMIN_PASS=$(grep -A2 'initialUser' /opt/netbird/config.yaml \
+    | grep 'password' | awk '{print $2}' | tr -d '"')
+elif [ -f /opt/netbird/management.env ]; then
+  # Older Zitadel-based installer
+  source /opt/netbird/management.env
+  ADMIN_USER="$ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME"
+  ADMIN_PASS="$ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD"
+else
+  echo "Could not find credentials file. Check /opt/netbird/ contents:" && ls /opt/netbird/
+  exit 1
+fi
 
-ZITADEL_DOMAIN="https://${domain}"
-ADMIN_USER="$ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME"
-ADMIN_PASS="$ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD"
-ORG_ID="$ZITADEL_FIRSTINSTANCE_ORG_ID"
+if [ -z "$ADMIN_USER" ] || [ -z "$ADMIN_PASS" ]; then
+  echo "Failed to extract admin credentials. Dumping /opt/netbird/ for debugging:"
+  ls -la /opt/netbird/
+  exit 1
+fi
 
-# ── Step 1: Authenticate as initial admin → get session token ────────────
-SESSION_RESP=$(curl -sf -X POST "$ZITADEL_DOMAIN/auth/v1/users/me/_password" \
+echo "Admin user resolved: $ADMIN_USER"
+
+# ── Authenticate → get session token ─────────────────────────────────────
+echo "Authenticating with Netbird IdP..."
+ADMIN_TOKEN=$(curl -sf -X POST "https://$NETBIRD_DOMAIN/auth/v1/users/me/_password" \
   -H "Content-Type: application/json" \
-  -d "{\"loginName\": \"$ADMIN_USER\", \"password\": \"$ADMIN_PASS\"}")
+  -d "{\"loginName\": \"$ADMIN_USER\", \"password\": \"$ADMIN_PASS\"}" \
+  | jq -r '.token')
 
-ADMIN_TOKEN=$(echo "$SESSION_RESP" | jq -r '.token')
+if [ -z "$ADMIN_TOKEN" ] || [ "$ADMIN_TOKEN" = "null" ]; then
+  echo "Failed to obtain admin token." && exit 1
+fi
 
-# ── Step 2: Create a Zitadel machine user (service account) ──────────────
-MACHINE_RESP=$(curl -sf -X POST "$ZITADEL_DOMAIN/management/v1/users/machine" \
+# ── Create machine user + grant role ─────────────────────────────────────
+echo "Creating Terraform service account in Netbird IdP..."
+MACHINE_USER_ID=$(curl -sf -X POST \
+  "https://$NETBIRD_DOMAIN/management/v1/users/machine" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "userName": "netbird-terraform-sa",
-    "name": "Netbird Terraform Service Account",
-    "description": "Used by Terraform to manage Netbird resources",
+    "userName":        "netbird-terraform-sa",
+    "name":            "Netbird Terraform Service Account",
+    "description":     "Used by Terraform to manage Netbird resources",
     "accessTokenType": "ACCESS_TOKEN_TYPE_BEARER"
-  }')
+  }' | jq -r '.userId')
 
-MACHINE_USER_ID=$(echo "$MACHINE_RESP" | jq -r '.userId')
+if [ -z "$MACHINE_USER_ID" ] || [ "$MACHINE_USER_ID" = "null" ]; then
+  echo "Failed to create machine user." && exit 1
+fi
 
-# ── Step 3: Grant the machine user the Netbird IAM Admin role ─────────────
-curl -sf -X POST "$ZITADEL_DOMAIN/management/v1/orgs/me/members" \
+curl -sf -X POST "https://$NETBIRD_DOMAIN/management/v1/orgs/me/members" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{
-    \"userId\": \"$MACHINE_USER_ID\",
-    \"roles\": [\"ORG_OWNER\"]
-  }"
+  -d "{\"userId\": \"$MACHINE_USER_ID\", \"roles\": [\"ORG_OWNER\"]}" > /dev/null
 
-# ── Step 4: Generate a PAT for the machine user ───────────────────────────
-PAT_RESP=$(curl -sf -X POST \
-  "$ZITADEL_DOMAIN/management/v1/users/$MACHINE_USER_ID/pats" \
+# ── Generate PAT ──────────────────────────────────────────────────────────
+echo "Generating PAT..."
+NETBIRD_PAT=$(curl -sf -X POST \
+  "https://$NETBIRD_DOMAIN/management/v1/users/$MACHINE_USER_ID/pats" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{
-    "expirationDate": "2099-01-01T00:00:00Z"
-  }')
+  -d '{"expirationDate": "2099-01-01T00:00:00Z"}' \
+  | jq -r '.token')
 
-NETBIRD_PAT=$(echo "$PAT_RESP" | jq -r '.token')
+if [ -z "$NETBIRD_PAT" ] || [ "$NETBIRD_PAT" = "null" ]; then
+  echo "Failed to generate PAT." && exit 1
+fi
 
-# ── Step 5: Store PAT in Secret Manager ──────────────────────────────────
-METADATA_TOKEN=$(curl -sf \
-  -H "Metadata-Flavor: Google" \
-  "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token" \
-  | jq -r '.access_token')
+# ── Store PAT in Secret Manager ───────────────────────────────────────────
+echo "Storing PAT in Secret Manager..."
+gcloud secrets versions add "$PAT_SECRET_ID" \
+  --data-file=<(echo -n "$NETBIRD_PAT") \
+  --project="$PROJECT_ID"
 
-PROJECT_ID=$(curl -sf \
-  -H "Metadata-Flavor: Google" \
-  "http://metadata.google.internal/computeMetadata/v1/project/project-id")
-
-curl -sf -X POST \
-  "https://secretmanager.googleapis.com/v1/projects/$PROJECT_ID/secrets/$PAT_SECRET_ID/versions:add" \
-  -H "Authorization: Bearer $METADATA_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{\"payload\": {\"data\": \"$(echo -n "$NETBIRD_PAT" | base64 -w0)\"}}"
-
-echo "PAT generated and stored in Secret Manager." > /var/log/netbird-setup.log
+echo "Netbird server setup complete." | tee /var/log/netbird-setup.log

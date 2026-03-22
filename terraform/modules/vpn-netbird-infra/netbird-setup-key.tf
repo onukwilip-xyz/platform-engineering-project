@@ -1,10 +1,20 @@
-resource "netbird_setup_key" "routing_peer" {
-  name        = var.netbird_routing_peer_setup_key_name
-  type        = "reusable"
-  usage_limit = 1                # Single-use
-  auto_groups = [ netbird_group.routing_peers.id ]               # Assign groups here if needed
-  expiry_seconds  = 86400            # 24 hours — enough for first boot
-  revoked     = false
+resource "null_resource" "netbird_setup_key" {
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash"]
+    command     = "${path.module}/scripts/create_setup_key.sh"
+    environment = {
+      PAT_SECRET_ID       = var.netbird_pat_secret_id
+      PROJECT_ID          = var.service_project_id
+      NETBIRD_DOMAIN      = var.netbird_domain
+      PARAMETER_ID        = var.netbird_group_id_parameter_id
+      SETUP_KEY_NAME      = var.netbird_routing_peer_setup_key_name
+      SETUP_KEY_SECRET_ID = var.netbird_routing_peer_setup_key_secret_id
+    }
+  }
 
-  depends_on = [ netbird_group.routing_peers ]
+  triggers = {
+    group_resource = null_resource.netbird_group.id
+  }
+
+  depends_on = [null_resource.netbird_group]
 }

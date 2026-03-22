@@ -61,6 +61,8 @@ module "networking" {
   services_secondary_range_name = var.services_secondary_range_name
   services_secondary_cidr       = var.services_secondary_cidr
 
+  ssh_network_tag = var.ssh_network_tag
+
   tf_platform_sa_email = var.tf_platform_sa_email
 
   depends_on = [module.enable_apis]
@@ -91,45 +93,61 @@ module "vpn_server_infra" {
     google.platform = google.platform
   }
 
-  host_project_id = module.projects.host_project.project_id
+  host_project_id    = module.projects.host_project.project_id
   service_project_id = module.projects.service_project.project_id
   zone               = var.zone
   region             = var.region
-  network            = module.networking.vpc.name
-  subnetwork         = module.networking.gke_subnet.name
+  network            = module.networking.vpc.self_link
+  subnetwork         = module.networking.gke_subnet.self_link
 
-  netbird_server_instance_name       = var.netbird_server_instance_name
-  netbird_domain                     = var.netbird_domain
-  dns_managed_zone_name              = var.dns_managed_zone_name
-  letsencrypt_email                  = var.letsencrypt_email
-  netbird_pat_secret_id              = var.netbird_pat_secret_id
+  netbird_server_instance_name = var.netbird_server_instance_name
+  netbird_domain               = var.netbird_domain
+  dns_managed_zone_name        = var.dns_managed_zone_name
+  letsencrypt_email            = var.letsencrypt_email
+  netbird_pat_secret_id        = var.netbird_pat_secret_id
 
-  depends_on = [module.dns]
+  netbird_server_service_account_description = var.netbird_server_service_account_description
+  netbird_server_service_account_id          = var.netbird_server_service_account_id
+  netbird_server_service_account_name        = var.netbird_server_service_account_name
+  ssh_network_tag                            = var.ssh_network_tag
+  netbird_server_network_tag                 = var.netbird_server_network_tag
+
+  depends_on = [
+    module.dns,
+    module.iam_policies
+  ]
 }
 
 module "vpn_netbird_infra" {
   source = "./modules/vpn-netbird-infra"
   providers = {
-    google  = google.platform
-    netbird = netbird
+    google.net      = google.net
+    google.platform = google.platform,
   }
 
   service_project_id = module.projects.service_project.project_id
   zone               = var.zone
   region             = var.region
-  network            = module.networking.vpc.name
-  subnetwork         = module.networking.gke_subnet.name
+  network            = module.networking.vpc.self_link
+  subnetwork         = module.networking.gke_subnet.self_link
 
-  netbird_routing_peer_instance_name = var.netbird_routing_peer_instance_name
-  netbird_domain                     = var.netbird_domain
-  netbird_routing_peer_setup_key_secret_id = var.netbird_routing_peer_setup_key_secret_id
-  netbird_routing_peer_group_name          = var.netbird_routing_peer_group_name
-  vpc_subnet_cidr                          = var.subnet_cidr
-  netbird_routing_peer_setup_key_name      = var.netbird_routing_peer_setup_key_name
+  netbird_routing_peer_instance_name               = var.netbird_routing_peer_instance_name
+  netbird_domain                                   = var.netbird_domain
+  netbird_routing_peer_setup_key_secret_id         = var.netbird_routing_peer_setup_key_secret_id
+  netbird_routing_peer_group_name                  = var.netbird_routing_peer_group_name
+  vpc_subnet_cidr                                  = var.subnet_cidr
+  netbird_routing_peer_setup_key_name              = var.netbird_routing_peer_setup_key_name
+  netbird_pat_secret_id                            = module.vpn_server_infra.netbird_pat_secret.secret_id
+  netbird_group_id_parameter_id                    = var.netbird_group_id_parameter_id
+  netbird_routing_peer_service_account_description = var.netbird_routing_peer_service_account_description
+  netbird_routing_peer_service_account_id          = var.netbird_routing_peer_service_account_id
+  netbird_routing_peer_service_account_name        = var.netbird_routing_peer_service_account_name
 
-  depends_on = [module.vpn_server_infra]
+  depends_on = [
+    module.vpn_server_infra,
+    module.iam_policies
+  ]
 }
-
 
 # module "gke" {
 #   source = "./modules/gke"
