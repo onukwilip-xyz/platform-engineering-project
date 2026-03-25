@@ -111,6 +111,10 @@ module "vpn_server_infra" {
   netbird_server_service_account_name        = var.netbird_server_service_account_name
   ssh_network_tag                            = var.ssh_network_tag
   netbird_server_network_tag                 = var.netbird_server_network_tag
+  netbird_admin_email                        = var.netbird_admin_email
+  netbird_admin_password                     = var.netbird_admin_password
+  netbird_service_user_name                 = var.netbird_service_user_name
+  netbird_service_user_token_name           = var.netbird_service_user_token_name
 
   depends_on = [
     module.dns,

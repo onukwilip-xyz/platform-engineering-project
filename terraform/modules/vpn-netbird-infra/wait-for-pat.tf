@@ -1,4 +1,5 @@
 resource "null_resource" "wait_for_pat" {
+  # provider = google.platform
   provisioner "local-exec" {
     interpreter = ["/bin/bash"]
     command     = "${path.module}/scripts/wait_for_pat.sh"

@@ -11,7 +11,6 @@ if ! command -v docker &> /dev/null; then
   echo "Docker not found, installing..."
   install -m 0755 -d /etc/apt/keyrings
 
-  # ✅ --batch and --no-tty prevent gpg from trying to open /dev/tty
   curl -fsSL https://download.docker.com/linux/debian/gpg \
     | gpg --batch --no-tty --dearmor -o /etc/apt/keyrings/docker.gpg
   chmod a+r /etc/apt/keyrings/docker.gpg
@@ -35,6 +34,8 @@ export NETBIRD_DOMAIN="${domain}"
 export LETSENCRYPT_EMAIL="${letsencrypt_email}"
 export NETBIRD_LETSENCRYPT_EMAIL="${letsencrypt_email}"  # explicit export matching setup.env key
 export PAT_SECRET_ID="${pat_secret_id}"
+export NETBIRD_SERVICE_USER_NAME="${netbird_service_user_name}"
+export NETBIRD_SERVICE_USER_TOKEN_NAME="${netbird_service_user_token_name}"
 
 # ── Get project ID via gcloud (uses instance service account automatically) 
 PROJECT_ID=$(gcloud config get-value core/project)
@@ -49,19 +50,24 @@ NETBIRD_DOMAIN=$NETBIRD_DOMAIN
 NETBIRD_LETSENCRYPT_EMAIL=$LETSENCRYPT_EMAIL
 EOF
 
-curl -fsSL https://github.com/netbirdio/netbird/releases/latest/download/getting-started.sh \
+curl -fsSL https://github.com/netbirdio/netbird/releases/download/v0.67.0/getting-started.sh \
   -o /opt/netbird/getting-started.sh
 
 chmod +x /opt/netbird/getting-started.sh
 
-expect <<EXPECT
-  set timeout 120
-  spawn bash /opt/netbird/getting-started.sh
-  expect "Enter choice*"    { send "0\r" }
-  expect "Email address*"   { send "$LETSENCRYPT_EMAIL\r" }
-  expect "Enable proxy?"    { send "N\r" }
-  expect eof
+# ── Skip installer if already run (docker-compose.yml is the indicator) ───
+if [ -f /opt/netbird/docker-compose.yml ]; then
+  echo "Netbird already installed, skipping installer."
+else
+  expect <<EXPECT
+    set timeout 120
+    spawn bash /opt/netbird/getting-started.sh
+    expect "Enter choice*"    { send "0\r" }
+    expect "Email address*"   { send "$LETSENCRYPT_EMAIL\r" }
+    expect "Enable proxy?"    { send "N\r" }
+    expect eof
 EXPECT
+fi
 
 # ── Wait for Netbird management API to be healthy ─────────────────────────
 echo "Waiting for Netbird to be healthy..."
@@ -78,84 +84,198 @@ for i in $(seq 1 $MAX_ATTEMPTS); do
   sleep 15
 done
 
-# ── Extract initial admin credentials ─────────────────────────────────────
-# The installer writes credentials to different files depending on version.
-# Try both locations — new combined installer vs older Zitadel-based installer.
-if [ -f /opt/netbird/config.yaml ]; then
-  # New combined netbird-server installer (post ~v0.29)
-  # Credentials are embedded in config.yaml
-  ADMIN_USER=$(grep -A2 'initialUser' /opt/netbird/config.yaml \
-    | grep 'email' | awk '{print $2}' | tr -d '"')
-  ADMIN_PASS=$(grep -A2 'initialUser' /opt/netbird/config.yaml \
-    | grep 'password' | awk '{print $2}' | tr -d '"')
-elif [ -f /opt/netbird/management.env ]; then
-  # Older Zitadel-based installer
-  source /opt/netbird/management.env
-  ADMIN_USER="$ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME"
-  ADMIN_PASS="$ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD"
+echo "About to generate PAT...."
+echo "--- /opt/netbird contents ---"
+ls -la /opt/netbird/
+echo "--- config.yaml exists: $([ -f /opt/netbird/config.yaml ] && echo YES || echo NO) ---"
+echo "--- management.env exists: $([ -f /opt/netbird/management.env ] && echo YES || echo NO) ---"
+
+# ── Skip PAT generation if already stored ────────────────────────────────
+if gcloud secrets versions access latest \
+    --secret="$PAT_SECRET_ID" \
+    --project="$PROJECT_ID" > /dev/null 2>&1; then
+  echo "PAT already exists in Secret Manager, skipping generation."
+  echo "Netbird server setup complete." | tee /var/log/netbird-setup.log
+  exit 0
+fi
+
+# ── These come from Terraform templatefile vars ───────────────────────────
+ADMIN_EMAIL="${netbird_admin_email}"
+ADMIN_PASS="${netbird_admin_password}"
+
+# ── Step 1: Check if first-run setup is required ─────────────────────────
+echo "Checking instance setup status..."
+INSTANCE_RESP=$(curl -sf "https://$NETBIRD_DOMAIN/api/instance")
+echo "Instance response: $INSTANCE_RESP"
+SETUP_REQUIRED=$(echo "$INSTANCE_RESP" | jq -r '.setup_required')
+
+if [ "$SETUP_REQUIRED" = "true" ]; then
+  echo "Running first-time instance setup..."
+
+  HTTP_CODE=$(curl -s -o /tmp/setup_resp.json -w "%%{http_code}" \
+    -X POST "https://$NETBIRD_DOMAIN/api/setup" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\": \"$ADMIN_EMAIL\", \"password\": \"$ADMIN_PASS\", \"name\": \"Admin\"}")
+
+  echo "Setup HTTP status: $HTTP_CODE"
+  echo "Setup response body: $(cat /tmp/setup_resp.json)"
+
+  if [[ "$HTTP_CODE" != "200" && "$HTTP_CODE" != "201" ]]; then
+    echo "Instance setup failed with HTTP $HTTP_CODE" && exit 1
+  fi
 else
-  echo "Could not find credentials file. Check /opt/netbird/ contents:" && ls /opt/netbird/
-  exit 1
+  echo "Instance already set up, skipping."
 fi
 
-if [ -z "$ADMIN_USER" ] || [ -z "$ADMIN_PASS" ]; then
-  echo "Failed to extract admin credentials. Dumping /opt/netbird/ for debugging:"
-  ls -la /opt/netbird/
-  exit 1
+# ── Step 2: PKCE authorization_code flow to get bearer token ─────────────
+echo "Generating PKCE values..."
+CODE_VERIFIER=$(openssl rand -base64 64 | tr -d '=+/\n' | cut -c1-64)
+CODE_CHALLENGE=$(echo -n "$CODE_VERIFIER" \
+  | openssl dgst -sha256 -binary \
+  | openssl base64 \
+  | tr '+/' '-_' \
+  | tr -d '=\n')
+STATE=$(openssl rand -hex 16)
+COOKIE_JAR=$(mktemp)
+REDIRECT_URI="https://$NETBIRD_DOMAIN/nb-auth"
+
+# Step 2a: Initiate auth — get Dex's internal login redirect
+echo "Initiating OIDC auth flow..."
+DEX_REDIRECT=$(curl -sc "$COOKIE_JAR" -o /dev/null -w "%%{redirect_url}" \
+  "https://$NETBIRD_DOMAIN/oauth2/auth\
+?response_type=code\
+&client_id=netbird-dashboard\
+&redirect_uri=https%3A%2F%2F$NETBIRD_DOMAIN%2Fnb-auth\
+&state=$STATE\
+&code_challenge=$CODE_CHALLENGE\
+&code_challenge_method=S256\
+&scope=openid+profile+email")
+echo "Dex redirect: $DEX_REDIRECT"
+
+# Step 2b: Fetch the Dex login page to extract the form's internal state
+LOGIN_PAGE=$(curl -sc "$COOKIE_JAR" -b "$COOKIE_JAR" -L "$DEX_REDIRECT")
+DEX_FORM_STATE=$(echo "$LOGIN_PAGE" | grep -oP '(?<=state=)[^"&]+' | head -1)
+echo "Dex form state: $DEX_FORM_STATE"
+
+if [ -z "$DEX_FORM_STATE" ]; then
+  echo "Failed to extract Dex form state from login page." && exit 1
 fi
 
-echo "Admin user resolved: $ADMIN_USER"
+# Step 2c: POST credentials to Dex login form
+echo "Submitting login credentials..."
+LOGIN_REDIRECT=$(curl -sb "$COOKIE_JAR" -b "$COOKIE_JAR" \
+  -o /dev/null -w "%%{redirect_url}" \
+  -X POST "https://$NETBIRD_DOMAIN/oauth2/auth/local/login?back=&state=$DEX_FORM_STATE" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "login=$ADMIN_EMAIL" \
+  --data-urlencode "password=$ADMIN_PASS")
+echo "Login redirect: $LOGIN_REDIRECT"
 
-# ── Authenticate → get session token ─────────────────────────────────────
-echo "Authenticating with Netbird IdP..."
-ADMIN_TOKEN=$(curl -sf -X POST "https://$NETBIRD_DOMAIN/auth/v1/users/me/_password" \
+AUTH_CODE=$(echo "$LOGIN_REDIRECT" | grep -oP '(?<=code=)[^&]+')
+echo "Auth code: $AUTH_CODE"
+
+if [ -z "$AUTH_CODE" ]; then
+  echo "Failed to extract auth code — login may have failed (wrong credentials or unexpected redirect)." && exit 1
+fi
+
+# Step 2d: Exchange code + code_verifier for access token
+echo "Exchanging auth code for bearer token..."
+TOKEN_HTTP=$(curl -s -o /tmp/token_resp.json -w "%%{http_code}" \
+  -X POST "https://$NETBIRD_DOMAIN/oauth2/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "code=$AUTH_CODE" \
+  --data-urlencode "grant_type=authorization_code" \
+  --data-urlencode "client_id=netbird-dashboard" \
+  --data-urlencode "redirect_uri=$REDIRECT_URI" \
+  --data-urlencode "code_verifier=$CODE_VERIFIER")
+
+echo "Token HTTP status: $TOKEN_HTTP"
+echo "Token response: $(cat /tmp/token_resp.json)"
+rm -f "$COOKIE_JAR"
+
+BEARER_TOKEN=$(cat /tmp/token_resp.json | jq -r '.access_token')
+
+if [ -z "$BEARER_TOKEN" ] || [ "$BEARER_TOKEN" = "null" ]; then
+  echo "Failed to obtain bearer token." && exit 1
+fi
+
+echo "Bearer token obtained successfully."
+
+# ── Step 3: Create Service User (idempotent) ─────────────────────────────
+echo "Checking for existing Terraform service user..."
+EXISTING_USERS=$(curl -s \
+  "https://$NETBIRD_DOMAIN/api/users?service_user=true" \
+  -H "Authorization: Bearer $BEARER_TOKEN")
+echo "Existing service users: $EXISTING_USERS"
+
+SERVICE_USER_ID=$(echo "$EXISTING_USERS" \
+  | jq -r '.[] | select(.name == "$NETBIRD_SERVICE_USER_NAME") | .id' | head -1)
+
+if [ -n "$SERVICE_USER_ID" ] && [ "$SERVICE_USER_ID" != "null" ]; then
+  echo "Terraform service user already exists: $SERVICE_USER_ID"
+else
+  echo "Creating Terraform service user..."
+  SERVICE_USER_HTTP=$(curl -s -o /tmp/service_user_resp.json -w "%%{http_code}" \
+    -X POST "https://$NETBIRD_DOMAIN/api/users" \
+    -H "Authorization: Bearer $BEARER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"name":"$NETBIRD_SERVICE_USER_NAME","role":"network_admin","auto_groups":[],"is_service_user":true}')
+
+  echo "Service User HTTP status: $SERVICE_USER_HTTP"
+  echo "Service User response: $(cat /tmp/service_user_resp.json)"
+
+  SERVICE_USER_ID=$(cat /tmp/service_user_resp.json | jq -r '.id')
+
+  if [ -z "$SERVICE_USER_ID" ] || [ "$SERVICE_USER_ID" = "null" ]; then
+    echo "Failed to create Service User." && exit 1
+  fi
+fi
+
+echo "Service User ID: $SERVICE_USER_ID"
+
+# ── Step 4: Create Token for Service User (idempotent) ───────────────────
+echo "Checking for existing Terraform Token..."
+EXISTING_TOKENS=$(curl -s \
+  "https://$NETBIRD_DOMAIN/api/users/$SERVICE_USER_ID/tokens" \
+  -H "Authorization: Bearer $BEARER_TOKEN")
+echo "Existing tokens: $EXISTING_TOKENS"
+
+EXISTING_TOKEN_ID=$(echo "$EXISTING_TOKENS" \
+  | jq -r '(. // []) | .[] | select(.name == "Terraform Token") | .id' | head -1)
+
+if [ -n "$EXISTING_TOKEN_ID" ] && [ "$EXISTING_TOKEN_ID" != "null" ]; then
+  echo "'$NETBIRD_SERVICE_USER_TOKEN_NAME' already exists: $EXISTING_TOKEN_ID"
+  echo "Note: plain_token is not retrievable for existing tokens — storing placeholder."
+  # The PAT secret-already-exists check at the top of the script would have
+  # caught a fully successful prior run. Reaching here means the token was
+  # created but never stored. We can't recover the plain_token, so delete
+  # the old one and create a fresh token.
+  echo "Deleting old token to generate a fresh one..."
+  curl -s -X DELETE \
+    "https://$NETBIRD_DOMAIN/api/users/$SERVICE_USER_ID/tokens/$EXISTING_TOKEN_ID" \
+    -H "Authorization: Bearer $BEARER_TOKEN"
+fi
+
+echo "Creating Personal Access Token..."
+TOKEN_HTTP=$(curl -s -o /tmp/token_resp.json -w "%%{http_code}" \
+  -X POST "https://$NETBIRD_DOMAIN/api/users/$SERVICE_USER_ID/tokens" \
+  -H "Authorization: Bearer $BEARER_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"loginName\": \"$ADMIN_USER\", \"password\": \"$ADMIN_PASS\"}" \
-  | jq -r '.token')
+  -d '{"name":"$NETBIRD_SERVICE_USER_TOKEN_NAME","expires_in":365}')
 
-if [ -z "$ADMIN_TOKEN" ] || [ "$ADMIN_TOKEN" = "null" ]; then
-  echo "Failed to obtain admin token." && exit 1
+echo "Token HTTP status: $TOKEN_HTTP"
+echo "Token ID: $(cat /tmp/token_resp.json | jq -r '.personal_access_token.id')"
+
+PLAIN_TOKEN=$(cat /tmp/token_resp.json | jq -r '.plain_token')
+
+if [ -z "$PLAIN_TOKEN" ] || [ "$PLAIN_TOKEN" = "null" ]; then
+  echo "Failed to create Personal Access Token." && exit 1
 fi
 
-# ── Create machine user + grant role ─────────────────────────────────────
-echo "Creating Terraform service account in Netbird IdP..."
-MACHINE_USER_ID=$(curl -sf -X POST \
-  "https://$NETBIRD_DOMAIN/management/v1/users/machine" \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userName":        "netbird-terraform-sa",
-    "name":            "Netbird Terraform Service Account",
-    "description":     "Used by Terraform to manage Netbird resources",
-    "accessTokenType": "ACCESS_TOKEN_TYPE_BEARER"
-  }' | jq -r '.userId')
-
-if [ -z "$MACHINE_USER_ID" ] || [ "$MACHINE_USER_ID" = "null" ]; then
-  echo "Failed to create machine user." && exit 1
-fi
-
-curl -sf -X POST "https://$NETBIRD_DOMAIN/management/v1/orgs/me/members" \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{\"userId\": \"$MACHINE_USER_ID\", \"roles\": [\"ORG_OWNER\"]}" > /dev/null
-
-# ── Generate PAT ──────────────────────────────────────────────────────────
-echo "Generating PAT..."
-NETBIRD_PAT=$(curl -sf -X POST \
-  "https://$NETBIRD_DOMAIN/management/v1/users/$MACHINE_USER_ID/pats" \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"expirationDate": "2099-01-01T00:00:00Z"}' \
-  | jq -r '.token')
-
-if [ -z "$NETBIRD_PAT" ] || [ "$NETBIRD_PAT" = "null" ]; then
-  echo "Failed to generate PAT." && exit 1
-fi
-
-# ── Store PAT in Secret Manager ───────────────────────────────────────────
+# ── Step 5: Store PAT in Secret Manager ──────────────────────────────────
 echo "Storing PAT in Secret Manager..."
 gcloud secrets versions add "$PAT_SECRET_ID" \
-  --data-file=<(echo -n "$NETBIRD_PAT") \
+  --data-file=<(echo -n "$PLAIN_TOKEN") \
   --project="$PROJECT_ID"
 
 echo "Netbird server setup complete." | tee /var/log/netbird-setup.log

@@ -5,7 +5,7 @@ resource "google_compute_instance" "netbird_server" {
   project = var.service_project_id
   zone    = var.zone
 
-  machine_type = "e2-small"
+  machine_type = "e2-custom-2-2048"
 
   boot_disk {
     initialize_params {
@@ -37,6 +37,10 @@ resource "google_compute_instance" "netbird_server" {
       domain            = var.netbird_domain
       letsencrypt_email = var.letsencrypt_email
       pat_secret_id     = google_secret_manager_secret.netbird_pat.id
+      netbird_admin_email   = var.netbird_admin_email
+      netbird_admin_password = var.netbird_admin_password
+      netbird_service_user_name = var.netbird_service_user_name
+      netbird_service_user_token_name = var.netbird_service_user_token_name
     })
     google-logging-enabled    = "true"
     google-monitoring-enabled = "true"
@@ -48,7 +52,7 @@ resource "google_compute_instance" "netbird_server" {
   }
 
   depends_on = [
-    google_secret_manager_secret.netbird_pat,
+    # google_secret_manager_secret.netbird_pat,
     google_service_account.netbird_server
   ]
 }

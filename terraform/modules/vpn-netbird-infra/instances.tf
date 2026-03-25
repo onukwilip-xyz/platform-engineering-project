@@ -1,4 +1,5 @@
 resource "google_compute_instance" "netbird_routing_peer" {
+  provider = google.platform
   name    = var.netbird_routing_peer_instance_name
   project = var.service_project_id
   zone    = var.zone

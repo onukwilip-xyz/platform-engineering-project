@@ -169,6 +169,27 @@ variable "netbird_pat_secret_id" {
   description = "The ID for the Secret Manager secret that will store the Netbird Personal Access Token (PAT)"
 }
 
+variable "netbird_admin_email" {
+  description = "Email address for the initial Netbird admin user"
+  type        = string
+}
+
+variable "netbird_admin_password" {
+  description = "Password for the initial Netbird admin user"
+  type        = string
+  sensitive   = true
+}
+
+variable "netbird_service_user_name" {
+  description = "Name for the Netbird service user"
+  type        = string
+}
+
+variable "netbird_service_user_token_name" {
+  description = "Name for the Netbird service user token"
+  type        = string
+}
+
 variable "netbird_routing_peer_instance_name" {
   type        = string
   description = "Name of the Netbird routing peer instance"

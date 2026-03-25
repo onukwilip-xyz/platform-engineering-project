@@ -77,3 +77,24 @@ variable "netbird_server_network_tag" {
   description = "Network tag for the Netbird server instance"
   type        = string
 }
+
+variable "netbird_admin_email" {
+  description = "Email address for the initial Netbird admin user"
+  type        = string
+}
+
+variable "netbird_admin_password" {
+  description = "Password for the initial Netbird admin user"
+  type        = string
+  sensitive   = true
+}
+
+variable "netbird_service_user_name" {
+  description = "Name for the Netbird service user"
+  type        = string
+}
+
+variable "netbird_service_user_token_name" {
+  description = "Name for the Netbird service user token"
+  type        = string
+}

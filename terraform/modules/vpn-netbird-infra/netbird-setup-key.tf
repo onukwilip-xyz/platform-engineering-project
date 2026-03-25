@@ -1,4 +1,5 @@
 resource "null_resource" "netbird_setup_key" {
+  # provider = google.platform
   provisioner "local-exec" {
     interpreter = ["/bin/bash"]
     command     = "${path.module}/scripts/create_setup_key.sh"
