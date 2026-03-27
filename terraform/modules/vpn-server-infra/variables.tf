@@ -98,3 +98,9 @@ variable "netbird_service_user_token_name" {
   description = "Name for the Netbird service user token"
   type        = string
 }
+
+variable "netbird_admin_password_secret_id" {
+  description = "The ID for the Secret Manager secret that will store the Netbird admin password"
+  type        = string
+  sensitive = true
+}

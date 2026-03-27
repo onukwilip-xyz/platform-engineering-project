@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+gcloud config set auth/impersonate_service_account "$IMPERSONATE_SA"
+
 PAT=$(gcloud secrets versions access latest \
   --secret="$PAT_SECRET_ID" \
   --project="$PROJECT_ID")
@@ -24,7 +26,7 @@ else
 fi
 
 # Check if parameter version already exists, add only if not
-EXISTING_PARAM=$(gcloud parameter-manager parameters versions list \
+EXISTING_PARAM=$(gcloud parametermanager parameters versions list \
   "$PARAMETER_ID" \
   --location=global \
   --project="$PROJECT_ID" \
@@ -33,10 +35,12 @@ EXISTING_PARAM=$(gcloud parameter-manager parameters versions list \
 if [ -n "$EXISTING_PARAM" ]; then
   echo "Parameter version already exists, skipping write."
 else
-  gcloud parameter-manager parameters versions create "v1" \
+  gcloud parametermanager parameters versions create "v1" \
     --parameter="$PARAMETER_ID" \
-    --parameter-data="$GROUP_ID" \
+    --payload-data="$GROUP_ID" \
     --location=global \
     --project="$PROJECT_ID"
   echo "Group ID stored in Parameter Manager."
 fi
+
+gcloud config unset auth/impersonate_service_account

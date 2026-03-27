@@ -77,3 +77,8 @@ variable "netbird_routing_peer_service_account_description" {
   description = "Description for the Netbird routing peer service account"
   type        = string
 }
+
+variable "tf_platform_sa_email" {
+  type        = string
+  description = "Service account email to impersonate for the tf-platform provider."
+}

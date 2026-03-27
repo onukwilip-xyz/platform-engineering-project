@@ -10,6 +10,7 @@ resource "null_resource" "netbird_setup_key" {
       PARAMETER_ID        = var.netbird_group_id_parameter_id
       SETUP_KEY_NAME      = var.netbird_routing_peer_setup_key_name
       SETUP_KEY_SECRET_ID = var.netbird_routing_peer_setup_key_secret_id
+      IMPERSONATE_SA = var.tf_platform_sa_email
     }
   }
 

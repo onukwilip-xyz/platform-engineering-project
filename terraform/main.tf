@@ -113,8 +113,9 @@ module "vpn_server_infra" {
   netbird_server_network_tag                 = var.netbird_server_network_tag
   netbird_admin_email                        = var.netbird_admin_email
   netbird_admin_password                     = var.netbird_admin_password
-  netbird_service_user_name                 = var.netbird_service_user_name
-  netbird_service_user_token_name           = var.netbird_service_user_token_name
+  netbird_admin_password_secret_id          = var.netbird_admin_password_secret_id
+  netbird_service_user_name                  = var.netbird_service_user_name
+  netbird_service_user_token_name            = var.netbird_service_user_token_name
 
   depends_on = [
     module.dns,
@@ -146,6 +147,7 @@ module "vpn_netbird_infra" {
   netbird_routing_peer_service_account_description = var.netbird_routing_peer_service_account_description
   netbird_routing_peer_service_account_id          = var.netbird_routing_peer_service_account_id
   netbird_routing_peer_service_account_name        = var.netbird_routing_peer_service_account_name
+  tf_platform_sa_email                             = var.tf_platform_sa_email
 
   depends_on = [
     module.vpn_server_infra,

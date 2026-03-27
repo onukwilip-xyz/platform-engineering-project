@@ -6,6 +6,7 @@ resource "null_resource" "wait_for_pat" {
     environment = {
       PAT_SECRET_ID = var.netbird_pat_secret_id
       PROJECT_ID    = var.service_project_id
+      IMPERSONATE_SA = var.tf_platform_sa_email
     }
   }
 }

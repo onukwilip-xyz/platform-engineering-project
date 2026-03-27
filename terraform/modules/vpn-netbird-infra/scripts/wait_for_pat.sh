@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+gcloud config set auth/impersonate_service_account "$IMPERSONATE_SA"
+
 echo "Polling for Netbird PAT in Secret Manager..."
 
 for i in $(seq 1 40); do
@@ -15,3 +17,5 @@ for i in $(seq 1 40); do
 done
 
 echo "Timed out waiting for PAT." && exit 1
+
+gcloud config unset auth/impersonate_service_account

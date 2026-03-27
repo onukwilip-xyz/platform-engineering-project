@@ -9,6 +9,7 @@ resource "null_resource" "netbird_route" {
       NETBIRD_DOMAIN = var.netbird_domain
       PARAMETER_ID   = var.netbird_group_id_parameter_id
       VPC_CIDR       = var.vpc_subnet_cidr
+      IMPERSONATE_SA = var.tf_platform_sa_email
     }
   }
 

@@ -41,6 +41,8 @@ resource "google_compute_instance" "netbird_routing_peer" {
 
   depends_on = [
     null_resource.wait_for_pat,
-    google_service_account.netbird_routing_peer
+    google_service_account.netbird_routing_peer,
+    google_secret_manager_secret_iam_member.peer_setup_key_accessor,
+    null_resource.netbird_setup_key
   ]
 }

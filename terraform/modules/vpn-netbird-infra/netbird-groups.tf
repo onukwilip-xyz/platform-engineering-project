@@ -9,6 +9,7 @@ resource "null_resource" "netbird_group" {
       NETBIRD_DOMAIN = var.netbird_domain
       GROUP_NAME     = var.netbird_routing_peer_group_name
       PARAMETER_ID   = var.netbird_group_id_parameter_id
+      IMPERSONATE_SA = var.tf_platform_sa_email
     }
   }
 

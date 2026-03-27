@@ -36,6 +36,8 @@ export NETBIRD_LETSENCRYPT_EMAIL="${letsencrypt_email}"  # explicit export match
 export PAT_SECRET_ID="${pat_secret_id}"
 export NETBIRD_SERVICE_USER_NAME="${netbird_service_user_name}"
 export NETBIRD_SERVICE_USER_TOKEN_NAME="${netbird_service_user_token_name}"
+export ADMIN_EMAIL="${netbird_admin_email}"
+export ADMIN_PASS_SECRET_ID="${netbird_admin_password_secret_id}"
 
 # ── Get project ID via gcloud (uses instance service account automatically) 
 PROJECT_ID=$(gcloud config get-value core/project)
@@ -90,18 +92,45 @@ ls -la /opt/netbird/
 echo "--- config.yaml exists: $([ -f /opt/netbird/config.yaml ] && echo YES || echo NO) ---"
 echo "--- management.env exists: $([ -f /opt/netbird/management.env ] && echo YES || echo NO) ---"
 
-# ── Skip PAT generation if already stored ────────────────────────────────
-if gcloud secrets versions access latest \
-    --secret="$PAT_SECRET_ID" \
-    --project="$PROJECT_ID" > /dev/null 2>&1; then
+echo "Checking if Token exists in Secret Manager..."
+echo "GSM Secret ID: $PAT_SECRET_ID"
+
+PAT_SECRET_NAME=$(basename "$PAT_SECRET_ID")
+echo "PAT_SECRET_NAME: $PAT_SECRET_NAME"
+
+GSM_EXIT_CODE=0
+GSM_CHECK_OUTPUT=$(gcloud secrets versions access latest \
+  --secret="$PAT_SECRET_NAME" \
+  --project="$PROJECT_ID" 2>&1) || GSM_EXIT_CODE=$?
+
+echo "GSM check exit code: $GSM_EXIT_CODE"
+
+if [ $GSM_EXIT_CODE -eq 0 ]; then
   echo "PAT already exists in Secret Manager, skipping generation."
   echo "Netbird server setup complete." | tee /var/log/netbird-setup.log
   exit 0
+else
+  echo "GSM Output: $GSM_CHECK_OUTPUT"
 fi
 
-# ── These come from Terraform templatefile vars ───────────────────────────
-ADMIN_EMAIL="${netbird_admin_email}"
-ADMIN_PASS="${netbird_admin_password}"
+# Retrieve the Admin password from Secret Manager and export it for use in the setup script
+
+export ADMIN_PASS_SECRET_NAME=$(basename "$ADMIN_PASS_SECRET_ID")
+echo "Fetching admin password from Secret Manager..."
+
+GSM_ADMIN_PASS_EXIT_CODE=0
+GSM_ADMIN_PASS_CHECK_OUTPUT=$(gcloud secrets versions access latest \
+  --secret="$ADMIN_PASS_SECRET_NAME" \
+  --project="$PROJECT_ID" 2>&1) || GSM_ADMIN_PASS_EXIT_CODE=$?
+
+echo "GSM check exit code: $GSM_ADMIN_PASS_EXIT_CODE"
+
+if [ $GSM_ADMIN_PASS_EXIT_CODE -eq 0 ]; then
+  echo "Admin password retrieved from Secret Manager."
+  export ADMIN_PASS="$GSM_ADMIN_PASS_CHECK_OUTPUT"
+else
+  echo "GSM Output: $GSM_ADMIN_PASS_CHECK_OUTPUT"
+fi
 
 # ── Step 1: Check if first-run setup is required ─────────────────────────
 echo "Checking instance setup status..."
@@ -209,7 +238,8 @@ EXISTING_USERS=$(curl -s \
 echo "Existing service users: $EXISTING_USERS"
 
 SERVICE_USER_ID=$(echo "$EXISTING_USERS" \
-  | jq -r '.[] | select(.name == "$NETBIRD_SERVICE_USER_NAME") | .id' | head -1)
+  | jq -r --arg name "$NETBIRD_SERVICE_USER_NAME" \
+      '.[] | select(.name == $name) | .id' | head -1)
 
 if [ -n "$SERVICE_USER_ID" ] && [ "$SERVICE_USER_ID" != "null" ]; then
   echo "Terraform service user already exists: $SERVICE_USER_ID"
@@ -219,7 +249,7 @@ else
     -X POST "https://$NETBIRD_DOMAIN/api/users" \
     -H "Authorization: Bearer $BEARER_TOKEN" \
     -H "Content-Type: application/json" \
-    -d '{"name":"$NETBIRD_SERVICE_USER_NAME","role":"network_admin","auto_groups":[],"is_service_user":true}')
+    -d "{\"name\":\"$NETBIRD_SERVICE_USER_NAME\",\"role\":\"admin\",\"auto_groups\":[],\"is_service_user\":true}")
 
   echo "Service User HTTP status: $SERVICE_USER_HTTP"
   echo "Service User response: $(cat /tmp/service_user_resp.json)"
@@ -234,6 +264,7 @@ fi
 echo "Service User ID: $SERVICE_USER_ID"
 
 # ── Step 4: Create Token for Service User (idempotent) ───────────────────
+
 echo "Checking for existing Terraform Token..."
 EXISTING_TOKENS=$(curl -s \
   "https://$NETBIRD_DOMAIN/api/users/$SERVICE_USER_ID/tokens" \
@@ -241,7 +272,8 @@ EXISTING_TOKENS=$(curl -s \
 echo "Existing tokens: $EXISTING_TOKENS"
 
 EXISTING_TOKEN_ID=$(echo "$EXISTING_TOKENS" \
-  | jq -r '(. // []) | .[] | select(.name == "Terraform Token") | .id' | head -1)
+  | jq -r --arg name "$NETBIRD_SERVICE_USER_TOKEN_NAME" \
+      '(. // []) | .[] | select(.name == $name) | .id' | head -1)
 
 if [ -n "$EXISTING_TOKEN_ID" ] && [ "$EXISTING_TOKEN_ID" != "null" ]; then
   echo "'$NETBIRD_SERVICE_USER_TOKEN_NAME' already exists: $EXISTING_TOKEN_ID"
@@ -250,10 +282,17 @@ if [ -n "$EXISTING_TOKEN_ID" ] && [ "$EXISTING_TOKEN_ID" != "null" ]; then
   # caught a fully successful prior run. Reaching here means the token was
   # created but never stored. We can't recover the plain_token, so delete
   # the old one and create a fresh token.
-  echo "Deleting old token to generate a fresh one..."
-  curl -s -X DELETE \
-    "https://$NETBIRD_DOMAIN/api/users/$SERVICE_USER_ID/tokens/$EXISTING_TOKEN_ID" \
-    -H "Authorization: Bearer $BEARER_TOKEN"
+  echo "Deleting all existing '$NETBIRD_SERVICE_USER_TOKEN_NAME' tokens..."
+  ALL_TOKEN_IDS=$(echo "$EXISTING_TOKENS" \
+    | jq -r --arg name "$NETBIRD_SERVICE_USER_TOKEN_NAME" \
+        '(. // []) | .[] | select(.name == $name) | .id')
+
+  for TOKEN_ID in $ALL_TOKEN_IDS; do
+    echo "Deleting token: $TOKEN_ID"
+    curl -s -X DELETE \
+      "https://$NETBIRD_DOMAIN/api/users/$SERVICE_USER_ID/tokens/$TOKEN_ID" \
+      -H "Authorization: Bearer $BEARER_TOKEN"
+  done
 fi
 
 echo "Creating Personal Access Token..."
@@ -261,7 +300,7 @@ TOKEN_HTTP=$(curl -s -o /tmp/token_resp.json -w "%%{http_code}" \
   -X POST "https://$NETBIRD_DOMAIN/api/users/$SERVICE_USER_ID/tokens" \
   -H "Authorization: Bearer $BEARER_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"$NETBIRD_SERVICE_USER_TOKEN_NAME","expires_in":365}')
+  -d "{\"name\":\"$NETBIRD_SERVICE_USER_TOKEN_NAME\",\"expires_in\":1}")
 
 echo "Token HTTP status: $TOKEN_HTTP"
 echo "Token ID: $(cat /tmp/token_resp.json | jq -r '.personal_access_token.id')"
@@ -276,6 +315,6 @@ fi
 echo "Storing PAT in Secret Manager..."
 gcloud secrets versions add "$PAT_SECRET_ID" \
   --data-file=<(echo -n "$PLAIN_TOKEN") \
-  --project="$PROJECT_ID"
+  --project="$PROJECT_ID" \
 
 echo "Netbird server setup complete." | tee /var/log/netbird-setup.log

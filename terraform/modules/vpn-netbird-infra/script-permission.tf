@@ -1,6 +1,6 @@
 resource "null_resource" "script_permissions" {
   provisioner "local-exec" {
-    interpreter = ["/bin/bash"]
+    interpreter = ["/bin/bash", "-c"]
     command     = "chmod +x ${abspath(path.module)}/scripts/*.sh"
   }
 
