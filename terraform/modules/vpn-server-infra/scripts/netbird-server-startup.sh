@@ -219,7 +219,7 @@ TOKEN_HTTP=$(curl -s -o /tmp/token_resp.json -w "%%{http_code}" \
   --data-urlencode "code_verifier=$CODE_VERIFIER")
 
 echo "Token HTTP status: $TOKEN_HTTP"
-echo "Token response: $(cat /tmp/token_resp.json)"
+echo "Token response: $(cat /tmp/token_resp.json | jq -r '.token_type')"
 rm -f "$COOKIE_JAR"
 
 BEARER_TOKEN=$(cat /tmp/token_resp.json | jq -r '.access_token')
