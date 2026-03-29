@@ -108,12 +108,18 @@ gcloud auth application-default login
 
 Initialize Terraform
 ```bash
+TF_LOG=DEBUG
 terraform init -backend-config="bucket=$TF_STATE_BUCKET"
 ```
 
 Refresh Terraform
 ```bash
 terraform refresh -var-file=".tfvars"
+```
+
+Plan Terraform
+```bash
+terraform plan -var-file=".tfvars"
 ```
 
 Apply Terraform

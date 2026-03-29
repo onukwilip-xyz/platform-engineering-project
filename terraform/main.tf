@@ -1,28 +1,29 @@
 module "projects" {
-    source = "./modules/projects"
-    providers = {
-      google = google.net
-    }
+  source = "./modules/projects"
+  providers = {
+    google = google.net
+  }
 
-    org_id = var.org_id
-    host_project = var.host_project
-    service_project = var.service_project
-    billing_account_id = var.billing_account_id
+  org_id             = var.org_id
+  host_project       = var.host_project
+  service_project    = var.service_project
+  billing_account_id = var.billing_account_id
 }
 
 module "iam_policies" {
-    source = "./modules/iam_policies"
-    providers = {
-      google = google.net
-    }
+  source = "./modules/iam_policies"
+  providers = {
+    google = google.net
+  }
 
-    host_project_id = module.projects.host_project.project_id
-    service_project_id = module.projects.service_project.project_id
-    tf_network_sa_email = var.tf_network_sa_email
-    tf_platform_sa_email = var.tf_platform_sa_email
-    region = var.region
+  host_project_id        = module.projects.host_project.project_id
+  service_project_id     = module.projects.service_project.project_id
+  service_project_number = module.projects.service_project.number
+  tf_network_sa_email    = var.tf_network_sa_email
+  tf_platform_sa_email   = var.tf_platform_sa_email
+  region                 = var.region
 
-    depends_on = [ module.projects ]
+  depends_on = [module.projects]
 }
 
 module "enable_apis" {
@@ -33,10 +34,10 @@ module "enable_apis" {
     google.platform = google.platform
   }
 
-  host_project =  module.projects.host_project.project_id
+  host_project    = module.projects.host_project.project_id
   service_project = module.projects.service_project.project_id
 
-  depends_on = [ module.iam_policies ]
+  depends_on = [module.iam_policies]
 }
 
 module "networking" {
@@ -46,23 +47,133 @@ module "networking" {
     google = google.net
   }
 
-  host_project_id    = module.projects.host_project.project_id
-  service_project_id = module.projects.service_project.project_id
+  host_project_id        = module.projects.host_project.project_id
+  service_project_id     = module.projects.service_project.project_id
   service_project_number = module.projects.service_project.number
-  region             = var.region
+  region                 = var.region
 
-  vpc_name     = var.vpc_name
-  subnet_name  = var.subnet_name
-  subnet_cidr  = var.subnet_cidr
+  vpc_name    = var.vpc_name
+  subnet_name = var.subnet_name
+  subnet_cidr = var.subnet_cidr
 
   pods_secondary_range_name     = var.pods_secondary_range_name
   pods_secondary_cidr           = var.pods_secondary_cidr
   services_secondary_range_name = var.services_secondary_range_name
   services_secondary_cidr       = var.services_secondary_cidr
 
+  ssh_network_tag = var.ssh_network_tag
+
   tf_platform_sa_email = var.tf_platform_sa_email
 
-  depends_on = [ module.enable_apis ]
+  depends_on = [module.enable_apis]
+}
+
+module "dns" {
+  source = "./modules/dns"
+  providers = {
+    google     = google.net
+    cloudflare = cloudflare
+  }
+
+  cloudflare_api_token = var.cloudflare_api_token
+  root_domain          = var.root_domain
+  subdomain            = var.subdomain
+  private_subdomain    = var.private_subdomain
+  private_dns_network  = module.networking.vpc.self_link
+  cloudflare_zone_id   = var.cloudflare_zone_id
+  host_project_id      = module.projects.host_project.project_id
+
+  depends_on = [module.networking]
+}
+
+module "vpn_server_infra" {
+  source = "./modules/vpn-server-infra"
+  providers = {
+    google.net      = google.net
+    google.platform = google.platform
+  }
+
+  host_project_id    = module.projects.host_project.project_id
+  service_project_id = module.projects.service_project.project_id
+  zone               = var.zone
+  region             = var.region
+  network            = module.networking.vpc.self_link
+  subnetwork         = module.networking.gke_subnet.self_link
+
+  netbird_server_instance_name = var.netbird_server_instance_name
+  netbird_domain               = var.netbird_domain
+  dns_managed_zone_name        = var.dns_managed_zone_name
+  letsencrypt_email            = var.letsencrypt_email
+  netbird_pat_secret_id        = var.netbird_pat_secret_id
+
+  netbird_server_service_account_description = var.netbird_server_service_account_description
+  netbird_server_service_account_id          = var.netbird_server_service_account_id
+  netbird_server_service_account_name        = var.netbird_server_service_account_name
+  ssh_network_tag                            = var.ssh_network_tag
+  netbird_server_network_tag                 = var.netbird_server_network_tag
+  netbird_admin_email                        = var.netbird_admin_email
+  netbird_admin_password                     = var.netbird_admin_password
+  netbird_admin_password_secret_id          = var.netbird_admin_password_secret_id
+  netbird_service_user_name                  = var.netbird_service_user_name
+  netbird_service_user_token_name            = var.netbird_service_user_token_name
+
+  depends_on = [
+    module.dns,
+    module.iam_policies
+  ]
+}
+
+module "vpn_netbird_infra" {
+  source = "./modules/vpn-netbird-infra"
+  providers = {
+    google.net      = google.net
+    google.platform = google.platform,
+  }
+
+  service_project_id = module.projects.service_project.project_id
+  zone               = var.zone
+  region             = var.region
+  network            = module.networking.vpc.self_link
+  subnetwork         = module.networking.gke_subnet.self_link
+
+  netbird_routing_peer_instance_name               = var.netbird_routing_peer_instance_name
+  netbird_domain                                   = var.netbird_domain
+  netbird_routing_peer_setup_key_secret_id         = var.netbird_routing_peer_setup_key_secret_id
+  netbird_routing_peer_group_name                  = var.netbird_routing_peer_group_name
+  netbird_route_cidrs = [
+    {
+      cidr        = var.subnet_cidr
+      network_id  = "vpc-subnet-route"
+      description = "Route VPC subnet traffic through routing peer"
+    },
+    {
+      cidr        = var.gke_master_ipv4_cidr_block
+      network_id  = "gke-master-route"
+      description = "Route GKE control plane traffic through routing peer"
+    },
+  ]
+  netbird_routing_peer_setup_key_name              = var.netbird_routing_peer_setup_key_name
+  netbird_pat_secret_id                            = module.vpn_server_infra.netbird_pat_secret.secret_id
+  netbird_group_id_parameter_id                    = var.netbird_group_id_parameter_id
+  netbird_routing_peer_service_account_description = var.netbird_routing_peer_service_account_description
+  netbird_routing_peer_service_account_id          = var.netbird_routing_peer_service_account_id
+  netbird_routing_peer_service_account_name        = var.netbird_routing_peer_service_account_name
+  tf_platform_sa_email                             = var.tf_platform_sa_email
+
+  # Google Workspace Identity Provider
+  enable_google_idp                     = var.enable_google_idp
+  google_oauth_client_id                = var.google_oauth_client_id
+  google_oauth_client_secret            = var.google_oauth_client_secret
+  netbird_idp_name                      = var.netbird_idp_name
+  netbird_idp_redirect_uri_parameter_id = var.netbird_idp_redirect_uri_parameter_id
+
+  # User invitations
+  netbird_users = var.netbird_users
+
+  depends_on = [
+    module.vpn_server_infra,
+    module.iam_policies
+  ]
 }
 
 module "gke" {
@@ -72,27 +183,27 @@ module "gke" {
     google.platform = google.platform
   }
 
-  host_project_id    = module.projects.host_project.project_id
-  service_project_id = module.projects.service_project.project_id
+  host_project_id        = module.projects.host_project.project_id
+  service_project_id     = module.projects.service_project.project_id
   service_project_number = module.projects.service_project.number
-  region             = var.region
-  zone = var.zone
+  region                 = var.region
+  zone                   = var.zone
 
-  network_self_link  = module.networking.vpc.self_link
-  subnet_self_link   = module.networking.gke_subnet.self_link
+  network_self_link             = module.networking.vpc.self_link
+  subnet_self_link              = module.networking.gke_subnet.self_link
   pods_secondary_range_name     = module.networking.pods_secondary_range_name
   services_secondary_range_name = module.networking.services_secondary_range_name
-  subnet_name = module.networking.gke_subnet.name
+  subnet_name                   = module.networking.gke_subnet.name
 
   cluster_name = var.gke_cluster_name
   # Lock control-plane access down to the subnet CIDR (from networking)
   master_authorized_cidr = module.networking.gke_subnet.ip_cidr_range
   # Pick a non-overlapping /28 RFC1918 range for the control plane
   master_ipv4_cidr_block = var.gke_master_ipv4_cidr_block
-  gke_resource_labels = var.gke_resource_labels
+  gke_resource_labels    = var.gke_resource_labels
 
   node_service_account_id = var.gke_node_service_account_id
-  
+
   node_pools = [
     {
       name               = "large-node-pool"
@@ -129,9 +240,9 @@ module "gke" {
     }
   ]
 
-  jump_service_account_id = "jump-vm-sa"
-  jump_vm_name            = "jump-vm"
+  jump_service_account_id         = "jump-vm-sa"
+  jump_vm_name                    = "jump-vm"
   jump_vm_access_sa_impersonators = ["user:onukwilip@onukwilip.xyz"]
 
-  depends_on = [ module.networking ]
+  depends_on = [module.networking]
 }

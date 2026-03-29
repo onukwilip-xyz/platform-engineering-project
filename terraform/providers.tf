@@ -9,3 +9,7 @@ provider "google" {
   impersonate_service_account = var.tf_platform_sa_email
   region                      = var.region
 }
+
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
+}

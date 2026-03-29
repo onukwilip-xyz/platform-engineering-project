@@ -5,6 +5,7 @@ locals {
     "serviceusage.googleapis.com",
     "iam.googleapis.com",
     "cloudresourcemanager.googleapis.com",
+    "dns.googleapis.com"
   ], var.extra_host_services)
 
   service_services_list = concat([
@@ -15,11 +16,13 @@ locals {
     "serviceusage.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
+    "secretmanager.googleapis.com",
+    "parametermanager.googleapis.com",
 
     # Nice-to-have for your setup:
     "logging.googleapis.com",
     "monitoring.googleapis.com",
-    "iap.googleapis.com",
+    "iap.googleapis.com"
   ], var.extra_service_services)
 
   host_services    = toset(local.host_services_list)

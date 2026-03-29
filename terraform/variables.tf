@@ -98,3 +98,193 @@ variable "gke_resource_labels" {
   description = "Resource labels to apply to the GKE cluster."
   default     = {}
 }
+
+variable "cloudflare_api_token" {
+  type        = string
+  description = "Cloudflare API token with DNS edit permissions"
+  sensitive   = true
+}
+
+variable "cloudflare_zone_id" {
+  type        = string
+  description = "The Cloudflare Zone ID for your root domain"
+}
+
+variable "root_domain" {
+  type        = string
+  description = "Your root domain"
+  default     = "onukwilip.xyz"
+}
+
+variable "subdomain" {
+  type        = string
+  description = "Subdomain to delegate to Google Cloud DNS from Cloudflare (e.g. 'pe' for pe.onukwilip.xyz)"
+  default     = "pe"
+}
+
+variable "private_subdomain" {
+  type        = string
+  description = "Private subdomain for internal DNS records (e.g. 'internal' for internal.pe.onukwilip.xyz)"
+  default     = "internal"
+}
+
+# VPN Configuration
+variable "netbird_server_instance_name" {
+  type        = string
+  description = "Name of the Netbird server instance"
+}
+
+variable "netbird_server_service_account_id" {
+  description = "Service account ID for the Netbird server"
+  type        = string
+}
+
+variable "netbird_server_service_account_name" {
+  description = "Display name for the Netbird server service account"
+  type        = string
+}
+
+variable "netbird_server_service_account_description" {
+  description = "Description for the Netbird server service account"
+  type        = string
+}
+
+variable "netbird_domain" {
+  type        = string
+  description = "Domain name for Netbird"
+}
+
+variable "dns_managed_zone_name" {
+  type        = string
+  description = "Name of the existing Google Cloud DNS managed zone to use for the Netbird domain"
+}
+
+variable "letsencrypt_email" {
+  type        = string
+  description = "Email address for Let's Encrypt certificate registration"
+}
+
+variable "netbird_pat_secret_id" {
+  type        = string
+  description = "The ID for the Secret Manager secret that will store the Netbird Personal Access Token (PAT)"
+}
+
+variable "netbird_admin_email" {
+  description = "Email address for the initial Netbird admin user"
+  type        = string
+}
+
+variable "netbird_admin_password" {
+  description = "Password for the initial Netbird admin user"
+  type        = string
+  sensitive   = true
+}
+
+variable "netbird_admin_password_secret_id" {
+  description = "The ID for the Secret Manager secret that will store the Netbird admin password"
+  type        = string
+  sensitive = true
+}
+
+variable "netbird_service_user_name" {
+  description = "Name for the Netbird service user"
+  type        = string
+}
+
+variable "netbird_service_user_token_name" {
+  description = "Name for the Netbird service user token"
+  type        = string
+}
+
+variable "netbird_routing_peer_instance_name" {
+  type        = string
+  description = "Name of the Netbird routing peer instance"
+}
+
+variable "netbird_routing_peer_setup_key_secret_id" {
+  type        = string
+  description = "The ID for the Secret Manager secret that will store the Netbird routing peer setup key"
+}
+
+variable "netbird_routing_peer_setup_key_name" {
+  description = "The name of the Netbird setup key to create for the routing peer"
+  type        = string
+}
+
+variable "netbird_routing_peer_group_name" {
+  description = "The name of the Netbird group to which the routing peer will be added"
+  type        = string
+}
+
+variable "netbird_group_id_parameter_id" {
+  description = "The ID for the Parameter Manager parameter that will store the Netbird group ID"
+  type        = string
+}
+
+variable "netbird_routing_peer_service_account_id" {
+  description = "Service account ID for the Netbird routing peer"
+  type        = string
+}
+
+variable "netbird_routing_peer_service_account_name" {
+  description = "Display name for the Netbird routing peer service account"
+  type        = string
+}
+
+variable "netbird_routing_peer_service_account_description" {
+  description = "Description for the Netbird routing peer service account"
+  type        = string
+}
+
+variable "ssh_network_tag" {
+  description = "Network tag for SSH firewall rule"
+  type        = string
+}
+
+variable "netbird_server_network_tag" {
+  description = "Network tag for the Netbird server instance"
+  type        = string
+}
+
+# Google Workspace Identity Provider (see terraform/modules/vpn-netbird-infra/README.md for pre-requisites)
+variable "enable_google_idp" {
+  description = "Whether to enable Google Workspace identity provider integration in Netbird"
+  type        = bool
+  default     = false
+}
+
+variable "google_oauth_client_id" {
+  description = "Google OAuth 2.0 Client ID (pre-created in GCP Console)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "google_oauth_client_secret" {
+  description = "Google OAuth 2.0 Client Secret (pre-created in GCP Console)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "netbird_idp_name" {
+  description = "Display name for the identity provider in Netbird"
+  type        = string
+  default     = "Google Workspace"
+}
+
+variable "netbird_idp_redirect_uri_parameter_id" {
+  description = "Parameter Manager parameter ID for storing the Netbird identity provider redirect URI"
+  type        = string
+  default     = ""
+}
+
+variable "netbird_users" {
+  description = "List of users to create in Netbird and send invitations to"
+  type = list(object({
+    name  = string
+    email = string
+    role  = string
+  }))
+  default = []
+}

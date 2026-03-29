@@ -69,3 +69,8 @@ variable "service_project_number" {
   type        = string
   description = "Service project number (needed for IAM bindings)."
 }
+
+variable "ssh_network_tag" {
+  description = "Network tag for SSH firewall rule"
+  type        = string
+}
