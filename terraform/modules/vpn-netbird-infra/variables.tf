@@ -115,3 +115,19 @@ variable "netbird_idp_redirect_uri_parameter_id" {
   type        = string
   default     = ""
 }
+
+# Netbird user invitations
+variable "netbird_users" {
+  description = "List of users to create in Netbird and send invitations to. Each user requires name, email, and role (admin, user, or owner)."
+  type = list(object({
+    name  = string
+    email = string
+    role  = string
+  }))
+  default = []
+
+  validation {
+    condition     = alltrue([for u in var.netbird_users : contains(["admin", "user", "owner"], u.role)])
+    error_message = "Each user's role must be one of: admin, user, owner."
+  }
+}

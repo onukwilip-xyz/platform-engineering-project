@@ -278,3 +278,13 @@ variable "netbird_idp_redirect_uri_parameter_id" {
   type        = string
   default     = ""
 }
+
+variable "netbird_users" {
+  description = "List of users to create in Netbird and send invitations to"
+  type = list(object({
+    name  = string
+    email = string
+    role  = string
+  }))
+  default = []
+}

@@ -53,3 +53,29 @@ After `terraform apply` completes, the output will display a redirect URI from N
 5. Click **Save**
 
 The redirect URI is also stored in Parameter Manager (`netbird_idp_redirect_uri_parameter_id`) for reference.
+
+## User Invitations
+
+The `netbird_users` variable accepts a list of users to invite to the Netbird VPN:
+
+```hcl
+netbird_users = [
+  { name = "Prince Onukwili", email = "prince@example.com", role = "admin" },
+  { name = "Jane Doe",        email = "jane@example.com",   role = "user" },
+]
+```
+
+Valid roles: `admin`, `user`, `owner`. Leave as `[]` to skip.
+
+### Sharing invite links
+
+Netbird's local identity provider does not send invitation emails. When `terraform apply` creates the invites, they are registered in Netbird but the users are **not** automatically notified.
+
+To share an invite link with a user:
+
+1. Go to the **Netbird Dashboard > Users** page
+2. Find the invited user
+3. Click **Regenerate invite** to generate a fresh invite link
+4. Copy the link and send it to the user manually (e.g. via email or chat)
+
+The user can then open the link in their browser, set their password, and log in to the VPN.
