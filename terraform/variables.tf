@@ -245,3 +245,36 @@ variable "netbird_server_network_tag" {
   description = "Network tag for the Netbird server instance"
   type        = string
 }
+
+# Google Workspace Identity Provider (see terraform/modules/vpn-netbird-infra/README.md for pre-requisites)
+variable "enable_google_idp" {
+  description = "Whether to enable Google Workspace identity provider integration in Netbird"
+  type        = bool
+  default     = false
+}
+
+variable "google_oauth_client_id" {
+  description = "Google OAuth 2.0 Client ID (pre-created in GCP Console)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "google_oauth_client_secret" {
+  description = "Google OAuth 2.0 Client Secret (pre-created in GCP Console)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "netbird_idp_name" {
+  description = "Display name for the identity provider in Netbird"
+  type        = string
+  default     = "Google Workspace"
+}
+
+variable "netbird_idp_redirect_uri_parameter_id" {
+  description = "Parameter Manager parameter ID for storing the Netbird identity provider redirect URI"
+  type        = string
+  default     = ""
+}

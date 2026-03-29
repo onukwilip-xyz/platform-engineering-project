@@ -27,15 +27,17 @@ fi
 
 # Check if parameter version already exists, add only if not
 EXISTING_PARAM=$(gcloud parametermanager parameters versions list \
-  "$PARAMETER_ID" \
+  --parameter="$PARAMETER_ID" \
   --location=global \
   --project="$PROJECT_ID" \
   --format="value(name)" 2>/dev/null | head -1 || true)
 
+echo "Existing parameter version: $EXISTING_PARAM"
+
 if [ -n "$EXISTING_PARAM" ]; then
   echo "Parameter version already exists, skipping write."
 else
-  gcloud parametermanager parameters versions create "v1" \
+  gcloud parametermanager parameters versions create v1 \
     --parameter="$PARAMETER_ID" \
     --payload-data="$GROUP_ID" \
     --location=global \

@@ -82,3 +82,36 @@ variable "tf_platform_sa_email" {
   type        = string
   description = "Service account email to impersonate for the tf-platform provider."
 }
+
+# Google Workspace Identity Provider configuration
+variable "enable_google_idp" {
+  description = "Whether to enable Google Workspace identity provider integration. Requires google_oauth_client_id and google_oauth_client_secret to be set. See README.md for pre-requisites."
+  type        = bool
+  default     = false
+}
+
+variable "google_oauth_client_id" {
+  description = "Google OAuth 2.0 Client ID (from the pre-created OAuth client in GCP Console). Required when enable_google_idp = true."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "google_oauth_client_secret" {
+  description = "Google OAuth 2.0 Client Secret (from the pre-created OAuth client in GCP Console). Required when enable_google_idp = true."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "netbird_idp_name" {
+  description = "Display name for the identity provider in Netbird (e.g., 'Google Workspace')"
+  type        = string
+  default     = "Google Workspace"
+}
+
+variable "netbird_idp_redirect_uri_parameter_id" {
+  description = "Parameter Manager parameter ID for storing the Netbird identity provider redirect URI"
+  type        = string
+  default     = ""
+}

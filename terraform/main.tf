@@ -149,79 +149,86 @@ module "vpn_netbird_infra" {
   netbird_routing_peer_service_account_name        = var.netbird_routing_peer_service_account_name
   tf_platform_sa_email                             = var.tf_platform_sa_email
 
+  # Google Workspace Identity Provider
+  enable_google_idp                     = var.enable_google_idp
+  google_oauth_client_id                = var.google_oauth_client_id
+  google_oauth_client_secret            = var.google_oauth_client_secret
+  netbird_idp_name                      = var.netbird_idp_name
+  netbird_idp_redirect_uri_parameter_id = var.netbird_idp_redirect_uri_parameter_id
+
   depends_on = [
     module.vpn_server_infra,
     module.iam_policies
   ]
 }
 
-module "gke" {
-  source = "./modules/gke"
-  providers = {
-    google.net      = google.net
-    google.platform = google.platform
-  }
+# module "gke" {
+#   source = "./modules/gke"
+#   providers = {
+#     google.net      = google.net
+#     google.platform = google.platform
+#   }
 
-  host_project_id        = module.projects.host_project.project_id
-  service_project_id     = module.projects.service_project.project_id
-  service_project_number = module.projects.service_project.number
-  region                 = var.region
-  zone                   = var.zone
+#   host_project_id        = module.projects.host_project.project_id
+#   service_project_id     = module.projects.service_project.project_id
+#   service_project_number = module.projects.service_project.number
+#   region                 = var.region
+#   zone                   = var.zone
 
-  network_self_link             = module.networking.vpc.self_link
-  subnet_self_link              = module.networking.gke_subnet.self_link
-  pods_secondary_range_name     = module.networking.pods_secondary_range_name
-  services_secondary_range_name = module.networking.services_secondary_range_name
-  subnet_name                   = module.networking.gke_subnet.name
+#   network_self_link             = module.networking.vpc.self_link
+#   subnet_self_link              = module.networking.gke_subnet.self_link
+#   pods_secondary_range_name     = module.networking.pods_secondary_range_name
+#   services_secondary_range_name = module.networking.services_secondary_range_name
+#   subnet_name                   = module.networking.gke_subnet.name
 
-  cluster_name = var.gke_cluster_name
-  # Lock control-plane access down to the subnet CIDR (from networking)
-  master_authorized_cidr = module.networking.gke_subnet.ip_cidr_range
-  # Pick a non-overlapping /28 RFC1918 range for the control plane
-  master_ipv4_cidr_block = var.gke_master_ipv4_cidr_block
-  gke_resource_labels    = var.gke_resource_labels
+#   cluster_name = var.gke_cluster_name
+#   # Lock control-plane access down to the subnet CIDR (from networking)
+#   master_authorized_cidr = module.networking.gke_subnet.ip_cidr_range
+#   # Pick a non-overlapping /28 RFC1918 range for the control plane
+#   master_ipv4_cidr_block = var.gke_master_ipv4_cidr_block
+#   gke_resource_labels    = var.gke_resource_labels
 
-  node_service_account_id = var.gke_node_service_account_id
+#   node_service_account_id = var.gke_node_service_account_id
 
-  node_pools = [
-    {
-      name               = "large-node-pool"
-      machine_type       = "e2-standard-4"
-      initial_node_count = 0
-      min_node_count     = 0
-      max_node_count     = 5
-      labels             = {}
-      tags               = []
-      resource_labels = {
-        "type" = "large-node"
-        "team" = "platform-engineering"
-      }
-      taints = [
-        {
-          key    = "workload-type"
-          value  = "heavy"
-          effect = "NO_EXECUTE"
-        }
-      ]
-    },
-    {
-      name               = "small-node-pool"
-      machine_type       = "e2-standard-2"
-      initial_node_count = 0
-      min_node_count     = 0
-      max_node_count     = 5
-      labels             = {}
-      tags               = []
-      resource_labels = {
-        "type" = "small-node"
-        "team" = "platform-engineering"
-      }
-    }
-  ]
+#   node_pools = [
+#     {
+#       name               = "large-node-pool"
+#       machine_type       = "e2-standard-4"
+#       initial_node_count = 0
+#       min_node_count     = 0
+#       max_node_count     = 5
+#       labels             = {}
+#       tags               = []
+#       resource_labels = {
+#         "type" = "large-node"
+#         "team" = "platform-engineering"
+#       }
+#       taints = [
+#         {
+#           key    = "workload-type"
+#           value  = "heavy"
+#           effect = "NO_EXECUTE"
+#         }
+#       ]
+#     },
+#     {
+#       name               = "small-node-pool"
+#       machine_type       = "e2-standard-2"
+#       initial_node_count = 0
+#       min_node_count     = 0
+#       max_node_count     = 5
+#       labels             = {}
+#       tags               = []
+#       resource_labels = {
+#         "type" = "small-node"
+#         "team" = "platform-engineering"
+#       }
+#     }
+#   ]
 
-  jump_service_account_id         = "jump-vm-sa"
-  jump_vm_name                    = "jump-vm"
-  jump_vm_access_sa_impersonators = ["user:onukwilip@onukwilip.xyz"]
+#   jump_service_account_id         = "jump-vm-sa"
+#   jump_vm_name                    = "jump-vm"
+#   jump_vm_access_sa_impersonators = ["user:onukwilip@onukwilip.xyz"]
 
-  depends_on = [module.networking]
-}
+#   depends_on = [module.networking]
+# }
