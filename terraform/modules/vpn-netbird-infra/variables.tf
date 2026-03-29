@@ -8,9 +8,13 @@ variable "netbird_routing_peer_group_name" {
   type        = string
 }
 
-variable "vpc_subnet_cidr" {
-  description = "The CIDR range of the VPC subnet that should be routed through the Netbird routing peer (e.g. '10.0.0.0/24')"
-  type        = string
+variable "netbird_route_cidrs" {
+  description = "List of CIDR ranges to route through the Netbird routing peer (e.g. VPC subnet, GKE master range)"
+  type = list(object({
+    cidr        = string
+    network_id  = string
+    description = string
+  }))
 }
 
 variable "netbird_routing_peer_setup_key_name" {

@@ -140,7 +140,18 @@ module "vpn_netbird_infra" {
   netbird_domain                                   = var.netbird_domain
   netbird_routing_peer_setup_key_secret_id         = var.netbird_routing_peer_setup_key_secret_id
   netbird_routing_peer_group_name                  = var.netbird_routing_peer_group_name
-  vpc_subnet_cidr                                  = var.subnet_cidr
+  netbird_route_cidrs = [
+    {
+      cidr        = var.subnet_cidr
+      network_id  = "vpc-subnet-route"
+      description = "Route VPC subnet traffic through routing peer"
+    },
+    {
+      cidr        = var.gke_master_ipv4_cidr_block
+      network_id  = "gke-master-route"
+      description = "Route GKE control plane traffic through routing peer"
+    },
+  ]
   netbird_routing_peer_setup_key_name              = var.netbird_routing_peer_setup_key_name
   netbird_pat_secret_id                            = module.vpn_server_infra.netbird_pat_secret.secret_id
   netbird_group_id_parameter_id                    = var.netbird_group_id_parameter_id
