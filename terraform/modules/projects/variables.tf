@@ -3,17 +3,12 @@ variable "org_id" {
   description = "Organization ID for the Google Cloud organization."
 }
 
-variable "host_project" {
+variable "project_name" {
   type        = string
-  description = "The ID of the host project where Shared VPC will be created."
-}
-
-variable "service_project" {
-  type        = string
-  description = "The ID of the service project where Compute resources will be created."
+  description = "The name and ID prefix for the GCP project to create."
 }
 
 variable "billing_account_id" {
   type        = string
-  description = "The ID of the billing account associated with the projects."
+  description = "The ID of the billing account associated with the project."
 }

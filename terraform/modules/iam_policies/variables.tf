@@ -1,29 +1,12 @@
-variable "host_project_id" {
+variable "project_id" {
   type        = string
-  description = "The ID of the host project where Shared VPC will be created."
+  description = "The GCP project ID to apply IAM bindings to."
 }
 
-variable "service_project_id" {
-  type        = string
-  description = "The ID of the service project where Compute resources will be created."
-}
-
-variable "service_project_number" {
-  type        = string
-  description = "The number of the service project where Compute resources will be created."
-}
-
-variable "tf_network_sa_email" {
-  type        = string
-  description = "Service account email to impersonate for the tf-network provider."
-}
-
-variable "tf_platform_sa_email" {
-  type        = string
-  description = "Service account email to impersonate for the tf-platform provider."
-}
-
-variable "region" {
-  type        = string
-  description = "Default region for Google provider operations."
+variable "bindings" {
+  type = list(object({
+    role   = string
+    member = string
+  }))
+  description = "List of IAM bindings to apply. Each binding specifies a role and a member."
 }

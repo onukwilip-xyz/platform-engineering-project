@@ -1,11 +1,6 @@
-variable "host_project_id" {
+variable "project_id" {
   type        = string
-  description = "Host project ID (Shared VPC host project that owns the VPC/subnets)."
-}
-
-variable "service_project_id" {
-  description = "The service project ID, where the Netbird instances and related resources will be created"
-  type        = string
+  description = "The project ID where all VPN server resources will be created (host project)."
 }
 
 variable "netbird_server_instance_name" {
@@ -24,12 +19,12 @@ variable "region" {
 }
 
 variable "network" {
-  description = "VPC network name"
+  description = "VPC network self-link"
   type        = string
 }
 
 variable "subnetwork" {
-  description = "VPC subnetwork name"
+  description = "VPC subnetwork self-link"
   type        = string
 }
 
@@ -102,5 +97,5 @@ variable "netbird_service_user_token_name" {
 variable "netbird_admin_password_secret_id" {
   description = "The ID for the Secret Manager secret that will store the Netbird admin password"
   type        = string
-  sensitive = true
+  sensitive   = true
 }
