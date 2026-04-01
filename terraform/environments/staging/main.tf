@@ -38,20 +38,15 @@ module "service_iam" {
 
   project_id = module.service_project.project.project_id
   bindings = [
-    { role = "roles/container.admin", member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/compute.instanceAdmin.v1", member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/iam.serviceAccountAdmin", member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/iam.serviceAccountUser", member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/artifactregistry.admin", member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/storage.admin", member = "serviceAccount:${var.tf_platform_sa_email}" },
+    { role = "roles/container.admin",                member = "serviceAccount:${var.tf_platform_sa_email}" },
+    { role = "roles/compute.instanceAdmin.v1",       member = "serviceAccount:${var.tf_platform_sa_email}" },
+    { role = "roles/iam.serviceAccountAdmin",        member = "serviceAccount:${var.tf_platform_sa_email}" },
+    { role = "roles/iam.serviceAccountUser",         member = "serviceAccount:${var.tf_platform_sa_email}" },
+    { role = "roles/artifactregistry.admin",         member = "serviceAccount:${var.tf_platform_sa_email}" },
+    { role = "roles/storage.admin",                  member = "serviceAccount:${var.tf_platform_sa_email}" },
     { role = "roles/serviceusage.serviceUsageAdmin", member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/secretmanager.admin", member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/parametermanager.admin", member = "serviceAccount:${var.tf_platform_sa_email}" },
-    # Default compute engine SA logging
-    {
-      role   = "roles/logging.logWriter",
-      member = "serviceAccount:${module.service_project.project.number}-compute@developer.gserviceaccount.com"
-    },
+    { role = "roles/secretmanager.admin",            member = "serviceAccount:${var.tf_platform_sa_email}" },
+    { role = "roles/parametermanager.admin",         member = "serviceAccount:${var.tf_platform_sa_email}" },
   ]
 
   depends_on = [module.service_project]
@@ -83,6 +78,26 @@ module "service_apis" {
   ]
 
   depends_on = [module.service_iam]
+}
+
+# ──────────────────────────────────────────────
+# Post-APIs IAM (requires default compute SA to exist)
+# ──────────────────────────────────────────────
+module "service_compute_engine_sa_logging_iam" {
+  source = "../../modules/iam_policies"
+  providers = {
+    google = google.net
+  }
+
+  project_id = module.service_project.project.project_id
+  bindings = [
+    {
+      role   = "roles/logging.logWriter"
+      member = "serviceAccount:${module.service_project.project.number}-compute@developer.gserviceaccount.com"
+    },
+  ]
+
+  depends_on = [module.service_apis]
 }
 
 # ──────────────────────────────────────────────

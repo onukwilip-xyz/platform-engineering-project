@@ -1,5 +1,5 @@
 resource "google_project_iam_member" "bindings" {
-  for_each = { for binding in var.bindings : "${binding.member}_${binding.role}" => binding }
+  for_each = { for i, binding in var.bindings : tostring(i) => binding }
 
   project = var.project_id
   role    = each.value.role

@@ -12,12 +12,11 @@ set -euo pipefail
 #   REDIRECT_URI_PARAMETER_ID, IMPERSONATE_SA
 # ---------------------------------------------------------------
 
-gcloud config set auth/impersonate_service_account "$IMPERSONATE_SA"
-
 # Retrieve PAT from Secret Manager
 PAT=$(gcloud secrets versions access latest \
   --secret="$PAT_SECRET_ID" \
-  --project="$PROJECT_ID")
+  --project="$PROJECT_ID" \
+  --impersonate-service-account="$IMPERSONATE_SA")
 
 # Check if identity provider already exists
 echo "Checking for existing identity provider '$IDP_NAME'..."
@@ -31,7 +30,6 @@ echo "List identity providers response: $(cat /tmp/idp_list_resp.json)"
 
 if [ "$LIST_HTTP" != "200" ]; then
   echo "ERROR: Failed to list identity providers (HTTP $LIST_HTTP)."
-  gcloud config unset auth/impersonate_service_account
   exit 1
 fi
 
@@ -58,7 +56,6 @@ if [ -n "$EXISTING" ]; then
 
   if [[ "$UPDATE_HTTP" != "200" && "$UPDATE_HTTP" != "201" ]]; then
     echo "ERROR: Failed to update identity provider (HTTP $UPDATE_HTTP)."
-    gcloud config unset auth/impersonate_service_account
     exit 1
   fi
 
@@ -84,7 +81,6 @@ else
 
   if [[ "$CREATE_HTTP" != "200" && "$CREATE_HTTP" != "201" ]]; then
     echo "ERROR: Failed to create identity provider (HTTP $CREATE_HTTP)."
-    gcloud config unset auth/impersonate_service_account
     exit 1
   fi
 
@@ -93,7 +89,6 @@ else
 
   if [ -z "$IDP_ID" ]; then
     echo "ERROR: Identity provider created but could not extract ID from response."
-    gcloud config unset auth/impersonate_service_account
     exit 1
   fi
 
@@ -111,6 +106,7 @@ if [ -n "$REDIRECT_URI" ]; then
     --parameter="$REDIRECT_URI_PARAMETER_ID" \
     --location=global \
     --project="$PROJECT_ID" \
+    --impersonate-service-account="$IMPERSONATE_SA" \
     --format="value(name)" 2>/dev/null | head -1 || true)
 
   if [ -n "$EXISTING_PARAM" ]; then
@@ -120,11 +116,14 @@ if [ -n "$REDIRECT_URI" ]; then
       --parameter="$REDIRECT_URI_PARAMETER_ID" \
       --payload-data="$REDIRECT_URI" \
       --location=global \
-      --project="$PROJECT_ID"
+      --project="$PROJECT_ID" \
+      --impersonate-service-account="$IMPERSONATE_SA"
     echo "Redirect URI stored in Parameter Manager."
   fi
 
-  PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)" 2>/dev/null || true)
+  PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" \
+    --impersonate-service-account="$IMPERSONATE_SA" \
+    --format="value(projectNumber)" 2>/dev/null || true)
 
   echo ""
   echo "============================================================"
@@ -150,5 +149,4 @@ else
   echo "$RESPONSE" | jq .
 fi
 
-gcloud config unset auth/impersonate_service_account
 echo "Netbird identity provider setup complete."

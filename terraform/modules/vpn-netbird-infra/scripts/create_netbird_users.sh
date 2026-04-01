@@ -13,12 +13,11 @@ set -euo pipefail
 #   [{"name":"Alice","email":"alice@example.com","role":"admin"}, ...]
 # ---------------------------------------------------------------
 
-gcloud config set auth/impersonate_service_account "$IMPERSONATE_SA"
-
 # Retrieve PAT from Secret Manager
 PAT=$(gcloud secrets versions access latest \
   --secret="$PAT_SECRET_ID" \
-  --project="$PROJECT_ID")
+  --project="$PROJECT_ID" \
+  --impersonate-service-account="$IMPERSONATE_SA")
 
 # Fetch existing users
 echo "Fetching existing users..."
@@ -32,7 +31,6 @@ echo "List users HTTP status: $USERS_LIST_HTTP"
 if [ "$USERS_LIST_HTTP" != "200" ]; then
   echo "ERROR: Failed to list users (HTTP $USERS_LIST_HTTP)."
   echo "Response: $(cat /tmp/users_list_resp.json)"
-  gcloud config unset auth/impersonate_service_account
   exit 1
 fi
 
@@ -124,8 +122,6 @@ if [ "$FAILED" -gt 0 ]; then
   echo " $FAILED invite(s) failed — check the logs above."
 fi
 echo "============================================================"
-
-gcloud config unset auth/impersonate_service_account
 
 if [ "$FAILED" -gt 0 ]; then
   exit 1

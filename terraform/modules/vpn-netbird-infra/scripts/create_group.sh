@@ -1,11 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
-gcloud config set auth/impersonate_service_account "$IMPERSONATE_SA"
-
 PAT=$(gcloud secrets versions access latest \
   --secret="$PAT_SECRET_ID" \
-  --project="$PROJECT_ID")
+  --project="$PROJECT_ID" \
+  --impersonate-service-account="$IMPERSONATE_SA")
 
 EXISTING=$(curl -sf \
   "https://$NETBIRD_DOMAIN/api/groups" \
@@ -30,6 +29,7 @@ EXISTING_PARAM=$(gcloud parametermanager parameters versions list \
   --parameter="$PARAMETER_ID" \
   --location=global \
   --project="$PROJECT_ID" \
+  --impersonate-service-account="$IMPERSONATE_SA" \
   --format="value(name)" 2>/dev/null | head -1 || true)
 
 echo "Existing parameter version: $EXISTING_PARAM"
@@ -41,8 +41,7 @@ else
     --parameter="$PARAMETER_ID" \
     --payload-data="$GROUP_ID" \
     --location=global \
-    --project="$PROJECT_ID"
+    --project="$PROJECT_ID" \
+    --impersonate-service-account="$IMPERSONATE_SA"
   echo "Group ID stored in Parameter Manager."
 fi
-
-gcloud config unset auth/impersonate_service_account
