@@ -1,15 +1,14 @@
 resource "null_resource" "netbird_group" {
-  # provider = google.platform
   provisioner "local-exec" {
     interpreter = ["/bin/bash"]
     command     = "${path.module}/scripts/create_group.sh"
     environment = {
       PAT_SECRET_ID  = var.netbird_pat_secret_id
-      PROJECT_ID     = var.service_project_id
+      PROJECT_ID     = var.project_id
       NETBIRD_DOMAIN = var.netbird_domain
       GROUP_NAME     = var.netbird_routing_peer_group_name
       PARAMETER_ID   = var.netbird_group_id_parameter_id
-      IMPERSONATE_SA = var.tf_platform_sa_email
+      IMPERSONATE_SA = var.impersonate_sa_email
     }
   }
 

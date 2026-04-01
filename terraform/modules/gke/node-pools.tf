@@ -13,7 +13,6 @@ resource "google_container_node_pool" "pools" {
   location = var.region
   cluster  = google_container_cluster.gke_cluster.name
 
-  # In regional clusters, this is per-zone
   initial_node_count = each.value.initial_node_count
 
   autoscaling {
@@ -24,6 +23,11 @@ resource "google_container_node_pool" "pools" {
   management {
     auto_repair  = true
     auto_upgrade = true
+  }
+
+  upgrade_settings {
+    max_surge = try(each.value.max_surge, 1)
+    max_unavailable = try(each.value.max_unavailable, 0)
   }
 
   node_config {

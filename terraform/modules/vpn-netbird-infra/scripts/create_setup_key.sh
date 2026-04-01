@@ -1,8 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-gcloud config set auth/impersonate_service_account "$IMPERSONATE_SA"
-
 # ── Check Secret Manager first — skip everything if key already stored ────
 
 SETUP_KEY_SECRET_NAME=$(basename "$SETUP_KEY_SECRET_ID")
@@ -11,11 +9,11 @@ PROJECT_ID_CLEAN=$(basename "$PROJECT_ID")  # handle full resource path if passe
 GSM_EXIT_CODE=0
 GSM_OUTPUT=$(gcloud secrets versions access latest \
   --secret="$SETUP_KEY_SECRET_NAME" \
-  --project="$PROJECT_ID_CLEAN" 2>&1) || GSM_EXIT_CODE=$?
+  --project="$PROJECT_ID_CLEAN" \
+  --impersonate-service-account="$IMPERSONATE_SA" 2>&1) || GSM_EXIT_CODE=$?
 
 if [ $GSM_EXIT_CODE -eq 0 ] && [ -n "$GSM_OUTPUT" ]; then
   echo "Setup key already exists in Secret Manager, skipping."
-  gcloud config unset auth/impersonate_service_account
   exit 0
 fi
 
@@ -26,12 +24,14 @@ echo "No setup key in Secret Manager, proceeding..."
 PAT_SECRET_NAME=$(basename "$PAT_SECRET_ID")
 PAT=$(gcloud secrets versions access latest \
   --secret="$PAT_SECRET_NAME" \
-  --project="$PROJECT_ID_CLEAN")
+  --project="$PROJECT_ID_CLEAN" \
+  --impersonate-service-account="$IMPERSONATE_SA")
 
 GROUP_ID=$(gcloud parametermanager parameters versions render "v1" \
   --parameter="$PARAMETER_ID" \
   --location=global \
   --project="$PROJECT_ID_CLEAN" \
+  --impersonate-service-account="$IMPERSONATE_SA" \
   --format="value(payload.data)" | base64 --decode)
 
 echo "Using group ID: $GROUP_ID"
@@ -86,8 +86,7 @@ fi
 echo "Storing setup key in Secret Manager..."
 gcloud secrets versions add "$SETUP_KEY_SECRET_NAME" \
   --data-file=<(echo -n "$KEY") \
-  --project="$PROJECT_ID_CLEAN"
+  --project="$PROJECT_ID_CLEAN" \
+  --impersonate-service-account="$IMPERSONATE_SA"
 
 echo "Setup key stored in Secret Manager."
-
-gcloud config unset auth/impersonate_service_account

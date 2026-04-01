@@ -6,11 +6,11 @@ resource "null_resource" "netbird_users" {
     interpreter = ["/bin/bash"]
     command     = "${path.module}/scripts/create_netbird_users.sh"
     environment = {
-      PROJECT_ID     = var.service_project_id
+      PROJECT_ID     = var.project_id
       NETBIRD_DOMAIN = var.netbird_domain
       PAT_SECRET_ID  = var.netbird_pat_secret_id
       USERS_JSON     = jsonencode(var.netbird_users)
-      IMPERSONATE_SA = var.tf_platform_sa_email
+      IMPERSONATE_SA = var.impersonate_sa_email
     }
   }
 

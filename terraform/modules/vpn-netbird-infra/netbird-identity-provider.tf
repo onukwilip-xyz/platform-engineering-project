@@ -6,14 +6,14 @@ resource "null_resource" "netbird_identity_provider" {
     interpreter = ["/bin/bash"]
     command     = "${path.module}/scripts/create_netbird_idp.sh"
     environment = {
-      PROJECT_ID                = var.service_project_id
-      NETBIRD_DOMAIN            = var.netbird_domain
-      PAT_SECRET_ID             = var.netbird_pat_secret_id
-      IDP_NAME                  = var.netbird_idp_name
-      GOOGLE_OAUTH_CLIENT_ID    = var.google_oauth_client_id
+      PROJECT_ID                 = var.project_id
+      NETBIRD_DOMAIN             = var.netbird_domain
+      PAT_SECRET_ID              = var.netbird_pat_secret_id
+      IDP_NAME                   = var.netbird_idp_name
+      GOOGLE_OAUTH_CLIENT_ID     = var.google_oauth_client_id
       GOOGLE_OAUTH_CLIENT_SECRET = var.google_oauth_client_secret
-      REDIRECT_URI_PARAMETER_ID = var.netbird_idp_redirect_uri_parameter_id
-      IMPERSONATE_SA            = var.tf_platform_sa_email
+      REDIRECT_URI_PARAMETER_ID  = var.netbird_idp_redirect_uri_parameter_id
+      IMPERSONATE_SA             = var.impersonate_sa_email
     }
   }
 

@@ -1,8 +1,6 @@
 resource "google_compute_instance" "netbird_server" {
-  provider = google.platform
-
   name    = var.netbird_server_instance_name
-  project = var.service_project_id
+  project = var.project_id
   zone    = var.zone
 
   machine_type = "e2-small"
@@ -15,9 +13,8 @@ resource "google_compute_instance" "netbird_server" {
   }
 
   network_interface {
-    network            = var.network
-    subnetwork         = var.subnetwork
-    subnetwork_project = var.host_project_id
+    network    = var.network
+    subnetwork = var.subnetwork
     access_config {
       nat_ip = google_compute_address.netbird_server.address
     }
@@ -34,14 +31,14 @@ resource "google_compute_instance" "netbird_server" {
 
   metadata = {
     startup-script = templatefile("${path.module}/scripts/netbird-server-startup.sh", {
-      domain            = var.netbird_domain
-      letsencrypt_email = var.letsencrypt_email
-      pat_secret_id     = google_secret_manager_secret.netbird_pat.id
-      netbird_admin_email   = var.netbird_admin_email
-      netbird_admin_password = var.netbird_admin_password
+      domain                           = var.netbird_domain
+      letsencrypt_email                = var.letsencrypt_email
+      pat_secret_id                    = google_secret_manager_secret.netbird_pat.id
+      netbird_admin_email              = var.netbird_admin_email
+      netbird_admin_password           = var.netbird_admin_password
       netbird_admin_password_secret_id = google_secret_manager_secret.netbird_admin_password.id
-      netbird_service_user_name = var.netbird_service_user_name
-      netbird_service_user_token_name = var.netbird_service_user_token_name
+      netbird_service_user_name        = var.netbird_service_user_name
+      netbird_service_user_token_name  = var.netbird_service_user_token_name
     })
     google-logging-enabled    = "true"
     google-monitoring-enabled = "true"
@@ -63,9 +60,8 @@ resource "google_compute_instance" "netbird_server" {
 }
 
 resource "google_compute_firewall" "allow_netbird_server_access" {
-  provider = google.net
   name    = "allow-netbird-server-access"
-  project = var.host_project_id
+  project = var.project_id
   network = var.network
 
   direction = "INGRESS"

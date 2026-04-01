@@ -1,4 +1,5 @@
-# Grant GKE Service Account Secuirity Admin and Host Service Agent User on host project so it can manage firewall rules for private cluster
+# Grant GKE Service Account Security Admin and Host Service Agent User on host project
+# so it can manage firewall rules for private cluster
 locals {
   gke_sa = "serviceAccount:service-${var.service_project_number}@container-engine-robot.iam.gserviceaccount.com"
 }
@@ -63,7 +64,7 @@ resource "google_project_iam_member" "jump_sa_metric_writer" {
 }
 
 resource "google_service_account_iam_member" "jump_sa_actas_for_access_sa" {
-  provider = google.net
+  provider           = google.net
   service_account_id = google_service_account.jump_sa.name
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${google_service_account.jump_vm_access_sa.email}"
@@ -77,18 +78,6 @@ resource "google_project_iam_member" "jump_vm_access_sa_cluster_admin" {
   member  = "serviceAccount:${google_service_account.jump_vm_access_sa.email}"
 }
 
-# resource "google_iap_tunnel_instance_iam_member" "jump_vm_access_sa_iap_tunnel_accessor" {
-#   provider = google.net
-
-#   project = var.service_project_id
-#   zone = var.zone
-#   instance = google_compute_instance.jump.name
-#   role = "roles/iap.tunnelResourceAccessor"
-#   member = "serviceAccount:${google_service_account.jump_vm_access_sa.email}"
-
-#   depends_on = [ google_compute_instance.jump ]
-# }
-
 resource "google_project_iam_member" "jump_vm_access_sa_compute_instance_admin" {
   provider = google.net
 
@@ -97,18 +86,6 @@ resource "google_project_iam_member" "jump_vm_access_sa_compute_instance_admin" 
   member  = "serviceAccount:${google_service_account.jump_vm_access_sa.email}"
 }
 
-# resource "google_compute_instance_iam_member" "jump_vm_access_sa_oslogin" {
-#   provider = google.net
-
-#   project = var.service_project_id
-#   zone = var.zone
-#   instance_name = google_compute_instance.jump.name
-#   role = "roles/compute.osLogin"
-#   member = "serviceAccount:${google_service_account.jump_vm_access_sa.email}"
-
-#   depends_on = [ google_compute_instance.jump ]
-# }
-
 resource "google_service_account_iam_binding" "jump_access_impersonators" {
   provider = google.net
 
@@ -116,5 +93,5 @@ resource "google_service_account_iam_binding" "jump_access_impersonators" {
   role               = "roles/iam.serviceAccountTokenCreator"
   members            = var.jump_vm_access_sa_impersonators
 
-  depends_on = [ google_service_account.jump_vm_access_sa ]
+  depends_on = [google_service_account.jump_vm_access_sa]
 }

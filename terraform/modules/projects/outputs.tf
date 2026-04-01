@@ -1,7 +1,4 @@
-output "host_project" {
-  value = google_project.pe_host_project
-}
-
-output "service_project" {
-  value = google_project.pe_service_project
+output "project" {
+  value       = google_project.this
+  description = "The created GCP project resource."
 }

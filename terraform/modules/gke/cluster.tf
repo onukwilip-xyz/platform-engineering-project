@@ -10,7 +10,6 @@ resource "google_container_cluster" "gke_cluster" {
 
   networking_mode = "VPC_NATIVE"
 
-
   ip_allocation_policy {
     cluster_secondary_range_name  = var.pods_secondary_range_name
     services_secondary_range_name = var.services_secondary_range_name
@@ -65,6 +64,14 @@ resource "google_container_cluster" "gke_cluster" {
 
   cost_management_config {
     enabled = var.enable_cost_management
+  }
+
+  maintenance_policy {
+    recurring_window {
+      start_time = var.maintenance_window_start_time
+      end_time   = timeadd(var.maintenance_window_start_time, "6h")
+      recurrence = var.maintenance_window_recurrence
+    }
   }
 
   deletion_protection = var.deletion_protection

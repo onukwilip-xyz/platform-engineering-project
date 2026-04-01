@@ -1,4 +1,3 @@
-
 resource "google_service_account" "node_sa" {
   provider = google.platform
 

@@ -1,5 +1,5 @@
 PLAN.md
-.tfvars
+*.tfvars
 terraform.tfstate
 terraform.tfstate.backup
 .terraform/

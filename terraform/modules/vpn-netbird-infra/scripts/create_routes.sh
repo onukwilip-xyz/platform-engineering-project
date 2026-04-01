@@ -13,18 +13,18 @@ set -euo pipefail
 #   [{"cidr":"10.10.0.0/20","network_id":"vpc-subnet","description":"..."}, ...]
 # ---------------------------------------------------------------
 
-gcloud config set auth/impersonate_service_account "$IMPERSONATE_SA"
-
 echo "Retrieving PAT from Secret Manager..."
 PAT=$(gcloud secrets versions access latest \
   --secret="$PAT_SECRET_ID" \
-  --project="$PROJECT_ID")
+  --project="$PROJECT_ID" \
+  --impersonate-service-account="$IMPERSONATE_SA")
 
 echo "Retrieving Routing Peer group ID from Parameter Manager..."
 GROUP_ID=$(gcloud parametermanager parameters versions render "v1" \
   --parameter="$PARAMETER_ID" \
   --location=global \
   --project="$PROJECT_ID" \
+  --impersonate-service-account="$IMPERSONATE_SA" \
   --format="value(payload.data)" | base64 --decode)
 echo "Routing Peer group ID: $GROUP_ID"
 
@@ -46,7 +46,6 @@ echo "List routes HTTP status: $EXISTING_ROUTES_HTTP"
 if [ "$EXISTING_ROUTES_HTTP" != "200" ]; then
   echo "ERROR: Failed to list routes (HTTP $EXISTING_ROUTES_HTTP)."
   echo "Response: $(cat /tmp/existing_routes.json)"
-  gcloud config unset auth/impersonate_service_account
   exit 1
 fi
 
@@ -115,8 +114,6 @@ if [ "$FAILED" -gt 0 ]; then
   echo " $FAILED route(s) failed — check the logs above."
 fi
 echo "============================================================"
-
-gcloud config unset auth/impersonate_service_account
 
 if [ "$FAILED" -gt 0 ]; then
   exit 1

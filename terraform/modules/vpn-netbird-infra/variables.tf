@@ -1,10 +1,60 @@
-variable "netbird_routing_peer_setup_key_secret_id" {
-  description = "The ID for the Secret Manager secret that will store the Netbird routing peer setup key"
+variable "project_id" {
+  type        = string
+  description = "The project ID where all VPN Netbird resources will be created (host project)."
+}
+
+variable "zone" {
+  description = "Google Cloud zone for the instances"
+  type        = string
+}
+
+variable "region" {
+  description = "Google Cloud region"
+  type        = string
+}
+
+variable "network" {
+  description = "VPC network self-link"
+  type        = string
+}
+
+variable "subnetwork" {
+  description = "VPC subnetwork self-link"
+  type        = string
+}
+
+variable "ssh_network_tag" {
+  description = "Network tag for SSH firewall rule"
+  type        = string
+}
+
+variable "netbird_domain" {
+  description = "Domain name for Netbird"
+  type        = string
+}
+
+variable "netbird_pat_secret_id" {
+  description = "The ID for the Secret Manager secret storing the Netbird PAT for authentication with the management server"
+  type        = string
+}
+
+variable "netbird_routing_peer_instance_name" {
+  description = "Name of the Netbird routing peer instance"
   type        = string
 }
 
 variable "netbird_routing_peer_group_name" {
   description = "The name of the Netbird group to which the routing peer will be added"
+  type        = string
+}
+
+variable "netbird_routing_peer_setup_key_name" {
+  description = "The name of the Netbird setup key to create for the routing peer"
+  type        = string
+}
+
+variable "netbird_routing_peer_setup_key_secret_id" {
+  description = "The ID for the Secret Manager secret that will store the Netbird routing peer setup key"
   type        = string
 }
 
@@ -15,51 +65,6 @@ variable "netbird_route_cidrs" {
     network_id  = string
     description = string
   }))
-}
-
-variable "netbird_routing_peer_setup_key_name" {
-  description = "The name of the Netbird setup key to create for the routing peer"
-  type        = string
-}
-
-variable "netbird_routing_peer_instance_name" {
-  description = "Name of the Netbird routing peer instance"
-  type        = string
-}
-
-variable "service_project_id" {
-  description = "The service project ID, where the Netbird instances and related resources will be created"
-  type        = string
-}
-
-variable "zone" {
-  description = "Google Cloud zone for the instances"
-  type        = string
-}
-
-variable "region" {
-  description = "Google Cloud region for static IP addresses"
-  type        = string
-}
-
-variable "network" {
-  description = "VPC network name"
-  type        = string
-}
-
-variable "subnetwork" {
-  description = "VPC subnetwork name"
-  type        = string
-}
-
-variable "netbird_domain" {
-  description = "Domain name for Netbird"
-  type        = string
-}
-
-variable "netbird_pat_secret_id" {
-  description = "The ID for the Secret Manager secret that will store the Netbird Personal Access Token (PAT) for the routing peer to authenticate with the Netbird management server"
-  type        = string
 }
 
 variable "netbird_group_id_parameter_id" {
@@ -82,9 +87,9 @@ variable "netbird_routing_peer_service_account_description" {
   type        = string
 }
 
-variable "tf_platform_sa_email" {
+variable "impersonate_sa_email" {
   type        = string
-  description = "Service account email to impersonate for the tf-platform provider."
+  description = "Service account email to impersonate for script-based operations (Secret Manager, Parameter Manager access)."
 }
 
 # Google Workspace Identity Provider configuration

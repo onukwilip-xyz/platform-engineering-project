@@ -1,7 +1,6 @@
 resource "google_compute_instance" "netbird_routing_peer" {
-  provider = google.platform
   name    = var.netbird_routing_peer_instance_name
-  project = var.service_project_id
+  project = var.project_id
   zone    = var.zone
 
   machine_type   = "e2-small"
@@ -19,7 +18,7 @@ resource "google_compute_instance" "netbird_routing_peer" {
     subnetwork = var.subnetwork
   }
 
-  tags = ["ssh"]
+  tags = [ var.ssh_network_tag ]
 
   labels = {
     "type" : "netbird-routing-peer"
