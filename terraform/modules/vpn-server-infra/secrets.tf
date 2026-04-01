@@ -1,10 +1,15 @@
+locals {
+  secret_labels = merge(var.labels, {
+    purpose     = "vpn-credentials"
+    gcp-product = "secret-manager"
+  })
+}
+
 resource "google_secret_manager_secret" "netbird_pat" {
   secret_id = var.netbird_pat_secret_id
   project   = var.project_id
 
-  labels = {
-    usage = "netbird-pat"
-  }
+  labels = merge(local.secret_labels, { usage = "netbird-pat" })
 
   replication {
     auto {}
@@ -15,9 +20,7 @@ resource "google_secret_manager_secret" "netbird_admin_password" {
   secret_id = var.netbird_admin_password_secret_id
   project   = var.project_id
 
-  labels = {
-    usage = "netbird-admin-password"
-  }
+  labels = merge(local.secret_labels, { usage = "netbird-admin-password" })
 
   replication {
     auto {}

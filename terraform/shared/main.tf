@@ -7,6 +7,7 @@ module "host_project" {
   org_id             = var.org_id
   project_name       = var.host_project_name
   billing_account_id = var.billing_account_id
+  labels             = merge(var.labels, { purpose = "host-project" })
 }
 
 # ──────────────────────────────────────────────
@@ -102,6 +103,7 @@ module "host_networking" {
   pods_secondary_cidr           = var.pods_secondary_cidr
   services_secondary_range_name = var.services_secondary_range_name
   services_secondary_cidr       = var.services_secondary_cidr
+  
 
   ssh_network_tag = var.ssh_network_tag
 
@@ -125,6 +127,7 @@ module "dns" {
   root_domain          = var.root_domain
   subdomain            = var.subdomain
   private_subdomain    = var.private_subdomain
+  labels               = var.labels
 
   depends_on = [module.host_networking]
 }
@@ -156,6 +159,7 @@ module "vpn_server_infra" {
   netbird_admin_password_secret_id           = var.netbird_admin_password_secret_id
   netbird_service_user_name                  = var.netbird_service_user_name
   netbird_service_user_token_name            = var.netbird_service_user_token_name
+  labels                                     = var.labels
 
   depends_on = [
     module.dns,
@@ -199,6 +203,7 @@ module "vpn_netbird_infra" {
 
   # User invitations
   netbird_users = var.netbird_users
+  labels        = var.labels
 
   depends_on = [
     module.vpn_server_infra,

@@ -151,9 +151,9 @@ variable "node_service_account_extra_roles" {
   default     = []
 }
 
-variable "gke_resource_labels" {
+variable "labels" {
   type        = map(string)
-  description = "Resource labels to apply to the GKE cluster."
+  description = "Common labels applied to all GKE resources (e.g., env, team, managed-by). The module merges these with purpose and gcp-product automatically."
   default     = {}
 }
 

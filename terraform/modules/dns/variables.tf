@@ -37,3 +37,9 @@ variable "host_project_id" {
   type        = string
   description = "The ID of the host project where DNS resources will be created."
 }
+
+variable "labels" {
+  type        = map(string)
+  description = "Common labels applied to all DNS resources (e.g., env, team, managed-by). The module merges these with purpose and gcp-product automatically."
+  default     = {}
+}

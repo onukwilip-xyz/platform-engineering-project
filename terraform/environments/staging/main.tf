@@ -25,6 +25,7 @@ module "service_project" {
   org_id             = var.org_id
   project_name       = var.service_project_name
   billing_account_id = var.billing_account_id
+  labels             = merge(var.labels, { purpose = "service-project" })
 }
 
 # ──────────────────────────────────────────────
@@ -38,15 +39,42 @@ module "service_iam" {
 
   project_id = module.service_project.project.project_id
   bindings = [
-    { role = "roles/container.admin",                member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/compute.instanceAdmin.v1",       member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/iam.serviceAccountAdmin",        member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/iam.serviceAccountUser",         member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/artifactregistry.admin",         member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/storage.admin",                  member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/serviceusage.serviceUsageAdmin", member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/secretmanager.admin",            member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/parametermanager.admin",         member = "serviceAccount:${var.tf_platform_sa_email}" },
+    {
+      role   = "roles/container.admin",
+      member = "serviceAccount:${var.tf_platform_sa_email}"
+    },
+    {
+      role = "roles/compute.instanceAdmin.v1",
+    member = "serviceAccount:${var.tf_platform_sa_email}" }
+    ,
+    {
+      role   = "roles/iam.serviceAccountAdmin",
+      member = "serviceAccount:${var.tf_platform_sa_email}"
+    },
+    {
+      role   = "roles/iam.serviceAccountUser",
+      member = "serviceAccount:${var.tf_platform_sa_email}"
+    },
+    {
+      role   = "roles/artifactregistry.admin",
+      member = "serviceAccount:${var.tf_platform_sa_email}"
+    },
+    {
+      role   = "roles/storage.admin",
+      member = "serviceAccount:${var.tf_platform_sa_email}"
+    },
+    {
+      role   = "roles/serviceusage.serviceUsageAdmin",
+      member = "serviceAccount:${var.tf_platform_sa_email}"
+    },
+    {
+      role   = "roles/secretmanager.admin",
+      member = "serviceAccount:${var.tf_platform_sa_email}"
+    },
+    {
+      role   = "roles/parametermanager.admin",
+      member = "serviceAccount:${var.tf_platform_sa_email}"
+    },
   ]
 
   depends_on = [module.service_project]
@@ -144,7 +172,7 @@ module "gke" {
   cluster_name           = var.gke_cluster_name
   master_authorized_cidr = local.shared.gke_subnet_cidr
   master_ipv4_cidr_block = var.gke_master_ipv4_cidr_block
-  gke_resource_labels    = var.gke_resource_labels
+  labels                 = var.labels
 
   node_service_account_id = var.gke_node_service_account_id
   node_pools              = var.node_pools

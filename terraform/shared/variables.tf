@@ -6,6 +6,12 @@ variable "tf_network_sa_email" {
   description = "Service account email to impersonate for the Google provider (manages host project resources)."
 }
 
+variable "labels" {
+  type        = map(string)
+  description = "Common labels to apply to all resources in the shared layer (e.g., env, team, managed-by)."
+  default     = {}
+}
+
 variable "region" {
   type        = string
   description = "Default region for Google provider operations."

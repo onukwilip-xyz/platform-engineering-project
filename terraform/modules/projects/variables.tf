@@ -12,3 +12,9 @@ variable "billing_account_id" {
   type        = string
   description = "The ID of the billing account associated with the project."
 }
+
+variable "labels" {
+  type        = map(string)
+  description = "Labels to apply to the GCP project resource."
+  default     = {}
+}

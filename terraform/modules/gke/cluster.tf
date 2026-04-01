@@ -1,3 +1,10 @@
+locals {
+  cluster_labels = merge(var.labels, {
+    purpose     = "container-cluster"
+    gcp-product = "gke"
+  })
+}
+
 resource "google_container_cluster" "gke_cluster" {
   provider = google.platform
 
@@ -75,7 +82,7 @@ resource "google_container_cluster" "gke_cluster" {
   }
 
   deletion_protection = var.deletion_protection
-  resource_labels     = var.gke_resource_labels
+  resource_labels     = local.cluster_labels
 
   depends_on = [
     google_project_iam_member.gke_sa_host_service_agent_user_on_host,
