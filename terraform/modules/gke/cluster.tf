@@ -76,7 +76,7 @@ resource "google_container_cluster" "gke_cluster" {
   maintenance_policy {
     recurring_window {
       start_time = var.maintenance_window_start_time
-      end_time   = timeadd(var.maintenance_window_start_time, "12h")
+      end_time   = timeadd(var.maintenance_window_start_time, "48h")
       recurrence = var.maintenance_window_recurrence
     }
   }

@@ -124,5 +124,7 @@ terraform plan -var-file=".tfvars"
 
 Apply Terraform
 ```bash
+terraform apply -var-file=".tfvars"
+# OR
 terraform apply --auto-approve -var-file=".tfvars"
 ```
