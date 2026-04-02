@@ -1,0 +1,27 @@
+{{- if .Values.service.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-service" .Release.Name | trunc 63 | trimSuffix "-" }}
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name | quote }}
+    {{- with .Values.service.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type | default "ClusterIP" }}
+  selector:
+    app.kubernetes.io/name: {{ printf "%s-pod" .Release.Name | quote }}
+  ports:
+    - port: {{ .Values.service.port | default 80 }}
+      targetPort: {{ .Values.service.targetPort | default 80 }}
+      protocol: {{ .Values.service.protocol | default "TCP" }}
+      {{- if .Values.service.nodePort }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
+{{- end }}
+
