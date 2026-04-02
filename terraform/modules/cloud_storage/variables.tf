@@ -8,49 +8,6 @@ variable "region" {
   description = "Region for the Artifact Registry and backups bucket."
 }
 
-############################
-# Artifact Registry
-############################
-
-variable "artifact_registry_repository_id" {
-  type        = string
-  description = "Artifact Registry repository ID (last segment of the repo name)."
-}
-
-variable "artifact_registry_location" {
-  type        = string
-  description = "Artifact Registry location (region like us-central1 or multi-region like us). Defaults to var.region when null."
-  default     = null
-}
-
-variable "artifact_registry_format" {
-  type        = string
-  description = "Artifact Registry repository format (commonly DOCKER for container images and OCI-based Helm charts)."
-  default     = "DOCKER"
-}
-
-variable "artifact_registry_description" {
-  type        = string
-  description = "Description for the Artifact Registry repository."
-  default     = "Application artifacts (container images and Helm charts)."
-}
-
-variable "artifact_registry_docker_immutable_tags" {
-  type        = bool
-  description = "Whether to enable immutable tags for Docker repositories."
-  default     = false
-}
-
-variable "labels" {
-  type        = map(string)
-  description = "Common labels applied to all resources (e.g., env, team, managed-by). The module merges these with purpose and gcp-product automatically."
-  default     = {}
-}
-
-############################
-# DB Backups Bucket
-############################
-
 variable "db_backups_bucket_name" {
   type        = string
   description = "Globally-unique GCS bucket name for database backups."
@@ -117,4 +74,10 @@ variable "db_backups_bucket_lifecycle_rules" {
 
   description = "Optional lifecycle rules for the backups bucket (e.g., transition older objects to cheaper storage, prune older versions)."
   default     = []
+}
+
+variable "labels" {
+  type        = map(string)
+  description = "Common labels applied to all resources (e.g., env, team, managed-by). The module merges these with purpose and gcp-product automatically."
+  default     = {}
 }

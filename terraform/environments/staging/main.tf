@@ -183,3 +183,21 @@ module "gke" {
 
   depends_on = [module.service_networking]
 }
+
+# ──────────────────────────────────────────────
+# Artifact Registry
+# ──────────────────────────────────────────────
+
+module "artifact_registry" {
+  source = "../../modules/artifact_registry"
+  providers = {
+    google = google.platform
+  }
+
+  service_project_id = module.service_project.project.project_id
+  region             = var.region
+  repositories       = var.artifact_repositories
+  labels             = var.labels
+
+  depends_on = [module.service_apis]
+}

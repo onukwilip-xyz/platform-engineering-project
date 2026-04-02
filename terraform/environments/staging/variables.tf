@@ -109,3 +109,17 @@ variable "jump_vm_access_sa_impersonators" {
   description = "Principals allowed to impersonate the jump VM access service account."
   default     = []
 }
+
+# ──────────────────────────────────────────────
+# Artifact Registry
+# ──────────────────────────────────────────────
+variable "artifact_repositories" {
+  type = map(object({
+    repository_id  = string
+    description    = string
+    format         = string
+    immutable_tags = bool
+    labels         = map(string)
+  }))
+  description = "Map of Artifact Registry repositories to create. Keys are logical names (e.g. 'images', 'charts')."
+}
