@@ -1,3 +1,14 @@
+locals {
+  artifact_registry_labels = merge(var.labels, {
+    purpose     = "artifact-registry"
+    gcp-product = "artifact-registry"
+  })
+  db_backups_labels = merge(var.labels, {
+    purpose     = "db-backups"
+    gcp-product = "cloud-storage"
+  })
+}
+
 ############################
 # Artifact Registry (Docker/OCI) Repository
 ############################
@@ -16,7 +27,7 @@ resource "google_artifact_registry_repository" "app_repo" {
     }
   }
 
-  labels = var.artifact_registry_labels
+  labels = local.artifact_registry_labels
 }
 
 ############################
@@ -31,7 +42,7 @@ resource "google_storage_bucket" "db_backups" {
   uniform_bucket_level_access = var.db_backups_bucket_uniform_bucket_level_access
   public_access_prevention    = var.db_backups_bucket_public_access_prevention
   force_destroy               = var.db_backups_bucket_force_destroy
-  labels                      = var.db_backups_bucket_labels
+  labels                      = local.db_backups_labels
 
   versioning {
     enabled = var.db_backups_bucket_versioning

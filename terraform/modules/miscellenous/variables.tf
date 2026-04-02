@@ -41,9 +41,9 @@ variable "artifact_registry_docker_immutable_tags" {
   default     = false
 }
 
-variable "artifact_registry_labels" {
+variable "labels" {
   type        = map(string)
-  description = "Labels to apply to the Artifact Registry repository."
+  description = "Common labels applied to all resources (e.g., env, team, managed-by). The module merges these with purpose and gcp-product automatically."
   default     = {}
 }
 
@@ -96,12 +96,6 @@ variable "db_backups_bucket_kms_key_name" {
   type        = string
   description = "Optional CMEK key name to encrypt bucket objects (full KMS key resource name). Set to null to use Google-managed encryption."
   default     = null
-}
-
-variable "db_backups_bucket_labels" {
-  type        = map(string)
-  description = "Labels to apply to the backups bucket."
-  default     = {}
 }
 
 variable "db_backups_bucket_lifecycle_rules" {

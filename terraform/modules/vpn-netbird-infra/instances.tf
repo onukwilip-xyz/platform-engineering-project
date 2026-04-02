@@ -1,3 +1,10 @@
+locals {
+  instance_labels = merge(var.labels, {
+    purpose     = "vpn-routing-peer"
+    gcp-product = "compute"
+  })
+}
+
 resource "google_compute_instance" "netbird_routing_peer" {
   name    = var.netbird_routing_peer_instance_name
   project = var.project_id
@@ -20,9 +27,7 @@ resource "google_compute_instance" "netbird_routing_peer" {
 
   tags = [ var.ssh_network_tag ]
 
-  labels = {
-    "type" : "netbird-routing-peer"
-  }
+  labels = local.instance_labels
 
   metadata = {
     startup-script = templatefile("${path.module}/scripts/netbird-routing-peer-startup.sh", {

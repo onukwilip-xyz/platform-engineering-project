@@ -65,9 +65,9 @@ variable "gke_node_service_account_id" {
   description = "The ID of the service account to be used by GKE nodes."
 }
 
-variable "gke_resource_labels" {
+variable "labels" {
   type        = map(string)
-  description = "Resource labels to apply to the GKE cluster."
+  description = "Common labels to apply to all resources in this environment (e.g., env, team, managed-by)."
   default     = {}
 }
 

@@ -126,6 +126,12 @@ variable "netbird_idp_redirect_uri_parameter_id" {
 }
 
 # Netbird user invitations
+variable "labels" {
+  type        = map(string)
+  description = "Common labels applied to all resources (e.g., env, team, managed-by). The module merges these with purpose and gcp-product automatically."
+  default     = {}
+}
+
 variable "netbird_users" {
   description = "List of users to create in Netbird and send invitations to. Each user requires name, email, and role (admin, user, or owner)."
   type = list(object({

@@ -1,3 +1,10 @@
+locals {
+  instance_labels = merge(var.labels, {
+    purpose     = "vpn-server"
+    gcp-product = "compute"
+  })
+}
+
 resource "google_compute_instance" "netbird_server" {
   name    = var.netbird_server_instance_name
   project = var.project_id
@@ -25,9 +32,7 @@ resource "google_compute_instance" "netbird_server" {
     var.netbird_server_network_tag
   ]
 
-  labels = {
-    "type" : "netbird-server"
-  }
+  labels = local.instance_labels
 
   metadata = {
     startup-script = templatefile("${path.module}/scripts/netbird-server-startup.sh", {

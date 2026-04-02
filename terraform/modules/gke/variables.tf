@@ -151,23 +151,23 @@ variable "node_service_account_extra_roles" {
   default     = []
 }
 
-variable "gke_resource_labels" {
+variable "labels" {
   type        = map(string)
-  description = "Resource labels to apply to the GKE cluster."
+  description = "Common labels applied to all GKE resources (e.g., env, team, managed-by). The module merges these with purpose and gcp-product automatically."
   default     = {}
 }
 
 # Maintenance window
 variable "maintenance_window_start_time" {
   type        = string
-  description = "RFC3339 UTC start time for the recurring GKE maintenance window (e.g., '2025-01-01T02:00:00Z'). The window lasts 6 hours from this time."
-  default     = "2025-01-01T02:00:00Z"
+  description = "RFC3339 UTC start time for the recurring GKE maintenance window (e.g., '2025-01-04T00:00:00Z'). The window lasts 48 hours from this time (Saturday + Sunday)."
+  default     = "2025-01-04T00:00:00Z"
 }
 
 variable "maintenance_window_recurrence" {
   type        = string
-  description = "RFC5545 RRULE recurrence for the GKE maintenance window (e.g., 'FREQ=MONTHLY' for monthly)."
-  default     = "FREQ=MONTHLY"
+  description = "RFC5545 RRULE recurrence for the GKE maintenance window. Must satisfy GKE's constraint: >=48h of availability within any 32-day rolling window. Default is every 4 weeks on Saturday (gap always 28 days < 32), with a 48h window covering Saturday+Sunday."
+  default     = "FREQ=WEEKLY;INTERVAL=4;BYDAY=SA"
 }
 
 variable "node_pools" {

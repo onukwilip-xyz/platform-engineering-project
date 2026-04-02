@@ -8,6 +8,7 @@ resource "google_project" "this" {
   org_id          = var.org_id
   billing_account = var.billing_account_id
   deletion_policy = "DELETE"
+  labels          = merge(var.labels, { gcp-product = "resource-manager" })
 
   depends_on = [google_organization_policy.no_vpc_policy]
 }

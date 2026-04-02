@@ -49,7 +49,7 @@ resource "google_container_node_pool" "pools" {
     )
 
     tags            = length(try(each.value.tags, [])) > 0 ? each.value.tags : var.node_network_tags
-    resource_labels = each.value.resource_labels
+    resource_labels = merge(local.cluster_labels, try(each.value.resource_labels, {}))
 
     dynamic "taint" {
       for_each = try(each.value.taints, [])
