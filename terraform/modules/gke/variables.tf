@@ -160,14 +160,14 @@ variable "labels" {
 # Maintenance window
 variable "maintenance_window_start_time" {
   type        = string
-  description = "RFC3339 UTC start time for the recurring GKE maintenance window (e.g., '2025-01-01T02:00:00Z'). The window lasts 6 hours from this time."
-  default     = "2025-01-01T02:00:00Z"
+  description = "RFC3339 UTC start time for the recurring GKE maintenance window (e.g., '2025-01-04T22:00:00Z'). The window lasts 12 hours from this time."
+  default     = "2025-01-04T22:00:00Z" # Saturday 22:00 UTC
 }
 
 variable "maintenance_window_recurrence" {
   type        = string
-  description = "RFC5545 RRULE recurrence for the GKE maintenance window (e.g., 'FREQ=MONTHLY' for monthly)."
-  default     = "FREQ=MONTHLY"
+  description = "RFC5545 RRULE recurrence for the GKE maintenance window. Must satisfy GKE's constraint: >=48h of availability within any 32-day rolling window (e.g., weekly 12h = 4x12h = 48h/28d). Default is every Saturday night."
+  default     = "FREQ=WEEKLY;BYDAY=SA"
 }
 
 variable "node_pools" {
