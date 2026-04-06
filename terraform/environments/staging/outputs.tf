@@ -13,3 +13,9 @@ output "gke_cluster_endpoint" {
   value       = module.gke.gke_cluster.endpoint
   sensitive   = true
 }
+
+output "gke_cluster_ca_certificate" {
+  description = "Base64-encoded CA certificate for the staging GKE cluster (pass to the cert-manager layer as cluster_ca_certificate)."
+  value       = module.gke.gke_cluster.master_auth[0].cluster_ca_certificate
+  sensitive   = true
+}

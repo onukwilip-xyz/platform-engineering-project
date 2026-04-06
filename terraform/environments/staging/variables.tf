@@ -1,6 +1,25 @@
 # ──────────────────────────────────────────────
 # Provider / Auth
 # ──────────────────────────────────────────────
+
+# Required by the kubernetes and helm providers, which cannot reference module
+# outputs in their configuration blocks — only variables and data sources.
+# Populate from the GKE layer outputs before applying this layer:
+#   export TF_VAR_cluster_endpoint=$(terraform output -raw gke_cluster_endpoint)
+#   export TF_VAR_cluster_ca_certificate=$(terraform output -raw gke_cluster_ca_certificate)
+variable "cluster_endpoint" {
+  type        = string
+  description = "GKE cluster API endpoint (raw IP, no https:// scheme). Fed into the kubernetes and helm provider configurations."
+  sensitive   = true
+  default     = "" # safe default so the staging layer can be planned/applied before GKE exists
+}
+
+variable "cluster_ca_certificate" {
+  type        = string
+  description = "Base64-encoded cluster CA certificate from GKE master_auth. Fed into the kubernetes and helm provider configurations."
+  sensitive   = true
+  default     = "" # safe default so the staging layer can be planned/applied before GKE exists
+}
 variable "tf_network_sa_email" {
   type        = string
   description = "Service account email to impersonate for the tf-network provider (host project operations)."
