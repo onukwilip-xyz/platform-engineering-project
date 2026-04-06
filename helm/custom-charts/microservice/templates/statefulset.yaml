@@ -1,0 +1,208 @@
+{{- if .Values.useStatefulSet }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+	name: {{ printf "%s-statefulset" .Release.Name | trunc 63 | trimSuffix "-" }}
+	labels:
+		app.kubernetes.io/name: {{ .Release.Name | quote }}
+spec:
+	serviceName: {{ printf "%s-headless" .Release.Name | trunc 63 | trimSuffix "-" | quote }}
+	replicas: {{ .Values.replicas | default 1 }}
+	selector:
+		matchLabels:
+			app.kubernetes.io/name: {{ printf "%s-pod" .Release.Name | quote }}
+		template:
+			metadata:
+				labels:
+					app.kubernetes.io/name: {{ printf "%s-pod" .Release.Name | quote }}
+				{{- with .Values.podLabels }}
+				{{- toYaml . | nindent 8 }}
+				{{- end }}
+			{{- with .Values.podAnnotations }}
+			annotations:
+				{{- toYaml . | nindent 8 }}
+			{{- end }}
+		spec:
+			{{- /* Determine effective serviceAccountName:
+			      1. If serviceAccount.enabled:
+			         - if serviceAccount.name set -> use it
+			         - else -> default "<name>-sa"
+			      2. Else, if legacy serviceAccountName set -> use that.
+			   */}}
+			{{- if .Values.serviceAccount.enabled }}
+			{{- if .Values.serviceAccount.name }}
+			serviceAccountName: {{ .Values.serviceAccount.name | quote }}
+			{{- else }}
+			serviceAccountName: {{ printf "%s-sa" .Release.Name | trunc 63 | trimSuffix "-" | quote }}
+			{{- end }}
+			{{- else if .Values.serviceAccountName }}
+			serviceAccountName: {{ .Values.serviceAccountName | quote }}
+			{{- end }}
+			{{- with .Values.podSecurityContext }}
+			securityContext:
+				{{- toYaml . | nindent 8 }}
+			{{- end }}
+			{{- with .Values.volumes }}
+			volumes:
+				{{- toYaml . | nindent 8 }}
+			{{- end }}
+			{{- with .Values.initContainers }}
+			initContainers:
+				{{- range . }}
+				- name: {{ printf "%s-container" .name | quote }}
+					image: {{ .image | quote }}
+					{{- if .imagePullPolicy }}
+					imagePullPolicy: {{ .imagePullPolicy | quote }}
+					{{- end }}
+					{{- if or .env .externalSecrets (gt (len .configMaps) 0) (gt (len .secrets) 0) .secretRef .configMapRef }}
+					env:
+						{{- range $k, $v := .env }}
+						- name: {{ $k | quote }}
+							value: {{ $v | quote }}
+						{{- end }}
+						{{- range $k, $v := .externalSecrets }}
+						- name: {{ $k | quote }}
+							valueFrom:
+								secretKeyRef:
+									name: {{ default (printf "%s-secret" $.Release.Name | trunc 63 | trimSuffix "-") $.Values.externalSecret.targetName | quote }}
+									key: {{ $v | quote }}
+						{{- end }}
+						{{- range .secrets }}
+						- name: {{ .name | quote }}
+							valueFrom:
+								secretKeyRef:
+									name: {{ .valueFrom.secretKeyRef.name | quote }}
+									key: {{ .valueFrom.secretKeyRef.key | quote }}
+						{{- end }}
+						{{- range .configMaps }}
+						- name: {{ .name | quote }}
+							valueFrom:
+								configMapKeyRef:
+									name: {{ .valueFrom.configMapKeyRef.name | quote }}
+									key: {{ .valueFrom.configMapKeyRef.key | quote }}
+						{{- end }}
+					{{- end }}
+
+					{{- if or .secretRef .configMapRef }}
+					envFrom:
+						{{- range .secretRef }}
+						- secretRef:
+								name: {{ . | quote }}
+						{{- end }}
+						{{- range .configMapRef }}
+						- configMapRef:
+								name: {{ . | quote }}
+						{{- end }}
+					{{- end }}
+
+					{{- with .volumeMounts }}
+					volumeMounts:
+						{{- toYaml . | nindent 12 }}
+					{{- end }}
+
+					resources:
+						{{- if .resources }}
+						{{- toYaml .resources | nindent 12 }}
+						{{- else }}
+						limits:
+							cpu: 100m
+							memory: 250Mi
+						requests:
+							cpu: 30m
+							memory: 50Mi
+						{{- end }}
+					{{- with .otherSpecs }}
+					{{- toYaml . | nindent 10 }}
+					{{- end }}
+				{{- end }}
+			{{- end }}
+			containers:
+				{{- range .Values.containers }}
+				- name: {{ printf "%s-container" .name | quote }}
+					image: {{ .image | quote }}
+					{{- if .imagePullPolicy }}
+					imagePullPolicy: {{ .imagePullPolicy | quote }}
+					{{- end }}
+					{{- if or .env .externalSecrets (gt (len .configMaps) 0) (gt (len .secrets) 0) .secretRef .configMapRef }}
+					env:
+						{{- range $k, $v := .env }}
+						- name: {{ $k | quote }}
+							value: {{ $v | quote }}
+						{{- end }}
+						{{- range $k, $v := .externalSecrets }}
+						- name: {{ $k | quote }}
+							valueFrom:
+								secretKeyRef:
+									name: {{ default (printf "%s-secret" $.Release.Name | trunc 63 | trimSuffix "-") $.Values.externalSecret.targetName | quote }}
+									key: {{ $v | quote }}
+						{{- end }}
+						{{- range .secrets }}
+						- name: {{ .name | quote }}
+							valueFrom:
+								secretKeyRef:
+									name: {{ .valueFrom.secretKeyRef.name | quote }}
+									key: {{ .valueFrom.secretKeyRef.key | quote }}
+						{{- end }}
+						{{- range .configMaps }}
+						- name: {{ .name | quote }}
+							valueFrom:
+								configMapKeyRef:
+									name: {{ .valueFrom.configMapKeyRef.name | quote }}
+									key: {{ .valueFrom.configMapKeyRef.key | quote }}
+						{{- end }}
+					{{- end }}
+
+					{{- if or .secretRef .configMapRef }}
+					envFrom:
+						{{- range .secretRef }}
+						- secretRef:
+								name: {{ . | quote }}
+						{{- end }}
+						{{- range .configMapRef }}
+						- configMapRef:
+								name: {{ . | quote }}
+						{{- end }}
+					{{- end }}
+
+					{{- with .volumeMounts }}
+					volumeMounts:
+						{{- toYaml . | nindent 12 }}
+					{{- end }}
+
+					resources:
+						{{- if .resources }}
+						{{- toYaml .resources | nindent 12 }}
+						{{- else }}
+						limits:
+							cpu: 100m
+							memory: 250Mi
+						requests:
+							cpu: 30m
+							memory: 50Mi
+						{{- end }}
+					{{- with .otherSpecs }}
+					{{- toYaml . | nindent 10 }}
+					{{- end }}
+				{{- end }}
+
+				{{- with .Values.otherTemplateSpecs }}
+				{{- toYaml . | nindent 6 }}
+				{{- end }}
+
+			{{- with .Values.nodeSelector }}
+			nodeSelector:
+				{{- toYaml . | nindent 8 }}
+			{{- end }}
+			{{- with .Values.affinity }}
+			affinity:
+				{{- toYaml . | nindent 8 }}
+			{{- end }}
+			{{- with .Values.tolerations }}
+			tolerations:
+				{{- toYaml . | nindent 8 }}
+			{{- end }}
+{{- with .Values.otherSpecs }}
+	{{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}
+

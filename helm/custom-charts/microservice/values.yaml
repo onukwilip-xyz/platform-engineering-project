@@ -1,0 +1,147 @@
+# name: my-app
+
+useDeployment: true
+useStatefulSet: false
+
+replicas: 1
+
+containers:
+  - name: api
+    image: nginx:1.27.2
+    imagePullPolicy: IfNotPresent
+    resources: {}
+    # Plain env vars as key/value.
+    # Example:
+    # env:
+    #   ENVIRONMENT: "production"
+    #   SERVER_PORT: ":9000"
+    env: {}
+
+    # Map of env var name -> key in the external secret created by ExternalSecret.
+    # For each pair, we generate:
+    # - name: <KEY>
+    #   valueFrom.secretKeyRef.name: <target secret name>
+    #   valueFrom.secretKeyRef.key: <VALUE>
+    # Example:
+    # externalSecrets:
+    #   DB_PASSWORD: db-password
+    externalSecrets: {}
+
+    # List of secret-based env vars using the native Kubernetes
+    # `secretKeyRef` schema.
+    # Example:
+    # secrets:
+    #   - name: BITCOIN_RPC_PASSWORD
+    #     valueFrom:
+    #       secretKeyRef:
+    #         name: bitcoin-secret
+    #         key: BITCOIN_RPC_PASSWORD_ARCHIVE
+    secrets: []
+
+    # List of configMap-based env vars. Each entry matches the
+    # Kubernetes `configMapKeyRef` schema.
+    # Example:
+    # configMaps:
+    #   - name: LOG_LEVEL
+    #     valueFrom:
+    #       configMapKeyRef:
+    #         name: app-config
+    #         key: LOG_LEVEL
+    configMaps: []
+    # A list of the secrets you want to reference, e.g. secretRef: [secretRef1, secretRef2]
+    secretRef: []
+    # A list of the configMaps you want to reference, e.g. configMapRef: [configMap1, configMap2]
+    configMapRef: []
+    # The same spec as the default Kubernetes `container.volumeMounts` property
+    volumeMounts: []
+    # Any additional container fields to merge directly into
+    # the container spec (e.g. livenessProbe, readinessProbe, args).
+    # Example:
+    # otherSpecs:
+    #   args:
+    #     - "--some-flag=true"
+    #   livenessProbe:
+    #     httpGet:
+    #       path: /healthz
+    #       port: 8080
+    otherSpecs: {}
+
+initContainers: []
+
+serviceAccount:
+  enabled: false
+  # If empty, a name will not be generated automatically; set explicitly.
+  name: ""
+  labels: {}
+  annotations: {}
+  # Optionally, if you still want to bind the pod to this SA,
+  # set `serviceAccountName` below to the same value.
+
+serviceAccountName: ""
+podAnnotations: {}
+podLabels: {}
+podSecurityContext: {}
+securityContext: {}
+nodeSelector: {}
+affinity: {}
+tolerations: []
+volumes: []
+
+# Extra fragment to merge into the generated workload spec.
+# Example:
+# otherSpecs:
+#   strategy:
+#     type: RollingUpdate
+otherSpecs: {}
+
+# Extra fragment to merge into the Pod template spec (`spec.template.spec`).
+# Example:
+# otherTemplateSpecs:
+#   hostAliases:
+#     - ip: "127.0.0.1"
+#       hostnames:
+#         - "local.example.com"
+otherTemplateSpecs: {}
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+  protocol: TCP
+  # Optional nodePort when type is NodePort or LoadBalancer.
+  nodePort: null
+  # Optional annotations for the Service.
+  annotations: {}
+  # Optional extra labels for the Service.
+  labels: {}
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  # CPU utilization percentage target (v2 spec)
+  targetCPUUtilizationPercentage: 80
+
+vpa:
+  enabled: false
+  updateMode: "Auto"
+
+pdb:
+  enabled: false
+  # Use either minAvailable or maxUnavailable (not both).
+  minAvailable: 1
+  maxUnavailable: null
+
+externalSecret:
+  enabled: false
+  # Default ExternalSecret metadata.name; fallback will be `<name>-externalsecret` if empty.
+  name: ""
+  # Default SecretStore reference.
+  secretStoreRef:
+    name: google-secret-manager-store
+    kind: SecretStore
+  # Default refresh interval.
+  refreshInterval: 24h
+  # Default target secret name; fallback will be `<name>-secret` if empty.
+  targetName: ""

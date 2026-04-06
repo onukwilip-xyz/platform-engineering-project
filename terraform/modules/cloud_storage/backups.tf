@@ -1,38 +1,9 @@
 locals {
-  artifact_registry_labels = merge(var.labels, {
-    purpose     = "artifact-registry"
-    gcp-product = "artifact-registry"
-  })
   db_backups_labels = merge(var.labels, {
     purpose     = "db-backups"
     gcp-product = "cloud-storage"
   })
 }
-
-############################
-# Artifact Registry (Docker/OCI) Repository
-############################
-
-resource "google_artifact_registry_repository" "app_repo" {
-  project       = var.service_project_id
-  location      = coalesce(var.artifact_registry_location, var.region)
-  repository_id = var.artifact_registry_repository_id
-  description   = var.artifact_registry_description
-  format        = var.artifact_registry_format
-
-  dynamic "docker_config" {
-    for_each = var.artifact_registry_format == "DOCKER" ? [1] : []
-    content {
-      immutable_tags = var.artifact_registry_docker_immutable_tags
-    }
-  }
-
-  labels = local.artifact_registry_labels
-}
-
-############################
-# DB Backups Bucket
-############################
 
 resource "google_storage_bucket" "db_backups" {
   project                     = var.service_project_id

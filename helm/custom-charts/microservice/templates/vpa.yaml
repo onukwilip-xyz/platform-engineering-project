@@ -1,0 +1,14 @@
+{{- if .Values.vpa.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+	name: {{ printf "%s-vpa" .Release.Name | trunc 63 | trimSuffix "-" }}
+spec:
+	targetRef:
+		apiVersion: "apps/v1"
+		kind: Deployment
+		name: {{ printf "%s-deployment" .Release.Name | trunc 63 | trimSuffix "-" }}
+	updatePolicy:
+		updateMode: {{ .Values.vpa.updateMode | default "Auto" | quote }}
+{{- end }}
+
