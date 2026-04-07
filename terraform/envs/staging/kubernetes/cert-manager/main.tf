@@ -6,7 +6,6 @@ module "cert_manager" {
     google.net      = google.net
     kubernetes      = kubernetes
     helm            = helm
-    tls             = tls
   }
 
   tf_platform_sa_email = var.tf_platform_sa_email
@@ -14,16 +13,8 @@ module "cert_manager" {
   service_project_id   = var.service_project_id
   dns_project_id       = var.dns_project_id
 
-  namespace                            = var.namespace
-  cert_manager_chart_version           = var.cert_manager_chart_version
+  namespace                              = var.namespace
+  cert_manager_chart_version             = var.cert_manager_chart_version
   cert_manager_google_service_account_id = var.cert_manager_google_service_account_id
   cert_manager_k8s_service_account_name  = var.cert_manager_k8s_service_account_name
-
-  ca_common_name               = var.ca_common_name
-  ca_organization              = var.ca_organization
-  internal_cluster_issuer_name = var.internal_cluster_issuer_name
-
-  public_cluster_issuer_name = var.public_cluster_issuer_name
-  acme_email                 = var.acme_email
-  acme_server                = var.acme_server
 }

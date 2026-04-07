@@ -7,8 +7,9 @@ terraform {
 
   extra_arguments "secrets" {
     commands = get_terraform_commands_that_need_vars()
-    optional_var_files = [find_in_parent_folders(".tfvars")]
-  
+    optional_var_files = [
+      find_in_parent_folders(".tfvars")
+    ]
   }
 }
 
@@ -16,7 +17,7 @@ dependency "project" {
   config_path = "../project"
 
   mock_outputs_allowed_terraform_commands = [
-    "validate", "plan"
+    "init", "validate", "plan"
   ]
 
   mock_outputs = {

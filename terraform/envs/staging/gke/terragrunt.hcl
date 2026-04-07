@@ -16,12 +16,8 @@ dependency "project" {
   }
 }
 
-# networking must be applied before gke (Shared VPC attachment must exist first)
-dependency "networking" {
-  config_path = "../networking"
-
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
-  mock_outputs                            = {}
+dependencies {
+  paths = ["../networking"]
 }
 
 generate "providers" {

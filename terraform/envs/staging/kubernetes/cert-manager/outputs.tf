@@ -1,9 +1,9 @@
-output "internal_cluster_issuer_name" {
-  description = "Name of the CA-backed ClusterIssuer for internal certificates."
-  value       = var.internal_cluster_issuer_name
+output "namespace" {
+  description = "The cert-manager namespace. Consumed by the cert-manager-config unit."
+  value       = module.cert_manager.namespace
 }
 
-output "public_cluster_issuer_name" {
-  description = "Name of the ACME ClusterIssuer for public internet-facing certificates."
-  value       = var.public_cluster_issuer_name
+output "cert_manager_dns_sa_email" {
+  description = "Email of the GCP DNS-01 solver service account."
+  value       = module.cert_manager.cert_manager_dns_sa_email
 }
