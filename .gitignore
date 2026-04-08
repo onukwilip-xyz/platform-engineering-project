@@ -6,6 +6,7 @@ terraform.tfstate
 terraform.tfstate.backup
 .terraform/
 .terraform.lock.hcl
+.terragrunt-cache/
 gpt-prompt.md
 SHORTCUTS.md
 secret-script.sh

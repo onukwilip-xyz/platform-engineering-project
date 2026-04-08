@@ -1,0 +1,12 @@
+# Sensitive variable files — never commit these
+secrets.tfvars
+*.tfvars.json
+
+# Terragrunt working directory (generated files, downloaded modules)
+.terragrunt-cache/
+
+# Terraform local state and metadata
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
