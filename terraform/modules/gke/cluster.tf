@@ -81,6 +81,10 @@ resource "google_container_cluster" "gke_cluster" {
     }
   }
 
+  gateway_api_config {
+    channel = "CHANNEL_STANDARD"
+  }
+
   deletion_protection = var.deletion_protection
   resource_labels     = local.cluster_labels
 

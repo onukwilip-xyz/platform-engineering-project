@@ -6,6 +6,6 @@ output "node_service_account" {
   value = google_service_account.node_sa
 }
 
-output "jump_service_account" {
-  value = google_service_account.jump_sa
-}
+# output "jump_service_account" {
+#   value = google_service_account.jump_sa
+# }

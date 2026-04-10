@@ -49,49 +49,49 @@ resource "google_project_iam_member" "node_sa_extra_roles" {
   member  = "serviceAccount:${google_service_account.node_sa.email}"
 }
 
-resource "google_project_iam_member" "jump_sa_logs_writer" {
-  provider = google.net
-  project  = var.service_project_id
-  role     = "roles/logging.logWriter"
-  member   = "serviceAccount:${google_service_account.jump_sa.email}"
-}
+# resource "google_project_iam_member" "jump_sa_logs_writer" {
+#   provider = google.net
+#   project  = var.service_project_id
+#   role     = "roles/logging.logWriter"
+#   member   = "serviceAccount:${google_service_account.jump_sa.email}"
+# }
 
-resource "google_project_iam_member" "jump_sa_metric_writer" {
-  provider = google.net
-  project  = var.service_project_id
-  role     = "roles/monitoring.metricWriter"
-  member   = "serviceAccount:${google_service_account.jump_sa.email}"
-}
+# resource "google_project_iam_member" "jump_sa_metric_writer" {
+#   provider = google.net
+#   project  = var.service_project_id
+#   role     = "roles/monitoring.metricWriter"
+#   member   = "serviceAccount:${google_service_account.jump_sa.email}"
+# }
 
-resource "google_service_account_iam_member" "jump_sa_actas_for_access_sa" {
-  provider           = google.net
-  service_account_id = google_service_account.jump_sa.name
-  role               = "roles/iam.serviceAccountUser"
-  member             = "serviceAccount:${google_service_account.jump_vm_access_sa.email}"
-}
+# resource "google_service_account_iam_member" "jump_sa_actas_for_access_sa" {
+#   provider           = google.net
+#   service_account_id = google_service_account.jump_sa.name
+#   role               = "roles/iam.serviceAccountUser"
+#   member             = "serviceAccount:${google_service_account.jump_vm_access_sa.email}"
+# }
 
-resource "google_project_iam_member" "jump_vm_access_sa_cluster_admin" {
-  provider = google.net
+# resource "google_project_iam_member" "jump_vm_access_sa_cluster_admin" {
+#   provider = google.net
 
-  project = var.service_project_id
-  role    = "roles/container.clusterAdmin"
-  member  = "serviceAccount:${google_service_account.jump_vm_access_sa.email}"
-}
+#   project = var.service_project_id
+#   role    = "roles/container.clusterAdmin"
+#   member  = "serviceAccount:${google_service_account.jump_vm_access_sa.email}"
+# }
 
-resource "google_project_iam_member" "jump_vm_access_sa_compute_instance_admin" {
-  provider = google.net
+# resource "google_project_iam_member" "jump_vm_access_sa_compute_instance_admin" {
+#   provider = google.net
 
-  project = var.service_project_id
-  role    = "roles/compute.instanceAdmin.v1"
-  member  = "serviceAccount:${google_service_account.jump_vm_access_sa.email}"
-}
+#   project = var.service_project_id
+#   role    = "roles/compute.instanceAdmin.v1"
+#   member  = "serviceAccount:${google_service_account.jump_vm_access_sa.email}"
+# }
 
-resource "google_service_account_iam_binding" "jump_access_impersonators" {
-  provider = google.net
+# resource "google_service_account_iam_binding" "jump_access_impersonators" {
+#   provider = google.net
 
-  service_account_id = google_service_account.jump_vm_access_sa.name
-  role               = "roles/iam.serviceAccountTokenCreator"
-  members            = var.jump_vm_access_sa_impersonators
+#   service_account_id = google_service_account.jump_vm_access_sa.name
+#   role               = "roles/iam.serviceAccountTokenCreator"
+#   members            = var.jump_vm_access_sa_impersonators
 
-  depends_on = [google_service_account.jump_vm_access_sa]
-}
+#   depends_on = [google_service_account.jump_vm_access_sa]
+# }

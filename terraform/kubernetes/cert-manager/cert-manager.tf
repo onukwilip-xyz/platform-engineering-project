@@ -16,12 +16,16 @@ resource "helm_release" "cert_manager" {
         annotations = {
           "iam.gke.io/gcp-service-account" = google_service_account.cert_manager_dns.email
         }
-      }
+      },
+      extraArgs = ["--enable-gateway-api"]
     })
   ]
 
   wait          = true
   wait_for_jobs = true
+  # Default Helm timeout (5 min) is too short when cert-manager pods restart
+  # after an upgrade (e.g. adding --enable-gateway-api). 10 min is safe.
+  timeout = 600
 
   depends_on = [
     kubernetes_namespace.cert_manager,
