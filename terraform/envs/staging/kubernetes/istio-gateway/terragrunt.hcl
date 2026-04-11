@@ -21,7 +21,8 @@ dependency "istio" {
 
   mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy"]
   mock_outputs = {
-    istio_chart_version = "1.24.2"
+    istio_chart_version  = "1.24.2"
+    gateway_class_name   = "istio"
   }
 }
 
@@ -72,6 +73,7 @@ terraform {
 
 inputs = {
   istio_chart_version          = dependency.istio.outputs.istio_chart_version
+  gateway_class_name           = dependency.istio.outputs.gateway_class_name
   public_cluster_issuer_name   = dependency.cert_manager_config.outputs.public_cluster_issuer_name
   internal_cluster_issuer_name = dependency.cert_manager_config.outputs.internal_cluster_issuer_name
 }
