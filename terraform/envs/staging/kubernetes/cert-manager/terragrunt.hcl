@@ -9,7 +9,7 @@ locals {
 dependency "project" {
   config_path = "../../project"
 
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
   mock_outputs = {
     service_project_id     = "mock-service-project-id"
     service_project_number = "000000000000"
@@ -19,7 +19,7 @@ dependency "project" {
 dependency "gke" {
   config_path = "../../gke"
 
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
   mock_outputs = {
     gke_cluster_endpoint = "127.0.0.1"
     # A valid self-signed PEM cert, base64-encoded. Required because the
