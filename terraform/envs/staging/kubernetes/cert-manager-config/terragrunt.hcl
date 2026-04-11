@@ -4,6 +4,7 @@ include "root" {
 
 locals {
   env = read_terragrunt_config(find_in_parent_folders("env.hcl")).locals
+  k8s = read_terragrunt_config(find_in_parent_folders("kubernetes.hcl")).locals
 }
 
 # cert-manager must be fully applied first so the ClusterIssuer CRD is
@@ -12,20 +13,14 @@ dependency "cert_manager" {
   config_path = "../cert-manager"
 
   mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy"]
-  mock_outputs = {
-    namespace = "cert-manager"
-  }
+  mock_outputs                            = local.k8s.cert_manager_mock_outputs
 }
 
 dependency "gke" {
   config_path = "../../gke"
 
   mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy"]
-  mock_outputs = {
-    gke_cluster_endpoint       = "127.0.0.1"
-    gke_cluster_ca_certificate = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBMFo1dnZaVThKVDNPUEZLL1NGRlYKTWREeGhsT3Y5WUNXcWpuQ3pTYk1PL05DNEpyVWU4SnlCeVlsRGNSaENsM0NmaGFSeGJaU0FwZElTeWREbgppWENscGJFaDVGL0pXVGhiTkZ0RXpJUVpYa3N4UVZvb3NOb0d6TUJVU3NXOE95UHVicmpjaFpuSTlIa1RHCkFQZlpERGhtZ3p4cmVDTUpvcFZ5aEdNVEE2blVMTFlOVk5ONjR4REVjUzZLc0xOdUhLMkpvbXh0UUlTRHkKdHZucUk1N0hhcGMyVHMxQTNnUHo0aXFhaFpFVFJsMFZYVktuYXFMRjFXZjk5OUVlNlpDVFY5YVdkaGhRTgpXZDlxV0QzWG5OZkdlQUlEN2pSUlRUcVBJQ2lScEZJbHdaTnJpMUkyYXZ3T29WTmNGcVJUWlVrSTQyVk1PClZ3SURBUUFCZ29BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBCkFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUEKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
-    host_project_id            = "mock-host-project-id"
-  }
+  mock_outputs                            = local.k8s.gke_mock_outputs
 }
 
 # No "plan" in mock_outputs_allowed_terraform_commands — cert-manager-config

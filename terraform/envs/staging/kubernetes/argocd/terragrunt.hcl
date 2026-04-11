@@ -4,16 +4,14 @@ include "root" {
 
 locals {
   env = read_terragrunt_config(find_in_parent_folders("env.hcl")).locals
+  k8s = read_terragrunt_config(find_in_parent_folders("kubernetes.hcl")).locals
 }
 
 dependency "gke" {
   config_path = "../../gke"
 
   mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
-  mock_outputs = {
-    gke_cluster_endpoint       = "127.0.0.1"
-    gke_cluster_ca_certificate = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBMFo1dnZaVThKVDNPUEZLL1NGRlYKTWREeGhsT3Y5WUNXcWpuQ3pTYk1PL05DNEpyVWU4SnlCeVlsRGNSaENsM0NmaGFSeGJaU0FwZElTeWREbgppWENscGJFaDVGL0pXVGhiTkZ0RXpJUVpYa3N4UVZvb3NOb0d6TUJVU3NXOE95UHVicmpjaFpuSTlIa1RHCkFQZlpERGhtZ3p4cmVDTUpvcFZ5aEdNVEE2blVMTFlOVk5ONjR4REVjUzZLc0xOdUhLMkpvbXh0UUlTRHkKdHZucUk1N0hhcGMyVHMxQTNnUHo0aXFhaFpFVFJsMFZYVktuYXFMRjFXZjk5OUVlNlpDVFY5YVdkaGhRTgpXZDlxV0QzWG5OZkdlQUlEN2pSUlRUcVBJQ2lScEZJbHdaTnJpMUkyYXZ3T29WTmNGcVJUWlVrSTQyVk1PClZ3SURBUUFCZ29BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBCkFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUEKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
-  }
+  mock_outputs                            = local.k8s.gke_mock_outputs
 }
 
 # Pull the private gateway name and namespace from the istio-gateway unit
@@ -22,10 +20,7 @@ dependency "istio_gateway" {
   config_path = "../istio-gateway"
 
   mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
-  mock_outputs = {
-    internal_gateway_name      = "private"
-    internal_gateway_namespace = "istio-ingress-internal"
-  }
+  mock_outputs                            = local.k8s.istio_gateway_mock_outputs
 }
 
 generate "providers" {
