@@ -25,16 +25,6 @@ dependency "istio" {
   }
 }
 
-# The GatewayClass must exist before Gateway resources are created.
-dependency "gateway_api" {
-  config_path = "../gateway-api"
-
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy"]
-  mock_outputs = {
-    istio_gateway_class_name = "istio"
-  }
-}
-
 dependency "cert_manager_config" {
   config_path = "../cert-manager-config"
 
@@ -82,7 +72,6 @@ terraform {
 
 inputs = {
   istio_chart_version          = dependency.istio.outputs.istio_chart_version
-  gateway_class_name           = dependency.gateway_api.outputs.istio_gateway_class_name
   public_cluster_issuer_name   = dependency.cert_manager_config.outputs.public_cluster_issuer_name
   internal_cluster_issuer_name = dependency.cert_manager_config.outputs.internal_cluster_issuer_name
 }
