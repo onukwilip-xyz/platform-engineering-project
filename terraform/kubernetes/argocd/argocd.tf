@@ -51,12 +51,14 @@ resource "helm_release" "argocd" {
 
       "redis-ha" = {
         enabled = true
-        podAnnotations = {
-          "sidecar.istio.io/inject" = "false"
+        redis = {
+          podAnnotations = {
+            "sidecar.istio.io/inject" = false
+          }
         }
         haproxy = {
           podAnnotations = {
-            "sidecar.istio.io/inject" = "false"
+            "sidecar.istio.io/inject" = false
           }
         }
       }
