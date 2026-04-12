@@ -7,13 +7,6 @@ locals {
   k8s = read_terragrunt_config(find_in_parent_folders("kubernetes.hcl")).locals
 }
 
-dependency "project" {
-  config_path = "../../project"
-
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
-  mock_outputs                            = local.k8s.project_mock_outputs
-}
-
 dependency "gke" {
   config_path = "../../gke"
 
@@ -21,22 +14,24 @@ dependency "gke" {
   mock_outputs                            = local.k8s.gke_mock_outputs
 }
 
+# Pull the private gateway name and namespace from the istio-gateway unit
+# so ArgoCD's HTTPRoute always references the exact gateway that was created.
+dependency "istio_gateway" {
+  config_path = "../istio-gateway"
+
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
+  mock_outputs                            = local.k8s.istio_gateway_mock_outputs
+}
+
 generate "providers" {
   path      = "providers_gen.tf"
   if_exists = "overwrite_terragrunt"
   contents  = <<-EOF
     provider "google" {
-      alias                       = "platform"
       impersonate_service_account = "${local.env.tf_platform_sa_email}"
     }
-    provider "google" {
-      alias                       = "net"
-      impersonate_service_account = "${local.env.tf_network_sa_email}"
-    }
 
-    data "google_client_config" "default" {
-      provider = google.platform
-    }
+    data "google_client_config" "default" {}
 
     provider "kubernetes" {
       host                   = "https://${dependency.gke.outputs.gke_cluster_endpoint}"
@@ -51,12 +46,11 @@ generate "providers" {
         cluster_ca_certificate = base64decode("${dependency.gke.outputs.gke_cluster_ca_certificate}")
       }
     }
-
   EOF
 }
 
 terraform {
-  source = "${get_repo_root()}//terraform/envs/staging/kubernetes/cert-manager"
+  source = "${get_repo_root()}//terraform/kubernetes/argocd"
 
   extra_arguments "secrets" {
     commands           = get_terraform_commands_that_need_vars()
@@ -65,8 +59,6 @@ terraform {
 }
 
 inputs = {
-  tf_platform_sa_email = local.env.tf_platform_sa_email
-  tf_network_sa_email  = local.env.tf_network_sa_email
-  service_project_id   = dependency.project.outputs.service_project_id
-  dns_project_id       = dependency.gke.outputs.host_project_id
+  private_gateway_name      = dependency.istio_gateway.outputs.internal_gateway_name
+  private_gateway_namespace = dependency.istio_gateway.outputs.internal_gateway_namespace
 }

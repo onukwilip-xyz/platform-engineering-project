@@ -28,6 +28,10 @@ resource "helm_release" "istiod" {
 
   values = [
     yamlencode({
+      env = {
+        ENABLE_NATIVE_SIDECARS = "true"
+      }
+
       meshConfig = {
         enablePrometheusMerge = true
 
