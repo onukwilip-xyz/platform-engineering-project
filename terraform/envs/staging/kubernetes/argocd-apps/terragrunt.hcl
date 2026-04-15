@@ -10,14 +10,14 @@ locals {
 dependency "gke" {
   config_path = "../../gke"
 
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
   mock_outputs                            = local.k8s.gke_mock_outputs
 }
 
 dependency "argocd" {
   config_path = "../argocd"
 
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
   mock_outputs                            = local.k8s.argocd_mock_outputs
 }
 

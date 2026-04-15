@@ -10,21 +10,21 @@ locals {
 dependency "gke" {
   config_path = "../../gke"
 
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "apply"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "state", "apply"]
   mock_outputs                            = local.k8s.gke_mock_outputs
 }
 
 dependency "istio" {
   config_path = "../istio"
 
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "apply"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "state", "apply"]
   mock_outputs                            = local.k8s.istio_mock_outputs
 }
 
 dependency "cert_manager_config" {
   config_path = "../cert-manager-config"
 
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "apply"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "state", "apply"]
   mock_outputs                            = local.k8s.cert_manager_config_mock_outputs
 }
 

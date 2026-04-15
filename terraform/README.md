@@ -104,6 +104,7 @@ gcloud storage buckets update "gs://$TF_STATE_BUCKET" --versioning
 Authenticate Terraform to Google Cloud
 ```bash
 gcloud auth application-default login
+gcloud auth login
 ```
 
 Initialize Terraform

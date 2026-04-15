@@ -12,14 +12,14 @@ locals {
 dependency "cert_manager" {
   config_path = "../cert-manager"
 
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "state"]
   mock_outputs                            = local.k8s.cert_manager_mock_outputs
 }
 
 dependency "gke" {
   config_path = "../../gke"
 
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "state"]
   mock_outputs                            = local.k8s.gke_mock_outputs
 }
 
