@@ -1,0 +1,73 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres-cluster
+  namespace: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  instances: 3
+
+  primaryUpdateStrategy: unsupervised
+  primaryUpdateMethod: switchover
+
+  minSyncReplicas: 1
+  maxSyncReplicas: 1
+
+  postgresql:
+    parameters:
+      shared_preload_libraries: "pg_stat_statements"
+      pg_stat_statements.track: "all"
+
+  certificates:
+    serverTLSSecret: postgres-server-tls
+    serverCASecret: postgres-server-ca
+    clientCASecret: postgres-client-ca
+    replicationTLSSecret: postgres-replication-tls
+
+  storage:
+    size: 10Gi
+    storageClass: standard-rwo
+
+  walStorage:
+    size: 10Gi
+    storageClass: standard-rwo
+
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          cnpg.io/cluster: postgres-cluster
+
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: kubernetes.io/hostname
+    podAntiAffinityType: required
+
+  podAnnotations:
+    sidecar.istio.io/inject: "false"
+
+  serviceAccountTemplate:
+    metadata:
+      annotations:
+        iam.gke.io/gcp-service-account: "cnpg-backup@<project-id>.iam.gserviceaccount.com"
+
+  backup:
+    barmanObjectStore:
+      # Replace bucket name if var.backup_bucket_name was overridden in Terraform.
+      destinationPath: "gs://pe-cnpg-postgres-backups/postgres-cluster"
+      googleCredentials:
+        gkeEnvironment: true
+      wal:
+        compression: gzip
+        maxParallel: 2
+      data:
+        compression: gzip
+        immediateCheckpoint: false
+    retentionPolicy: "30d"
+
+  # ── Monitoring ────────────────────────────────────────────────────────────────
+  monitoring:
+    enablePodMonitor: true

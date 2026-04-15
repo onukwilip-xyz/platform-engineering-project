@@ -35,4 +35,14 @@ locals {
     public_gateway_ip          = "1.2.3.4"
     private_gateway_ip         = "10.0.0.5"
   }
+
+  argocd_mock_outputs = {
+    namespace     = "argocd"
+    argocd_domain = "argocd.internal.pe.onukwilip.xyz"
+  }
+
+  cnpg_infra_mock_outputs = {
+    backup_bucket_name  = "mock-cnpg-postgres-backups"
+    backup_gcp_sa_email = "cnpg-backup@mock-service-project-id.iam.gserviceaccount.com"
+  }
 }

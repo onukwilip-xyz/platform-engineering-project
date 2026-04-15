@@ -1,0 +1,94 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: postgres-server-tls
+  namespace: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  secretName: postgres-server-tls
+  duration: 2160h    # 90 days
+  renewBefore: 240h  # renew 10 days before expiry
+  rotationPolicy: Always
+  usages:
+    - server auth
+    - digital signature
+    - key encipherment
+  dnsNames:
+    - postgres-cluster-rw
+    - postgres-cluster-rw.postgres.svc.cluster.local
+    - postgres-cluster-ro
+    - postgres-cluster-ro.postgres.svc.cluster.local
+    - postgres-cluster-r
+    - postgres-cluster-r.postgres.svc.cluster.local
+  issuerRef:
+    name: internal-ca
+    kind: ClusterIssuer
+---
+# Server CA — trust anchor Postgres uses to validate client certificates (mTLS).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: postgres-server-ca
+  namespace: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  secretName: postgres-server-ca
+  duration: 2160h
+  renewBefore: 240h
+  rotationPolicy: Always
+  isCA: true
+  usages:
+    - cert sign
+    - crl sign
+  issuerRef:
+    name: internal-ca
+    kind: ClusterIssuer
+---
+# Client CA — trust anchor Postgres uses to validate the replication client cert.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: postgres-client-ca
+  namespace: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  secretName: postgres-client-ca
+  duration: 2160h
+  renewBefore: 240h
+  rotationPolicy: Always
+  isCA: true
+  usages:
+    - cert sign
+    - crl sign
+  issuerRef:
+    name: internal-ca
+    kind: ClusterIssuer
+---
+# Replication client certificate — identity used by streaming_replica for
+# inter-node WAL shipping. CN must be exactly "streaming_replica" to match
+# the pg_hba.conf rule CNPG generates.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: postgres-replication-tls
+  namespace: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  secretName: postgres-replication-tls
+  duration: 2160h
+  renewBefore: 240h
+  rotationPolicy: Always
+  usages:
+    - client auth
+    - digital signature
+    - key encipherment
+  subject:
+    commonName: streaming_replica
+  issuerRef:
+    name: internal-ca
+    kind: ClusterIssuer
