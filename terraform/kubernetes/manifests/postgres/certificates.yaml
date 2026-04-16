@@ -36,6 +36,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
   secretName: postgres-server-ca
+  commonName: postgres-server-ca
   duration: 2160h
   renewBefore: 240h
   rotationPolicy: Always
@@ -57,6 +58,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
   secretName: postgres-client-ca
+  commonName: postgres-client-ca
   duration: 2160h
   renewBefore: 240h
   rotationPolicy: Always
@@ -80,6 +82,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
   secretName: postgres-replication-tls
+  commonName: streaming_replica
   duration: 2160h
   renewBefore: 240h
   rotationPolicy: Always
@@ -87,8 +90,6 @@ spec:
     - client auth
     - digital signature
     - key encipherment
-  subject:
-    commonName: streaming_replica
   issuerRef:
     name: internal-ca
     kind: ClusterIssuer

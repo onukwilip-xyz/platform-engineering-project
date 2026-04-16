@@ -16,6 +16,11 @@ resource "helm_release" "argocd" {
         params = {
           "server.insecure" = "true"
         }
+        cm = {
+          "resource.customizations.ignoreDifferences.apps_Deployment" = yamlencode({
+            managedFieldsManagers = ["kube-controller-manager"]
+          })
+        }
       }
 
       controller = {
@@ -67,7 +72,7 @@ resource "helm_release" "argocd" {
 
   wait          = true
   wait_for_jobs = true
-  timeout = 600
+  timeout       = 600
 
   depends_on = [kubernetes_namespace.argocd]
 }
