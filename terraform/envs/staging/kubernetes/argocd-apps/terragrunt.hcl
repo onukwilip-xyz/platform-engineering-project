@@ -50,5 +50,4 @@ terraform {
 
 inputs = {
   argocd_namespace = dependency.argocd.outputs.namespace
-  repo_url         = "https://github.com/onukwilip-xyz/platform-engineering-project.git"
 }
