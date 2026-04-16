@@ -16,7 +16,6 @@ spec:
 
   postgresql:
     parameters:
-      shared_preload_libraries: "pg_stat_statements"
       pg_stat_statements.track: "all"
 
   certificates:
