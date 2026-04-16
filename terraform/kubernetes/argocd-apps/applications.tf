@@ -7,6 +7,7 @@ resource "kubernetes_manifest" "cnpg_operator" {
       namespace = var.argocd_namespace
       annotations = {
         "argocd.argoproj.io/sync-wave" = "0"
+        "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
       }
       finalizers = ["resources-finalizer.argocd.argoproj.io"]
     }
@@ -20,8 +21,6 @@ resource "kubernetes_manifest" "cnpg_operator" {
           values = <<-EOT
             config:
               clusterWide: true
-            monitoring:
-              podMonitorEnabled: true
           EOT
         }
       }
@@ -34,7 +33,7 @@ resource "kubernetes_manifest" "cnpg_operator" {
           prune    = true
           selfHeal = true
         }
-        syncOptions = ["CreateNamespace=false", "ServerSideApply=true"]
+        syncOptions = ["CreateNamespace=false", "ServerSideApply=true", "ServerSideDiff=true"]
       }
     }
   }
@@ -68,7 +67,7 @@ resource "kubernetes_manifest" "postgres_cluster" {
           prune    = true
           selfHeal = true
         }
-        syncOptions = ["CreateNamespace=false", "ServerSideApply=true"]
+        syncOptions = ["CreateNamespace=false"]
       }
     }
   }
