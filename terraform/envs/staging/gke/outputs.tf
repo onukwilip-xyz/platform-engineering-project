@@ -24,3 +24,13 @@ output "host_project_id" {
   description = "Host project ID (from shared state). Re-exported as dns_project_id for cert-manager."
   value       = data.terraform_remote_state.shared.outputs.host_project_id
 }
+
+output "gke_subnet_self_link" {
+  description = "Self-link of the GKE subnet (from shared state). Re-exported for istio-gateway static IP allocation."
+  value       = data.terraform_remote_state.shared.outputs.gke_subnet_self_link
+}
+
+output "private_dns_zone_name" {
+  description = "Name of the private Cloud DNS managed zone (from shared state). Re-exported for istio-gateway DNS record creation."
+  value       = data.terraform_remote_state.shared.outputs.private_dns_zone.name
+}

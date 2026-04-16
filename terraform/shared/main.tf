@@ -205,7 +205,14 @@ module "vpn_netbird_infra" {
   netbird_users = var.netbird_users
   labels        = var.labels
 
+  # Internal DNS nameserver group
+  root_domain       = var.root_domain
+  subdomain         = var.subdomain
+  private_subdomain = var.private_subdomain
+  subnetwork_name   = module.host_networking.gke_subnet.name
+
   depends_on = [
+    module.host_networking, # DNS inbound policy must exist before create_nameservers.sh runs
     module.vpn_server_infra,
     module.host_iam,
   ]
