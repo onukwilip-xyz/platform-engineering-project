@@ -10,14 +10,14 @@ locals {
 dependency "project" {
   config_path = "../../project"
 
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
   mock_outputs                            = local.k8s.project_mock_outputs
 }
 
 dependency "gke" {
   config_path = "../../gke"
 
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
   mock_outputs                            = local.k8s.gke_mock_outputs
 }
 

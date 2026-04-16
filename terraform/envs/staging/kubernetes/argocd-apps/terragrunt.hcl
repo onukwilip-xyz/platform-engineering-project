@@ -14,13 +14,11 @@ dependency "gke" {
   mock_outputs                            = local.k8s.gke_mock_outputs
 }
 
-# Pull the private gateway name and namespace from the istio-gateway unit
-# so ArgoCD's HTTPRoute always references the exact gateway that was created.
-dependency "istio_gateway" {
-  config_path = "../istio-gateway"
+dependency "argocd" {
+  config_path = "../argocd"
 
   mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
-  mock_outputs                            = local.k8s.istio_gateway_mock_outputs
+  mock_outputs                            = local.k8s.argocd_mock_outputs
 }
 
 generate "providers" {
@@ -38,19 +36,11 @@ generate "providers" {
       token                  = data.google_client_config.default.access_token
       cluster_ca_certificate = base64decode("${dependency.gke.outputs.gke_cluster_ca_certificate}")
     }
-
-    provider "helm" {
-      kubernetes = {
-        host                   = "https://${dependency.gke.outputs.gke_cluster_endpoint}"
-        token                  = data.google_client_config.default.access_token
-        cluster_ca_certificate = base64decode("${dependency.gke.outputs.gke_cluster_ca_certificate}")
-      }
-    }
   EOF
 }
 
 terraform {
-  source = "${get_repo_root()}//terraform/kubernetes/argocd"
+  source = "${get_repo_root()}//terraform/kubernetes/argocd-apps"
 
   extra_arguments "secrets" {
     commands           = get_terraform_commands_that_need_vars()
@@ -59,6 +49,5 @@ terraform {
 }
 
 inputs = {
-  private_gateway_name      = dependency.istio_gateway.outputs.internal_gateway_name
-  private_gateway_namespace = dependency.istio_gateway.outputs.internal_gateway_namespace
+  argocd_namespace = dependency.argocd.outputs.namespace
 }

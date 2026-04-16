@@ -39,7 +39,12 @@ variable "private_domain" {
 
 variable "host_project_id" {
   type        = string
-  description = "Host project ID where the VPC, subnets, and Cloud DNS zones live. Used to create the static IPs and the private DNS A record."
+  description = "Host project ID where the VPC, subnets, and Cloud DNS zones live. Used to create the private DNS A record."
+}
+
+variable "service_project_id" {
+  type        = string
+  description = "Service project ID where GKE runs. Static IPs for shared-VPC LoadBalancer Services must be reserved here, otherwise the GKE service controller can't resolve them by name."
 }
 
 variable "region" {
