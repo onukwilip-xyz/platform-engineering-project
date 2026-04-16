@@ -125,6 +125,31 @@ variable "netbird_idp_redirect_uri_parameter_id" {
   default     = ""
 }
 
+# ── Internal DNS nameserver group ─────────────────────────────────────────────
+
+variable "root_domain" {
+  type        = string
+  description = "Root domain (e.g. onukwilip.xyz). Combined with subdomain and private_subdomain to build the internal DNS domain."
+  default     = "onukwilip.xyz"
+}
+
+variable "subdomain" {
+  type        = string
+  description = "Public subdomain (e.g. pe for pe.onukwilip.xyz)."
+  default     = "pe"
+}
+
+variable "private_subdomain" {
+  type        = string
+  description = "Private subdomain prefix (e.g. internal for internal.pe.onukwilip.xyz)."
+  default     = "internal"
+}
+
+variable "subnetwork_name" {
+  type        = string
+  description = "Name of the GKE subnet. Used to look up the subnet CIDR via the Google API and derive the VPC-internal DNS resolver IP (base + 2)."
+}
+
 # Netbird user invitations
 variable "labels" {
   type        = map(string)

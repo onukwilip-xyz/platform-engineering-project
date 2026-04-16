@@ -17,3 +17,13 @@ output "internal_gateway_name" {
   description = "Name of the private Gateway CR."
   value       = kubernetes_manifest.gateway_internal.manifest.metadata.name
 }
+
+output "public_gateway_ip" {
+  description = "Static external IP address assigned to the public Istio gateway LoadBalancer service."
+  value       = google_compute_address.public_gateway.address
+}
+
+output "private_gateway_ip" {
+  description = "Static internal IP address assigned to the private Istio gateway LoadBalancer service."
+  value       = google_compute_address.private_gateway.address
+}
