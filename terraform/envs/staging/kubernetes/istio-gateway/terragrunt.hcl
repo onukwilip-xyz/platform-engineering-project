@@ -10,21 +10,21 @@ locals {
 dependency "gke" {
   config_path = "../../gke"
 
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "state", "apply"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "state"]
   mock_outputs                            = local.k8s.gke_mock_outputs
 }
 
 dependency "istio" {
   config_path = "../istio"
 
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "state", "apply"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "state"]
   mock_outputs                            = local.k8s.istio_mock_outputs
 }
 
 dependency "cert_manager_config" {
   config_path = "../cert-manager-config"
 
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "state", "apply"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "state"]
   mock_outputs                            = local.k8s.cert_manager_config_mock_outputs
 }
 
@@ -77,6 +77,7 @@ inputs = {
 
   # Static IP / DNS — sourced from the GKE unit which re-exports shared-state values
   host_project_id       = dependency.gke.outputs.host_project_id
+  service_project_id    = dependency.gke.outputs.service_project_id
   region                = local.env.region
   subnetwork            = dependency.gke.outputs.gke_subnet_self_link
   private_dns_zone_name = dependency.gke.outputs.private_dns_zone_name

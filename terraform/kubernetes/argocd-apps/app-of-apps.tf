@@ -1,7 +1,3 @@
-# Root App-of-Apps — a single ArgoCD Application that watches the
-# argocd-apps/manifests/ directory in this repo. Any Application CR dropped
-# into that directory is automatically picked up and synced by ArgoCD,
-# making it the single entry-point for all GitOps-managed workloads.
 resource "kubernetes_manifest" "app_of_apps" {
   manifest = {
     apiVersion = "argoproj.io/v1alpha1"

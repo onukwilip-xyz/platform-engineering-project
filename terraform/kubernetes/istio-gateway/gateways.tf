@@ -10,13 +10,15 @@ resource "kubernetes_manifest" "gateway_public" {
       }
     }
     spec = {
-      # infrastructure.annotations are propagated by Istio's Gateway controller
-      # to the auto-provisioned LoadBalancer Service ("public-istio"), so GKE
-      # assigns our static external IP instead of a random one.
+      addresses = [
+        {
+          type  = "IPAddress"
+          value = google_compute_address.public_gateway.address
+        }
+      ]
       infrastructure = {
         annotations = {
-          "networking.gke.io/load-balancer-type"         = "External"
-          "networking.gke.io/load-balancer-ip-addresses" = google_compute_address.public_gateway.name
+          "networking.gke.io/load-balancer-type" = "External"
         }
       }
       gatewayClassName = var.gateway_class_name
@@ -46,7 +48,7 @@ resource "kubernetes_manifest" "gateway_public" {
     }
   }
 
-  depends_on = [helm_release.gateway_public, google_compute_address.public_gateway]
+  depends_on = [google_compute_address.public_gateway]
 }
 
 resource "kubernetes_manifest" "gateway_internal" {
@@ -61,13 +63,15 @@ resource "kubernetes_manifest" "gateway_internal" {
       }
     }
     spec = {
-      # infrastructure.annotations are propagated by Istio's Gateway controller
-      # to the auto-provisioned LoadBalancer Service ("private-istio"), so GKE
-      # assigns our static internal IP instead of a random one.
+      addresses = [
+        {
+          type  = "IPAddress"
+          value = google_compute_address.private_gateway.address
+        }
+      ]
       infrastructure = {
         annotations = {
-          "networking.gke.io/load-balancer-type"         = "Internal"
-          "networking.gke.io/load-balancer-ip-addresses" = google_compute_address.private_gateway.name
+          "networking.gke.io/load-balancer-type" = "Internal"
         }
       }
       gatewayClassName = var.gateway_class_name
@@ -97,5 +101,5 @@ resource "kubernetes_manifest" "gateway_internal" {
     }
   }
 
-  depends_on = [helm_release.gateway_internal, google_compute_address.private_gateway]
+  depends_on = [google_compute_address.private_gateway]
 }
