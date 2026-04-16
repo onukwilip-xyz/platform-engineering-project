@@ -20,8 +20,6 @@ spec:
       reserve_pool_size: "5"
       server_idle_timeout: "600"
       server_login_retry: "15"
-      server_tls_sslmode: "verify-full"
-      client_tls_sslmode: "require"
 
   template:
     metadata:
