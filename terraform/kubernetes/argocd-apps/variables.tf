@@ -11,6 +11,12 @@ variable "repo_url" {
 
 variable "target_revision" {
   type        = string
-  description = "Git branch, tag, or commit SHA ArgoCD should track."
+  description = "Git branch, tag, or commit SHA ArgoCD should track. Typically sourced from the CD pipeline's branch context (e.g. TF_VAR_target_revision=staging)."
   default     = "HEAD"
+}
+
+variable "cnpg_operator_chart_version" {
+  type        = string
+  description = "Pinned version of the cloudnative-pg Helm chart. Bump via PR to roll the operator forward."
+  default     = "0.23.0"
 }
