@@ -49,7 +49,7 @@ spec:
   serviceAccountTemplate:
     metadata:
       annotations:
-        iam.gke.io/gcp-service-account: "cnpg-backup@<project-id>.iam.gserviceaccount.com"
+        iam.gke.io/gcp-service-account: "cnpg-backup@pe-staging-project-9e9b.iam.gserviceaccount.com"
 
   backup:
     barmanObjectStore:
