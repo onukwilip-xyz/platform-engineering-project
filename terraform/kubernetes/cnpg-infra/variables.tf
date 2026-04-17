@@ -48,3 +48,20 @@ variable "cnpg_cluster_name" {
   description = "Name of the CNPG Cluster CR. The operator creates a KSA with this name, which is the WIF subject."
   default     = "postgres-cluster"
 }
+
+# ── DNS / Shared VIP ─────────────────────────────────────────────────────────
+
+variable "host_project_id" {
+  type        = string
+  description = "Host project ID where the VPC and Cloud DNS zones live."
+}
+
+variable "private_dns_zone_name" {
+  type        = string
+  description = "Name of the Cloud DNS private managed zone for internal records."
+}
+
+variable "shared_vip_address" {
+  type        = string
+  description = "IP address of the tcp-services shared VIP. Used for the postgres DNS A record."
+}

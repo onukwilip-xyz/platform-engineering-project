@@ -21,6 +21,14 @@ spec:
       server_idle_timeout: "600"
       server_login_retry: "15"
 
+  serviceTemplate:
+    metadata:
+      annotations:
+        networking.gke.io/load-balancer-ip-addresses: "tcp-services-shared-vip"
+        networking.gke.io/internal-load-balancer-allow-global-access: "true"
+    spec:
+      type: LoadBalancer
+
   template:
     metadata:
       annotations:

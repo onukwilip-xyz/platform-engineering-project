@@ -21,20 +21,11 @@ generate "providers" {
     provider "google" {
       impersonate_service_account = "${local.env.tf_platform_sa_email}"
     }
-
-    data "google_client_config" "default" {}
-
-    provider "kubectl" {
-      host                   = "https://${dependency.gke.outputs.gke_cluster_endpoint}"
-      token                  = data.google_client_config.default.access_token
-      cluster_ca_certificate = base64decode("${dependency.gke.outputs.gke_cluster_ca_certificate}")
-      load_config_file       = false
-    }
   EOF
 }
 
 terraform {
-  source = "${get_repo_root()}//terraform/kubernetes/gateway-crds"
+  source = "${get_repo_root()}//terraform/kubernetes/tcp-services"
 
   extra_arguments "secrets" {
     commands           = get_terraform_commands_that_need_vars()
@@ -42,4 +33,8 @@ terraform {
   }
 }
 
-inputs = {}
+inputs = {
+  service_project_id = dependency.gke.outputs.service_project_id
+  region             = local.env.region
+  subnetwork         = dependency.gke.outputs.gke_subnet_self_link
+}
