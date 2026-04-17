@@ -1,4 +1,3 @@
----
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -44,52 +43,6 @@ spec:
   usages:
     - cert sign
     - crl sign
-  issuerRef:
-    name: internal-ca
-    kind: ClusterIssuer
----
-# Client CA — trust anchor Postgres uses to validate the replication client cert.
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: postgres-client-ca
-  namespace: postgres
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
-spec:
-  secretName: postgres-client-ca
-  commonName: postgres-client-ca
-  duration: 2160h
-  renewBefore: 240h
-  rotationPolicy: Always
-  isCA: true
-  usages:
-    - cert sign
-    - crl sign
-  issuerRef:
-    name: internal-ca
-    kind: ClusterIssuer
----
-# Replication client certificate — identity used by streaming_replica for
-# inter-node WAL shipping. CN must be exactly "streaming_replica" to match
-# the pg_hba.conf rule CNPG generates.
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: postgres-replication-tls
-  namespace: postgres
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
-spec:
-  secretName: postgres-replication-tls
-  commonName: streaming_replica
-  duration: 2160h
-  renewBefore: 240h
-  rotationPolicy: Always
-  usages:
-    - client auth
-    - digital signature
-    - key encipherment
   issuerRef:
     name: internal-ca
     kind: ClusterIssuer
