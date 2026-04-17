@@ -24,11 +24,11 @@ spec:
   serviceTemplate:
     metadata:
       annotations:
-        networking.gke.io/load-balancer-ip-addresses: "tcp-services-shared-vip"
         networking.gke.io/internal-load-balancer-allow-global-access: "true"
         networking.gke.io/load-balancer-type: "Internal"
     spec:
       type: LoadBalancer
+      loadBalancerIP: "10.10.0.58"
 
   template:
     metadata:
