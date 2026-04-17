@@ -4,7 +4,6 @@ metadata:
   name: postgres-pooler-rw-hpa
   namespace: postgres
   annotations:
-    # Wave 2: the Pooler Deployment (wave 1) must exist before the HPA targets it.
     argocd.argoproj.io/sync-wave: "2"
 spec:
   scaleTargetRef:

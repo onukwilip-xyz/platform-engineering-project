@@ -57,6 +57,20 @@ resource "kubernetes_manifest" "postgres_cluster" {
         repoURL        = var.repo_url
         targetRevision = var.target_revision
         path           = "terraform/kubernetes/manifests/postgres"
+        helm = {
+          values = yamlencode({
+            backup = {
+              gcpServiceAccount = var.backup_gcp_sa_email
+              bucketName        = var.backup_bucket_name
+            }
+            pooler = {
+              loadBalancerIP = var.shared_vip_address
+            }
+            certificates = {
+              clusterIssuer = var.cluster_issuer_name
+            }
+          })
+        }
       }
       destination = {
         server    = "https://kubernetes.default.svc"
@@ -67,7 +81,7 @@ resource "kubernetes_manifest" "postgres_cluster" {
           prune    = true
           selfHeal = true
         }
-        syncOptions = ["CreateNamespace=false"]
+        syncOptions = ["CreateNamespace=false", "ServerSideApply=true"]
       }
     }
   }

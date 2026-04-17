@@ -22,10 +22,9 @@ spec:
     - postgres-cluster-r
     - postgres-cluster-r.postgres.svc.cluster.local
   issuerRef:
-    name: internal-ca
+    name: {{ .Values.certificates.clusterIssuer }}
     kind: ClusterIssuer
 ---
-# Server CA — trust anchor Postgres uses to validate client certificates (mTLS).
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -44,5 +43,5 @@ spec:
     - cert sign
     - crl sign
   issuerRef:
-    name: internal-ca
+    name: {{ .Values.certificates.clusterIssuer }}
     kind: ClusterIssuer
