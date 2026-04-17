@@ -49,12 +49,11 @@ spec:
   serviceAccountTemplate:
     metadata:
       annotations:
-        iam.gke.io/gcp-service-account: "cnpg-backup@pe-staging-project-9e9b.iam.gserviceaccount.com"
+        iam.gke.io/gcp-service-account: {{ .Values.backup.gcpServiceAccount | quote }}
 
   backup:
     barmanObjectStore:
-      # Replace bucket name if var.backup_bucket_name was overridden in Terraform.
-      destinationPath: "gs://pe-cnpg-postgres-backups/postgres-cluster"
+      destinationPath: "gs://{{ .Values.backup.bucketName }}/postgres-cluster"
       googleCredentials:
         gkeEnvironment: true
       wal:
@@ -65,6 +64,5 @@ spec:
         immediateCheckpoint: false
     retentionPolicy: "30d"
 
-  # ── Monitoring ────────────────────────────────────────────────────────────────
   monitoring:
     enablePodMonitor: true

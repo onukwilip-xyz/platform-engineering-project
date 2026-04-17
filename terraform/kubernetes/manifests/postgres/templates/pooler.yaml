@@ -28,7 +28,7 @@ spec:
         networking.gke.io/load-balancer-type: "Internal"
     spec:
       type: LoadBalancer
-      loadBalancerIP: "10.10.0.58"
+      loadBalancerIP: {{ .Values.pooler.loadBalancerIP | quote }}
 
   template:
     metadata:
