@@ -26,6 +26,7 @@ spec:
       annotations:
         networking.gke.io/load-balancer-ip-addresses: "tcp-services-shared-vip"
         networking.gke.io/internal-load-balancer-allow-global-access: "true"
+        networking.gke.io/load-balancer-type: "Internal"
     spec:
       type: LoadBalancer
 
