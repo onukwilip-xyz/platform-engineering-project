@@ -9,7 +9,8 @@ spec:
   secretName: postgres-server-tls
   duration: 2160h    # 90 days
   renewBefore: 240h  # renew 10 days before expiry
-  rotationPolicy: Always
+  privateKey:
+    rotationPolicy: Always
   usages:
     - server auth
     - digital signature
@@ -37,7 +38,8 @@ spec:
   commonName: postgres-server-ca
   duration: 2160h
   renewBefore: 240h
-  rotationPolicy: Always
+  privateKey:
+    rotationPolicy: Always
   isCA: true
   usages:
     - cert sign
