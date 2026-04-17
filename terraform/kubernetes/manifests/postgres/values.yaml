@@ -1,0 +1,9 @@
+backup:
+  gcpServiceAccount: ""
+  bucketName: ""
+
+pooler:
+  loadBalancerIP: ""
+
+certificates:
+  clusterIssuer: internal-ca
