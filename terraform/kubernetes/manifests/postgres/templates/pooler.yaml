@@ -20,14 +20,22 @@ spec:
       reserve_pool_size: "5"
       server_idle_timeout: "600"
       server_login_retry: "15"
-      server_tls_sslmode: "verify-full"
-      client_tls_sslmode: "require"
+
+  serviceTemplate:
+    metadata:
+      annotations:
+        networking.gke.io/internal-load-balancer-allow-global-access: "true"
+        networking.gke.io/load-balancer-type: "Internal"
+    spec:
+      type: LoadBalancer
+      loadBalancerIP: {{ .Values.pooler.loadBalancerIP | quote }}
 
   template:
     metadata:
       annotations:
         sidecar.istio.io/inject: "false"
     spec:
+      containers: []
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone

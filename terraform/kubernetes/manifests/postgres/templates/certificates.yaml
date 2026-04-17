@@ -1,0 +1,49 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: postgres-server-tls
+  namespace: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  secretName: postgres-server-tls
+  duration: 2160h    # 90 days
+  renewBefore: 240h  # renew 10 days before expiry
+  privateKey:
+    rotationPolicy: Always
+  usages:
+    - server auth
+    - digital signature
+    - key encipherment
+  dnsNames:
+    - postgres-cluster-rw
+    - postgres-cluster-rw.postgres.svc.cluster.local
+    - postgres-cluster-ro
+    - postgres-cluster-ro.postgres.svc.cluster.local
+    - postgres-cluster-r
+    - postgres-cluster-r.postgres.svc.cluster.local
+  issuerRef:
+    name: {{ .Values.certificates.clusterIssuer }}
+    kind: ClusterIssuer
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: postgres-server-ca
+  namespace: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  secretName: postgres-server-ca
+  commonName: postgres-server-ca
+  duration: 2160h
+  renewBefore: 240h
+  privateKey:
+    rotationPolicy: Always
+  isCA: true
+  usages:
+    - cert sign
+    - crl sign
+  issuerRef:
+    name: {{ .Values.certificates.clusterIssuer }}
+    kind: ClusterIssuer

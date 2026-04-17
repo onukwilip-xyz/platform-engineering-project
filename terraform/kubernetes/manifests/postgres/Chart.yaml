@@ -1,0 +1,4 @@
+apiVersion: v2
+name: postgres-cluster
+version: 0.1.0
+description: CNPG PostgreSQL cluster with PgBouncer pooler, TLS, backups, and autoscaling.

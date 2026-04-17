@@ -21,6 +21,27 @@ dependency "argocd" {
   mock_outputs                            = local.k8s.argocd_mock_outputs
 }
 
+dependency "cnpg_infra" {
+  config_path = "../cnpg-infra"
+
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
+  mock_outputs                            = local.k8s.cnpg_infra_mock_outputs
+}
+
+dependency "tcp_services" {
+  config_path = "../tcp-services"
+
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
+  mock_outputs                            = local.k8s.tcp_services_mock_outputs
+}
+
+dependency "cert_manager_config" {
+  config_path = "../cert-manager-config"
+
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
+  mock_outputs                            = local.k8s.cert_manager_config_mock_outputs
+}
+
 generate "providers" {
   path      = "providers_gen.tf"
   if_exists = "overwrite_terragrunt"
@@ -49,5 +70,9 @@ terraform {
 }
 
 inputs = {
-  argocd_namespace = dependency.argocd.outputs.namespace
+  argocd_namespace    = dependency.argocd.outputs.namespace
+  backup_gcp_sa_email = dependency.cnpg_infra.outputs.backup_gcp_sa_email
+  backup_bucket_name  = dependency.cnpg_infra.outputs.backup_bucket_name
+  shared_vip_address  = dependency.tcp_services.outputs.shared_vip_address
+  cluster_issuer_name = dependency.cert_manager_config.outputs.internal_cluster_issuer_name
 }

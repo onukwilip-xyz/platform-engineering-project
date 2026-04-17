@@ -1,5 +1,4 @@
 ---
-# Daily base backup — taken every night at midnight UTC.
 apiVersion: postgresql.cnpg.io/v1
 kind: ScheduledBackup
 metadata:
@@ -8,13 +7,12 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  schedule: "0 0 * * *"
+  schedule: "0 0 0 * * *"
   backupOwnerReference: self
   cluster:
     name: postgres-cluster
   immediate: false
 ---
-# Weekly base backup — taken every Sunday at midnight UTC.
 apiVersion: postgresql.cnpg.io/v1
 kind: ScheduledBackup
 metadata:
@@ -23,7 +21,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  schedule: "0 0 * * 0"
+  schedule: "0 0 0 * * 0"
   backupOwnerReference: self
   cluster:
     name: postgres-cluster

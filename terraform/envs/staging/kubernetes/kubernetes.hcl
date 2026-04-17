@@ -41,6 +41,11 @@ locals {
     argocd_domain = "argocd.internal.pe.onukwilip.xyz"
   }
 
+  tcp_services_mock_outputs = {
+    shared_vip_name    = "tcp-services-shared-vip"
+    shared_vip_address = "10.0.0.100"
+  }
+
   cnpg_infra_mock_outputs = {
     backup_bucket_name  = "mock-cnpg-postgres-backups"
     backup_gcp_sa_email = "cnpg-backup@mock-service-project-id.iam.gserviceaccount.com"
