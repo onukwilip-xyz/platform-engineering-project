@@ -48,7 +48,6 @@ resource "kubernetes_manifest" "postgres_cluster" {
       namespace = var.argocd_namespace
       annotations = {
         "argocd.argoproj.io/sync-wave" = "1"
-        "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
       }
       finalizers = ["resources-finalizer.argocd.argoproj.io"]
     }
@@ -82,7 +81,7 @@ resource "kubernetes_manifest" "postgres_cluster" {
           prune    = true
           selfHeal = true
         }
-        syncOptions = ["CreateNamespace=false", "ServerSideApply=true", "ServerSideDiff=true"]
+        syncOptions = ["CreateNamespace=false"]
       }
     }
   }
