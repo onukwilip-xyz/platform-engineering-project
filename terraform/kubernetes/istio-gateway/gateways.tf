@@ -96,21 +96,6 @@ resource "kubernetes_manifest" "gateway_internal" {
               from = "All"
             }
           }
-        },
-        {
-          name     = "postgres"
-          port     = 5432
-          protocol = "TCP"
-          allowedRoutes = {
-            namespaces = {
-              from = "Selector"
-              selector = {
-                matchLabels = {
-                  "kubernetes.io/metadata.name" = "postgres"
-                }
-              }
-            }
-          }
         }
       ]
     }
