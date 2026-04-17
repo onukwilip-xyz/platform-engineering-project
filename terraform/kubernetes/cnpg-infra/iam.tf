@@ -7,6 +7,14 @@ resource "google_service_account" "cnpg_backup" {
   description  = "Impersonated via Workload Identity Federation by CNPG cluster pods to write PostgreSQL backups to GCS."
 }
 
+resource "google_storage_bucket_iam_member" "cnpg_backup_bucket_reader" {
+  provider = google.platform
+
+  bucket = google_storage_bucket.cnpg_backup.name
+  role   = "roles/storage.legacyBucketReader"
+  member = "serviceAccount:${google_service_account.cnpg_backup.email}"
+}
+
 resource "google_storage_bucket_iam_member" "cnpg_backup_object_admin" {
   provider = google.platform
 
