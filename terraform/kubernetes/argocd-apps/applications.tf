@@ -1,3 +1,6 @@
+# * POSTGRESQL CLUSTER STACK
+
+# CNPG Operator
 resource "kubernetes_manifest" "cnpg_operator" {
   manifest = {
     apiVersion = "argoproj.io/v1alpha1"
@@ -39,6 +42,7 @@ resource "kubernetes_manifest" "cnpg_operator" {
   }
 }
 
+# PostgreSQL Cluster
 resource "kubernetes_manifest" "postgres_cluster" {
   manifest = {
     apiVersion = "argoproj.io/v1alpha1"
@@ -88,3 +92,5 @@ resource "kubernetes_manifest" "postgres_cluster" {
 
   depends_on = [kubernetes_manifest.cnpg_operator]
 }
+
+# * OBSERVABILITY STACK
