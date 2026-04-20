@@ -4,7 +4,7 @@ resource "google_storage_bucket" "cnpg_backup" {
   name          = var.backup_bucket_name
   project       = var.service_project_id
   location      = var.region
-  force_destroy = false
+  force_destroy = true
 
   # Object Versioning — keeps previous versions of backup objects, enabling
   # recovery from accidental overwrites or deletes.

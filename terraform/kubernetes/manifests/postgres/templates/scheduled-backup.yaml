@@ -1,22 +1,7 @@
----
 apiVersion: postgresql.cnpg.io/v1
 kind: ScheduledBackup
 metadata:
-  name: postgres-daily-backup
-  namespace: postgres
-  annotations:
-    argocd.argoproj.io/sync-wave: "1"
-spec:
-  schedule: "0 0 0 * * *"
-  backupOwnerReference: self
-  cluster:
-    name: postgres-cluster
-  immediate: false
----
-apiVersion: postgresql.cnpg.io/v1
-kind: ScheduledBackup
-metadata:
-  name: postgres-weekly-backup
+  name: postgres-weekly-full-backup
   namespace: postgres
   annotations:
     argocd.argoproj.io/sync-wave: "1"
@@ -25,4 +10,5 @@ spec:
   backupOwnerReference: self
   cluster:
     name: postgres-cluster
-  immediate: false
+  immediate: true
+  target: prefer-standby
