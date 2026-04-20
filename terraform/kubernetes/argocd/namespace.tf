@@ -2,7 +2,7 @@ resource "kubernetes_namespace" "argocd" {
   metadata {
     name = var.namespace
     labels = {
-      istio-injection = "enabled"
+      "istio.io/dataplane-mode" = "ambient"
     }
   }
 }
