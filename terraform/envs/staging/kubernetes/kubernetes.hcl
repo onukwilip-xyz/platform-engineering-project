@@ -50,4 +50,16 @@ locals {
     backup_bucket_name  = "mock-cnpg-postgres-backups"
     backup_gcp_sa_email = "cnpg-backup@mock-service-project-id.iam.gserviceaccount.com"
   }
+
+  observability_infra_mock_outputs = {
+    loki_bucket_name   = "mock-loki-chunks"
+    loki_gcp_sa_email  = "loki-gcs@mock-service-project-id.iam.gserviceaccount.com"
+    tempo_bucket_name  = "mock-tempo-traces"
+    tempo_gcp_sa_email = "tempo-gcs@mock-service-project-id.iam.gserviceaccount.com"
+  }
+
+  eso_infra_mock_outputs = {
+    eso_gcp_sa_email = "external-secrets@mock-service-project-id.iam.gserviceaccount.com"
+    eso_gcp_sa_name  = "projects/mock-service-project-id/serviceAccounts/external-secrets@mock-service-project-id.iam.gserviceaccount.com"
+  }
 }

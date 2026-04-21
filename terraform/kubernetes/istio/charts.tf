@@ -31,24 +31,30 @@ resource "helm_release" "istiod" {
       profile = "ambient" # For Ambient mode
 
       env = {
-        # ENABLE_NATIVE_SIDECARS = "true" // Not needed in Ambient mode
+        ENABLE_NATIVE_SIDECARS = "true"
       }
 
       meshConfig = {
-        # enablePrometheusMerge = true // Not needed in Ambient mode
+        enablePrometheusMerge = true
 
         enableTracing = true
 
         defaultConfig = {
-          # holdApplicationUntilProxyStarts = true // Not needed in Ambient mode
-
-          tracing = {
-            sampling = 1
-            openTelemetry = {
-              address = var.otel_collector_address
-            }
-          }
+          holdApplicationUntilProxyStarts = true
         }
+
+        # Registers Tempo under the name `tempo-otel`. Sidecars don't send
+        # spans until a Telemetry CR activates this provider — configured
+        # in the argocd-apps module alongside the Tempo Application.
+        extensionProviders = [
+          {
+            name = "tempo-otel"
+            opentelemetry = {
+              service = "tempo.${var.tracing_namespace}.svc.cluster.local"
+              port    = 4317
+            }
+          },
+        ]
       }
     })
   ]

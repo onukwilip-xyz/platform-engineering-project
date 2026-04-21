@@ -1,10 +1,10 @@
-resource "kubernetes_manifest" "argocd_httproute" {
+resource "kubernetes_manifest" "grafana_httproute" {
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1"
     kind       = "HTTPRoute"
     metadata = {
-      name      = "argocd"
-      namespace = kubernetes_namespace.argocd.metadata[0].name
+      name      = "grafana"
+      namespace = kubernetes_namespace.grafana.metadata[0].name
     }
     spec = {
       parentRefs = [
@@ -14,7 +14,7 @@ resource "kubernetes_manifest" "argocd_httproute" {
           sectionName = "https"
         }
       ]
-      hostnames = ["argocd.${var.private_domain}"]
+      hostnames = ["grafana.${var.private_domain}"]
       rules = [
         {
           matches = [
@@ -27,7 +27,11 @@ resource "kubernetes_manifest" "argocd_httproute" {
           ]
           backendRefs = [
             {
-              name = "argocd-server"
+              # kube-prometheus-stack's grafana subchart collapses its fullname
+              # to just the release name when the release name matches the chart
+              # name. The ArgoCD Application is named "grafana", so the Service
+              # ends up as `grafana` (not `grafana-grafana`).
+              name = "grafana"
               port = 80
             }
           ]
@@ -36,5 +40,5 @@ resource "kubernetes_manifest" "argocd_httproute" {
     }
   }
 
-  depends_on = [helm_release.argocd]
+  depends_on = [kubernetes_manifest.grafana]
 }

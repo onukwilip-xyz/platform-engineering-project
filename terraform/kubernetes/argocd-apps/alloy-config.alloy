@@ -1,0 +1,84 @@
+// Alloy log-collection pipeline. Shipped to Loki via the monolithic gateway.
+//
+// Architecture notes:
+//   - Runs as a DaemonSet, one pod per node.
+//   - Opted out of Istio ambient (`istio.io/dataplane-mode: none` on the
+//     DaemonSet's pod template) so hostPath reads of /var/log/pods/ behave
+//     predictably. ztunnel on Loki's side accepts plaintext from non-mesh
+//     senders, so this works without mesh config.
+//   - Single-tenant Loki, no auth header required.
+
+// Discover only pods scheduled on this node. Without the nodeName field
+// selector every Alloy pod would scrape every pod in the cluster.
+discovery.kubernetes "pods" {
+  role = "pod"
+
+  selectors {
+    role  = "pod"
+    field = "spec.nodeName=" + sys.env("HOSTNAME")
+  }
+}
+
+discovery.relabel "pod_logs" {
+  targets = discovery.kubernetes.pods.targets
+
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    action        = "replace"
+    target_label  = "namespace"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    action        = "replace"
+    target_label  = "pod"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_name"]
+    action        = "replace"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+    action        = "replace"
+    target_label  = "app"
+  }
+
+  // Map each container to its on-disk log path under /var/log/pods.
+  rule {
+    source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+    action        = "replace"
+    target_label  = "__path__"
+    separator     = "/"
+    replacement   = "/var/log/pods/*$1/*.log"
+  }
+}
+
+loki.source.file "pod_logs" {
+  targets    = discovery.relabel.pod_logs.output
+  forward_to = [loki.process.pod_logs.receiver]
+}
+
+loki.process "pod_logs" {
+  // Tag Envoy sidecar logs so they can be filtered out when noisy —
+  // matches the observability plan.
+  stage.match {
+    selector = "{container=\"istio-proxy\"}"
+
+    stage.static_labels {
+      values = {
+        source = "istio-proxy",
+      }
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki-gateway.logging.svc/loki/api/v1/push"
+  }
+}
