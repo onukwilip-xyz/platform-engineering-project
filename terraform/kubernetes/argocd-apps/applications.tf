@@ -492,7 +492,7 @@ resource "kubernetes_manifest" "tempo" {
     spec = {
       project = "default"
       source = {
-        repoURL        = "https://grafana.github.io/helm-charts"
+        repoURL        = "https://grafana-community.github.io/helm-charts"
         chart          = "tempo"
         targetRevision = var.tempo_chart_version
         helm = {
@@ -617,19 +617,32 @@ resource "kubernetes_manifest" "kubernetes_event_exporter" {
     spec = {
       project = "default"
       source = {
-        repoURL        = "https://resmoio.github.io/kubernetes-event-exporter"
+        repoURL        = "oci://registry-1.docker.io/bitnamicharts/kubernetes-event-exporter"
         chart          = "kubernetes-event-exporter"
         targetRevision = var.kubernetes_event_exporter_chart_version
         helm = {
           values = yamlencode({
+            image = {
+              repository = "bitnamilegacy/kubernetes-event-exporter"
+            }
+
+            podLabels = {
+              app = "kubernetes-event-exporter"
+            }
+
             config = {
-              logLevel  = "info"
-              logFormat = "json"
+              clusterName         = var.cluster_name
+              leaderElection      = {}
+              logFormat           = "pretty"
+              logLevel            = "debug"
+              maxEventAgeSeconds  = 3600
+              metricsNamePrefix   = "event_exporter_"
 
               route = {
                 routes = [
                   {
                     match = [
+                      { receiver = "dump" },
                       { receiver = "loki" },
                     ]
                   },
@@ -638,11 +651,29 @@ resource "kubernetes_manifest" "kubernetes_event_exporter" {
 
               receivers = [
                 {
+                  name = "dump"
+                  file = {
+                    path = "/dev/stdout"
+                    layout = {
+                      message   = "{{ .Message }}"
+                      reason    = "{{ .Reason }}"
+                      type      = "{{ .Type }}"
+                      count     = "{{ .Count }}"
+                      namespace = "{{ .InvolvedObject.Namespace }}"
+                      kind      = "{{ .InvolvedObject.Kind }}"
+                      name      = "{{ .InvolvedObject.Name }}"
+                      component = "{{ .Source.Component }}"
+                      host      = "{{ .Source.Host }}"
+                    }
+                  }
+                },
+                {
                   name = "loki"
                   loki = {
                     url = "http://loki-gateway.logging.svc/loki/api/v1/push"
                     streamLabels = {
-                      source = "kubernetes-event-exporter"
+                      container = "kubernetes-event-exporter"
+                      source    = "kubernetes-event-exporter"
                     }
                   }
                 },

@@ -130,6 +130,11 @@ variable "kubernetes_event_exporter_chart_version" {
   default     = "3.2.12"
 }
 
+variable "cluster_name" {
+  type        = string
+  description = "Name of the GKE cluster. Used to label events the kubernetes-event-exporter ships to Loki so multi-cluster dashboards can filter by origin."
+}
+
 variable "external_secrets_chart_version" {
   type        = string
   description = "Pinned version of the external-secrets Helm chart. Bump via PR to roll the operator forward."

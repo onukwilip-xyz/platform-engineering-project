@@ -28,6 +28,14 @@ resource "google_project_iam_member" "node_sa_min_role" {
   member  = "serviceAccount:${google_service_account.node_sa.email}"
 }
 
+resource "google_project_iam_member" "node_sa_ar_role" {
+  provider = google.net
+
+  project = var.service_project_id
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${google_service_account.node_sa.email}"
+}
+
 # Grant the Nodepool SA the "Compute Network User" role on the subnet so it can create necessary network interfaces for nodes.
 resource "google_compute_subnetwork_iam_member" "node_sa_network_user" {
   provider = google.net
