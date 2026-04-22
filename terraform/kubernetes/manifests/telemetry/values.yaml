@@ -1,0 +1,3 @@
+tracing:
+  providerName: tempo-otel
+  randomSamplingPercentage: 100

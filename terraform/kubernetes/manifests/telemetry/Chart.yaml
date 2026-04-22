@@ -1,0 +1,4 @@
+apiVersion: v2
+name: istio-telemetry
+version: 0.1.0
+description: Mesh-wide Istio Telemetry CR activating the tempo-otel extensionProvider so sidecars emit OTLP spans to Tempo.

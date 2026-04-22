@@ -72,11 +72,6 @@ All certs issued via cert-manager `Certificate` CRs pointing at your internal `C
   - Consumed via `.spec.certificates.serverTLSSecret`
 - **Server CA cert** — trust anchor for validating client certs (mTLS)
   - Consumed via `.spec.certificates.serverCASecret`
-- **Client CA cert** — trust anchor for validating replication client cert
-  - Consumed via `.spec.certificates.clientCASecret`
-- **Replication client cert + key** — `streaming_replica` user identity for inter-node replication
-  - CN: `streaming_replica`
-  - Consumed via `.spec.certificates.replicationTLSSecret`
 
 ### PgBouncer (CNPG Pooler)
 - **Server cert + key** — PgBouncer identity to application clients
@@ -108,13 +103,6 @@ Root CA stays long-lived (managed at ClusterIssuer level).
 ## Trust distribution to clients
 
 Apps mount `ca.crt` from their own client cert Secret (cert-manager populates all three keys). Pass `sslrootcert=/certs/ca.crt` in connection URI.
-
-## PgBouncer TLS configuration
-
-- `server_tls_sslmode = verify-full` (validates Postgres server cert)
-- `server_tls_ca_file` points to CA cert
-- `client_tls_sslmode = require` (or `verify-full` for mTLS from apps)
-- `client_tls_ca_file` points to CA cert (if validating app client certs)
 
 ## Application connection string
 

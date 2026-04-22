@@ -1,11 +1,13 @@
 locals {
   gke_mock_outputs = {
+    gke_cluster_name           = "mock-gke-cluster"
     gke_cluster_endpoint       = "127.0.0.1"
     gke_cluster_ca_certificate = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBMFo1dnZaVThKVDNPUEZLL1NGRlYKTWREeGhsT3Y5WUNXcWpuQ3pTYk1PL05DNEpyVWU4SnlCeVlsRGNSaENsM0NmaGFSeGJaU0FwZElTeWREbgppWENscGJFaDVGL0pXVGhiTkZ0RXpJUVpYa3N4UVZvb3NOb0d6TUJVU3NXOE95UHVicmpjaFpuSTlIa1RHCkFQZlpERGhtZ3p4cmVDTUpvcFZ5aEdNVEE2blVMTFlOVk5ONjR4REVjUzZLc0xOdUhLMkpvbXh0UUlTRHkKdHZucUk1N0hhcGMyVHMxQTNnUHo0aXFhaFpFVFJsMFZYVktuYXFMRjFXZjk5OUVlNlpDVFY5YVdkaGhRTgpXZDlxV0QzWG5OZkdlQUlEN2pSUlRUcVBJQ2lScEZJbHdaTnJpMUkyYXZ3T29WTmNGcVJUWlVrSTQyVk1PClZ3SURBUUFCZ29BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBCkFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUEKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
     service_project_id         = "mock-service-project-id"
     host_project_id            = "mock-host-project-id"
     gke_subnet_self_link       = "https://www.googleapis.com/compute/v1/projects/mock-host-project-id/regions/us-central1/subnetworks/mock-gke-subnet"
     private_dns_zone_name      = "internal-pe-onukwilip-xyz"
+    public_dns_zone_name       = "pe-onukwilip-xyz"
   }
 
   project_mock_outputs = {
@@ -49,5 +51,30 @@ locals {
   cnpg_infra_mock_outputs = {
     backup_bucket_name  = "mock-cnpg-postgres-backups"
     backup_gcp_sa_email = "cnpg-backup@mock-service-project-id.iam.gserviceaccount.com"
+  }
+
+  observability_infra_mock_outputs = {
+    loki_bucket_name   = "mock-loki-chunks"
+    loki_gcp_sa_email  = "loki-gcs@mock-service-project-id.iam.gserviceaccount.com"
+    tempo_bucket_name  = "mock-tempo-traces"
+    tempo_gcp_sa_email = "tempo-gcs@mock-service-project-id.iam.gserviceaccount.com"
+  }
+
+  eso_infra_mock_outputs = {
+    eso_gcp_sa_email = "external-secrets@mock-service-project-id.iam.gserviceaccount.com"
+    eso_gcp_sa_name  = "projects/mock-service-project-id/serviceAccounts/external-secrets@mock-service-project-id.iam.gserviceaccount.com"
+  }
+
+  artifact_registry_mock_outputs = {
+    repositories = {
+      images = {
+        repository_id = "images"
+        name          = "projects/mock-service-project-id/locations/us-central1/repositories/images"
+      }
+      helm = {
+        repository_id = "helm"
+        name          = "projects/mock-service-project-id/locations/us-central1/repositories/helm"
+      }
+    }
   }
 }

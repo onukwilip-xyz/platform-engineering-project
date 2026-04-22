@@ -61,3 +61,8 @@ variable "private_dns_zone_name" {
   type        = string
   description = "Name of the Cloud DNS private managed zone (e.g. internal-pe-onukwilip-xyz). Used to create the wildcard A record."
 }
+
+variable "public_dns_zone_name" {
+  type        = string
+  description = "Name of the Cloud DNS public managed zone (e.g. pe-onukwilip-xyz). Used to create the wildcard A record pointing at the public Istio gateway's external IP."
+}

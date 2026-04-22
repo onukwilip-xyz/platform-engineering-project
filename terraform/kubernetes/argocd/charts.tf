@@ -58,12 +58,12 @@ resource "helm_release" "argocd" {
         enabled = true
         redis = {
           podAnnotations = {
-            "sidecar.istio.io/inject" = false
+            "istio.io/dataplane-mode" = "none"
           }
         }
         haproxy = {
           podAnnotations = {
-            "sidecar.istio.io/inject" = false
+            "istio.io/dataplane-mode" = "none"
           }
         }
       }
