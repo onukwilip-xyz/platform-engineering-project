@@ -11,6 +11,9 @@ spec:
   type: rw
   instances: 3
 
+  monitoring:
+    enablePodMonitor: true
+
   pgbouncer:
     poolMode: transaction
     parameters:
