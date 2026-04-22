@@ -110,5 +110,10 @@ resource "helm_release" "ztunnel" {
   wait          = true
   wait_for_jobs = true
 
-  depends_on = [helm_release.istiod, helm_release.istio_cni]
+  timeout = 600
+  depends_on = [
+    helm_release.istiod,
+    helm_release.istio_cni,
+    kubernetes_resource_quota.istio_system_critical_pods,
+  ]
 }

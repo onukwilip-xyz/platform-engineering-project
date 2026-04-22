@@ -73,6 +73,13 @@ resource "kubernetes_manifest" "postgres_cluster" {
             certificates = {
               clusterIssuer = var.cluster_issuer_name
             }
+            databases = [
+              {
+                name               = local.users_db_name
+                owner              = local.users_db_username
+                passwordSecretName = kubernetes_secret.users_db_credentials.metadata[0].name
+              },
+            ]
           })
         }
       }
@@ -90,7 +97,10 @@ resource "kubernetes_manifest" "postgres_cluster" {
     }
   }
 
-  depends_on = [kubernetes_manifest.cnpg_operator]
+  depends_on = [
+    kubernetes_manifest.cnpg_operator,
+    kubernetes_secret.users_db_credentials,
+  ]
 }
 
 # * OBSERVABILITY STACK
@@ -701,4 +711,128 @@ resource "kubernetes_manifest" "external_secrets" {
   }
 
   depends_on = [kubernetes_namespace.external_secrets]
+}
+
+# * MICROSERVICES STACK
+
+# Users microservice
+resource "kubernetes_manifest" "users_microservice" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "users-microservice"
+      namespace = var.argocd_namespace
+      annotations = {
+        "argocd.argoproj.io/sync-wave" = "5"
+      }
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = var.repo_url
+        targetRevision = var.target_revision
+        path           = "helm/custom-charts/microservice"
+        helm = {
+          values = yamlencode({
+            useDeployment = true
+            replicas      = 1
+
+            containers = [
+              {
+                name            = "users"
+                image           = local.users_microservice_image
+                imagePullPolicy = "IfNotPresent"
+                configMapRef = [kubernetes_config_map.users_microservice.metadata[0].name]
+                secretRef    = [kubernetes_secret.users_microservice_db.metadata[0].name]
+              },
+            ]
+
+            service = {
+              enabled    = true
+              type       = "ClusterIP"
+              port       = 80
+              targetPort = 9090
+            }
+          })
+        }
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = kubernetes_namespace.users.metadata[0].name
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = ["CreateNamespace=false"]
+      }
+    }
+  }
+
+  depends_on = [
+    kubernetes_manifest.postgres_cluster,
+    kubernetes_config_map.users_microservice,
+    kubernetes_secret.users_microservice_db,
+  ]
+}
+
+# Store UI
+resource "kubernetes_manifest" "store_ui" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "store-ui"
+      namespace = var.argocd_namespace
+      annotations = {
+        "argocd.argoproj.io/sync-wave" = "5"
+      }
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = var.repo_url
+        targetRevision = var.target_revision
+        path           = "helm/custom-charts/microservice"
+        helm = {
+          values = yamlencode({
+            useDeployment = true
+            replicas      = 1
+
+            containers = [
+              {
+                name            = "store-ui"
+                image           = local.store_ui_image
+                imagePullPolicy = "IfNotPresent"
+              },
+            ]
+
+            service = {
+              enabled    = true
+              type       = "ClusterIP"
+              port       = 80
+              targetPort = 80
+            }
+          })
+        }
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = kubernetes_namespace.store_ui.metadata[0].name
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = ["CreateNamespace=false"]
+      }
+    }
+  }
+
+  depends_on = [kubernetes_namespace.store_ui]
 }

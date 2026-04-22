@@ -1,3 +1,5 @@
+# * POSTGRES CLUSTER
+
 resource "kubernetes_namespace" "cnpg_system" {
   metadata {
     name = "cnpg-system"
@@ -6,6 +8,20 @@ resource "kubernetes_namespace" "cnpg_system" {
     }
   }
 }
+
+resource "kubernetes_namespace" "postgres" {
+  metadata {
+    name = "postgres"
+    labels = {
+      "istio-injection" = "disabled"
+    }
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-1"
+    }
+  }
+}
+
+# * OBSERVABILITY STACK
 
 resource "kubernetes_namespace" "monitoring" {
   metadata {
@@ -67,11 +83,39 @@ resource "kubernetes_namespace" "events" {
   }
 }
 
+# * SECRET MANAGEMENT STACK
+
 resource "kubernetes_namespace" "external_secrets" {
   metadata {
     name = "external-secrets"
     labels = {
       "istio.io/dataplane-mode" = "ambient"
+    }
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-1"
+    }
+  }
+}
+
+# * MICROSERVICES STACK
+
+resource "kubernetes_namespace" "users" {
+  metadata {
+    name = "users"
+    labels = {
+      "istio-injection" = "enabled"
+    }
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-1"
+    }
+  }
+}
+
+resource "kubernetes_namespace" "store_ui" {
+  metadata {
+    name = "store-ui"
+    labels = {
+      "istio-injection" = "enabled"
     }
     annotations = {
       "argocd.argoproj.io/sync-wave" = "-1"

@@ -66,3 +66,15 @@ spec:
 
   monitoring:
     enablePodMonitor: true
+
+  {{- if .Values.databases }}
+  managed:
+    roles:
+      {{- range .Values.databases }}
+      - name: {{ .owner | quote }}
+        ensure: present
+        login: true
+        passwordSecret:
+          name: {{ .passwordSecretName | quote }}
+      {{- end }}
+  {{- end }}

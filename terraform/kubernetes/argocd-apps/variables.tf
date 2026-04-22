@@ -53,6 +53,22 @@ variable "private_domain" {
   description = "Root DNS name for internal services (e.g. internal.example.com). Used to build Grafana's root_url so login redirects resolve to the private Gateway hostname."
 }
 
+variable "public_domain" {
+  type        = string
+  description = "Root DNS name for public-facing services (e.g. example.com). Used to build hostnames for HTTPRoutes attached to the public Istio Gateway (e.g. store.<public_domain>)."
+}
+
+variable "public_gateway_name" {
+  type        = string
+  description = "Name of the public Istio Gateway CR. HTTPRoutes for internet-facing services reference this as parentRef."
+  default     = "public"
+}
+
+variable "public_gateway_namespace" {
+  type        = string
+  description = "Namespace where the public Istio Gateway lives. Sourced from the istio-gateway module output."
+}
+
 variable "private_gateway_name" {
   type        = string
   description = "Name of the internal Istio Gateway CR. HTTPRoutes for internal services reference this as parentRef."
@@ -118,4 +134,33 @@ variable "external_secrets_chart_version" {
   type        = string
   description = "Pinned version of the external-secrets Helm chart. Bump via PR to roll the operator forward."
   default     = "2.3.0"
+}
+
+# ── Microservices ─────────────────────────────────────────────────────────────
+
+variable "service_project_id" {
+  type        = string
+  description = "GCP project ID hosting the Artifact Registry Docker repo the microservice images are pushed to."
+}
+
+variable "region" {
+  type        = string
+  description = "The project resources region for artifact registry (e.g. us-central1). Must match the region the images were pushed to."
+}
+
+variable "artifact_registry_images_repo_id" {
+  type        = string
+  description = "Artifact Registry repository ID for Docker images. Must match the repo provisioned by the artifact-registry module."
+}
+
+variable "users_microservice_image_tag" {
+  type        = string
+  description = "Tag of the users microservice Docker image to deploy. Bump here to roll out a new version."
+  default     = "v1"
+}
+
+variable "store_ui_image_tag" {
+  type        = string
+  description = "Tag of the store-ui Docker image to deploy. Bump here to roll out a new version."
+  default     = "v1"
 }

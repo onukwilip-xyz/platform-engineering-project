@@ -56,6 +56,20 @@ dependency "observability_infra" {
   mock_outputs                            = local.k8s.observability_infra_mock_outputs
 }
 
+dependency "project" {
+  config_path = "../../project"
+
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
+  mock_outputs                            = local.k8s.project_mock_outputs
+}
+
+dependency "artifact_registry" {
+  config_path = "../../artifact-registry"
+
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
+  mock_outputs                            = local.k8s.artifact_registry_mock_outputs
+}
+
 generate "providers" {
   path      = "providers_gen.tf"
   if_exists = "overwrite_terragrunt"
@@ -91,8 +105,12 @@ inputs = {
   cluster_issuer_name       = dependency.cert_manager_config.outputs.internal_cluster_issuer_name
   private_gateway_name      = dependency.istio_gateway.outputs.internal_gateway_name
   private_gateway_namespace = dependency.istio_gateway.outputs.internal_gateway_namespace
+  public_gateway_name       = dependency.istio_gateway.outputs.public_gateway_name
+  public_gateway_namespace  = dependency.istio_gateway.outputs.public_gateway_namespace
   loki_gcs_bucket_name      = dependency.observability_infra.outputs.loki_bucket_name
   loki_gcs_sa_email         = dependency.observability_infra.outputs.loki_gcp_sa_email
   tempo_gcs_bucket_name     = dependency.observability_infra.outputs.tempo_bucket_name
   tempo_gcs_sa_email        = dependency.observability_infra.outputs.tempo_gcp_sa_email
+  service_project_id        = dependency.project.outputs.service_project_id
+  artifact_registry_images_repo_id = dependency.artifact_registry.outputs.repositories["images"].repository_id
 }
