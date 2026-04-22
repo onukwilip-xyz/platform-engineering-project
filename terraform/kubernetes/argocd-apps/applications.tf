@@ -266,7 +266,7 @@ resource "kubernetes_manifest" "grafana" {
                 {
                   name   = "Tempo"
                   type   = "tempo"
-                  url    = "http://tempo.tracing.svc:3100"
+                  url    = "http://tempo.tracing.svc:3200"
                   access = "proxy"
                 },
               ]
@@ -364,10 +364,10 @@ resource "kubernetes_manifest" "loki" {
             }
 
             singleBinary = {
-              replicas = 1
+              replicas = 2
               persistence = {
                 enabled      = true
-                size         = "4Gi"
+                size         = "2Gi"
                 storageClass = "standard"
               }
             }
