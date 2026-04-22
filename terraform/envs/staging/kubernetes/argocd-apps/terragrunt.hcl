@@ -113,4 +113,5 @@ inputs = {
   tempo_gcs_sa_email        = dependency.observability_infra.outputs.tempo_gcp_sa_email
   service_project_id        = dependency.project.outputs.service_project_id
   artifact_registry_images_repo_id = dependency.artifact_registry.outputs.repositories["images"].repository_id
+  cluster_name              = dependency.gke.outputs.gke_cluster_name
 }
