@@ -1,0 +1,33 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: istio-gateways
+  namespace: {{ .Release.Namespace }}
+spec:
+  namespaceSelector:
+    matchNames:
+      {{- range .Values.gateways.namespaces }}
+      - {{ . }}
+      {{- end }}
+  selector:
+    matchExpressions:
+      - key: gateway.networking.k8s.io/gateway-name
+        operator: In
+        values:
+          {{- range .Values.gateways.names }}
+          - {{ . }}
+          {{- end }}
+  podMetricsEndpoints:
+    - path: /stats/prometheus
+      interval: {{ .Values.scrapeInterval }}
+      relabelings:
+        - action: keep
+          sourceLabels: [__meta_kubernetes_pod_container_name]
+          regex: istio-proxy
+        - action: replace
+          sourceLabels:
+            - __address__
+            - __meta_kubernetes_pod_annotation_prometheus_io_port
+          regex: ([^:]+)(?::\d+)?;(\d+)
+          replacement: $1:$2
+          targetLabel: __address__

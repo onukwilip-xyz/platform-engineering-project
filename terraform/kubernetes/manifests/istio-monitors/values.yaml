@@ -1,0 +1,12 @@
+scrapeInterval: 15s
+
+gateways:
+  namespaces:
+    - istio-ingress
+    - istio-ingress-internal
+  names:
+    - public
+    - private
+
+istiodNamespace: istio-system
+ztunnelNamespace: istio-system

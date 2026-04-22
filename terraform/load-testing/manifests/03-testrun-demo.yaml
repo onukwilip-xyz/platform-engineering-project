@@ -1,0 +1,48 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# DEMO RUN — small, short, verifies the whole pipeline works
+#   • 2 runner pods
+#   • 2 minutes duration
+#   • 5 writes/sec + 2 reads/sec PER POD → ~14 req/s total → ~50k req/hr
+#   • Use this to verify: traffic hits users, HPA sees it, traces land in
+#     Tempo, logs in Loki, metrics in Prometheus. DO NOT skip this step.
+# ═══════════════════════════════════════════════════════════════════════════
+apiVersion: k6.io/v1alpha1
+kind: TestRun
+metadata:
+  name: k6-demo-write-heavy
+  namespace: load-testing
+spec:
+  parallelism: 2
+  script:
+    configMap:
+      name: k6-write-heavy
+      file: write-heavy.js
+  runner:
+    env:
+      - name: BASE_URL
+        value: "https://users.internal.pe.onukwilip.xyz"
+      - name: DURATION
+        value: "2m"
+      - name: WRITE_RATE
+        value: "5"
+      - name: READ_RATE
+        value: "2"
+      - name: WRITE_VUS
+        value: "10"
+      - name: READ_VUS
+        value: "5"
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+    # Ship metrics to your self-hosted Prometheus so you can see load-test
+    # RPS overlaid with infra metrics in Grafana.
+    # Requires Prometheus to have remote_write receiver enabled.
+    # If you haven't enabled it yet, just remove this arguments line for now.
+    # arguments: --out experimental-prometheus-rw=http://kube-prometheus-stack-prometheus.monitoring.svc:9090/api/v1/write
+  # Pass the pod index into each runner as an env var so email generation
+  # is collision-free across pods.
+  separate: false

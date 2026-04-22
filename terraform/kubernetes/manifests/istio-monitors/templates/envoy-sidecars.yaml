@@ -1,0 +1,26 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: envoy-sidecars
+  namespace: {{ .Release.Namespace }}
+spec:
+  namespaceSelector:
+    any: true
+  selector:
+    matchExpressions:
+      - key: istio-prometheus-ignore
+        operator: DoesNotExist
+  podMetricsEndpoints:
+    - path: /stats/prometheus
+      interval: {{ .Values.scrapeInterval }}
+      relabelings:
+        - action: keep
+          sourceLabels: [__meta_kubernetes_pod_container_name]
+          regex: istio-proxy
+        - action: replace
+          sourceLabels:
+            - __address__
+            - __meta_kubernetes_pod_annotation_prometheus_io_port
+          regex: ([^:]+)(?::\d+)?;(\d+)
+          replacement: $1:$2
+          targetLabel: __address__

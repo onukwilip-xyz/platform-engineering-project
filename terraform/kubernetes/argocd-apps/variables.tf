@@ -169,3 +169,11 @@ variable "store_ui_image_tag" {
   description = "Tag of the store-ui Docker image to deploy. Bump here to roll out a new version."
   default     = "v1"
 }
+
+# ── Load Testing ─────────────────────────────────────────────────────────────
+
+variable "k6_operator_chart_version" {
+  type        = string
+  description = "Pinned version of the grafana/k6-operator Helm chart. Bump via PR to roll the operator forward."
+  default     = "4.3.2"
+}

@@ -122,3 +122,17 @@ resource "kubernetes_namespace" "store_ui" {
     }
   }
 }
+
+# * LOAD TESTING STACK
+
+resource "kubernetes_namespace" "load_testing" {
+  metadata {
+    name = "load-testing"
+    labels = {
+      "istio.io/dataplane-mode" = "ambient"
+    }
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-1"
+    }
+  }
+}
