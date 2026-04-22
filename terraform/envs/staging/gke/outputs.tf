@@ -34,3 +34,8 @@ output "private_dns_zone_name" {
   description = "Name of the private Cloud DNS managed zone (from shared state). Re-exported for istio-gateway DNS record creation."
   value       = data.terraform_remote_state.shared.outputs.private_dns_zone.name
 }
+
+output "public_dns_zone_name" {
+  description = "Name of the public Cloud DNS managed zone (from shared state). Re-exported for istio-gateway public wildcard DNS record creation."
+  value       = data.terraform_remote_state.shared.outputs.public_dns_zone.name
+}

@@ -81,4 +81,5 @@ inputs = {
   region                = local.env.region
   subnetwork            = dependency.gke.outputs.gke_subnet_self_link
   private_dns_zone_name = dependency.gke.outputs.private_dns_zone_name
+  public_dns_zone_name  = dependency.gke.outputs.public_dns_zone_name
 }

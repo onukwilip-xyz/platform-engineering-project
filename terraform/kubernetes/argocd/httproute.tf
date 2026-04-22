@@ -14,7 +14,7 @@ resource "kubernetes_manifest" "argocd_httproute" {
           sectionName = "https"
         }
       ]
-      hostnames = [var.argocd_domain]
+      hostnames = ["argocd.${var.private_domain}"]
       rules = [
         {
           matches = [

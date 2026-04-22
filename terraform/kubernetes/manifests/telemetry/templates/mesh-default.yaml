@@ -1,0 +1,12 @@
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: mesh-default
+  namespace: istio-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  tracing:
+    - providers:
+        - name: {{ .Values.tracing.providerName }}
+      randomSamplingPercentage: {{ .Values.tracing.randomSamplingPercentage }}

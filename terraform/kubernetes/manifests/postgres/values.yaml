@@ -7,3 +7,13 @@ pooler:
 
 certificates:
   clusterIssuer: internal-ca
+
+# Per-workload logical databases. Each entry becomes a CNPG managed role
+# (owner, password sourced from `passwordSecretName`) and a Database CR.
+# The referenced secret must live in the `postgres` namespace and be of type
+# `kubernetes.io/basic-auth` with a `password` key.
+databases: []
+  # Example:
+  # - name: users
+  #   owner: users_app
+  #   passwordSecretName: users-app-credentials

@@ -14,6 +14,11 @@ variable "argocd_domain" {
   description = "Hostname for the ArgoCD UI, e.g. argocd.internal.pe.onukwilip.xyz. Must fall under the private gateway's wildcard listener."
 }
 
+variable "private_domain" {
+  type        = string
+  description = "Root DNS name for internal services (e.g. internal.example.com). Used to build ArgoCD's root_url so login redirects resolve to the private Gateway hostname."
+}
+
 variable "private_gateway_name" {
   type        = string
   description = "Name of the private (internal) Gateway CR. Passed from istio-gateway outputs."

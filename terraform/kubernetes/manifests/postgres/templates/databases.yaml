@@ -1,0 +1,15 @@
+{{- range .Values.databases }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: {{ .name | quote }}
+  namespace: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  name: {{ .name | quote }}
+  owner: {{ .owner | quote }}
+  cluster:
+    name: postgres-cluster
+{{- end }}

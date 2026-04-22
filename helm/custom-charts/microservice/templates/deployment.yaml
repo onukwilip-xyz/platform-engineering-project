@@ -53,7 +53,7 @@ spec:
           {{- if .imagePullPolicy }}
           imagePullPolicy: {{ .imagePullPolicy | quote }}
           {{- end }}
-          {{- if or .env .externalSecrets (gt (len .configMaps) 0) (gt (len .secrets) 0) .secretRef .configMapRef }}
+          {{- if or .env .externalSecrets (gt (len (default list .configMaps)) 0) (gt (len (default list .secrets)) 0) .secretRef .configMapRef }}
           env:
             # Environment variables
             {{- range $k, $v := .env }}
@@ -130,7 +130,7 @@ spec:
           imagePullPolicy: {{ .imagePullPolicy | quote }}
           {{- end }}
           {{- /* env: key/value into env vars */}}
-          {{- if or .env .externalSecrets (gt (len .configMaps) 0) (gt (len .secrets) 0) .secretRef .configMapRef }}
+          {{- if or .env .externalSecrets (gt (len (default list .configMaps)) 0) (gt (len (default list .secrets)) 0) .secretRef .configMapRef }}
           env:
             # Environment variables
             {{- range $k, $v := .env }}
