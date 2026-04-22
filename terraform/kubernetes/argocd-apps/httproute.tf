@@ -1,3 +1,4 @@
+# Grafana
 resource "kubernetes_manifest" "grafana_httproute" {
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1"
@@ -43,6 +44,9 @@ resource "kubernetes_manifest" "grafana_httproute" {
   depends_on = [kubernetes_manifest.grafana]
 }
 
+# * MICROSERVICES STACK
+
+# Store UI
 resource "kubernetes_manifest" "store_ui_httproute" {
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1"
@@ -72,7 +76,6 @@ resource "kubernetes_manifest" "store_ui_httproute" {
           ]
           backendRefs = [
             {
-              # microservice chart names the Service `<release>-service`
               name = "store-ui-service"
               port = 80
             }
@@ -83,4 +86,46 @@ resource "kubernetes_manifest" "store_ui_httproute" {
   }
 
   depends_on = [kubernetes_manifest.store_ui]
+}
+
+# Users
+resource "kubernetes_manifest" "users_microservice_httproute" {
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "HTTPRoute"
+    metadata = {
+      name      = "users-microservice"
+      namespace = kubernetes_namespace.users.metadata[0].name
+    }
+    spec = {
+      parentRefs = [
+        {
+          name        = var.private_gateway_name
+          namespace   = var.private_gateway_namespace
+          sectionName = "https"
+        }
+      ]
+      hostnames = ["users.${var.private_domain}"]
+      rules = [
+        {
+          matches = [
+            {
+              path = {
+                type  = "PathPrefix"
+                value = "/"
+              }
+            }
+          ]
+          backendRefs = [
+            {
+              name = "users-microservice-service"
+              port = 80
+            }
+          ]
+        }
+      ]
+    }
+  }
+
+  depends_on = [kubernetes_manifest.users_microservice]
 }
