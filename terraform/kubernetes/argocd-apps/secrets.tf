@@ -52,3 +52,25 @@ resource "kubernetes_secret" "users_microservice_db" {
     DATABASE_URL = "postgresql+asyncpg://${local.users_db_username}:${random_password.users_db.result}@postgres-cluster-rw.postgres.svc:5432/${local.users_db_name}"
   }
 }
+
+# * ARGOCD OCI REPO REGISTRATIONS
+
+# Kubernetes Event Exporter
+resource "kubernetes_secret" "bitnami_charts_oci_repo" {
+  metadata {
+    name      = "bitnami-charts-oci"
+    namespace = var.argocd_namespace
+    labels = {
+      "argocd.argoproj.io/secret-type" = "repository"
+    }
+  }
+
+  type = "Opaque"
+
+  data = {
+    name      = "bitnami-charts-oci"
+    url       = "registry-1.docker.io/bitnamicharts"
+    type      = "helm"
+    enableOCI = "true"
+  }
+}

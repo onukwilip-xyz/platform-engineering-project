@@ -617,7 +617,7 @@ resource "kubernetes_manifest" "kubernetes_event_exporter" {
     spec = {
       project = "default"
       source = {
-        repoURL        = "oci://registry-1.docker.io/bitnamicharts/kubernetes-event-exporter"
+        repoURL        = "registry-1.docker.io/bitnamicharts"
         chart          = "kubernetes-event-exporter"
         targetRevision = var.kubernetes_event_exporter_chart_version
         helm = {
@@ -696,7 +696,10 @@ resource "kubernetes_manifest" "kubernetes_event_exporter" {
     }
   }
 
-  depends_on = [kubernetes_manifest.loki]
+  depends_on = [
+    kubernetes_manifest.loki,
+    kubernetes_secret.bitnami_charts_oci_repo,
+  ]
 }
 
 # * SECRETS STACK
@@ -774,7 +777,7 @@ resource "kubernetes_manifest" "users_microservice" {
               {
                 name            = "users"
                 image           = local.users_microservice_image
-                imagePullPolicy = "IfNotPresent"
+                imagePullPolicy = "Always"
                 configMapRef = [kubernetes_config_map.users_microservice.metadata[0].name]
                 secretRef    = [kubernetes_secret.users_microservice_db.metadata[0].name]
               },
@@ -785,6 +788,13 @@ resource "kubernetes_manifest" "users_microservice" {
               type       = "ClusterIP"
               port       = 80
               targetPort = 9090
+            }
+
+            hpa = {
+              enabled                        = true
+              minReplicas                    = 1
+              maxReplicas                    = 6
+              targetCPUUtilizationPercentage = 80
             }
           })
         }
