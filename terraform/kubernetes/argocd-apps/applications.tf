@@ -9,7 +9,7 @@ resource "kubernetes_manifest" "cnpg_operator" {
       name      = "cnpg-operator"
       namespace = var.argocd_namespace
       annotations = {
-        "argocd.argoproj.io/sync-wave" = "0"
+        "argocd.argoproj.io/sync-wave"       = "0"
         "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
       }
       finalizers = ["resources-finalizer.argocd.argoproj.io"]
@@ -141,8 +141,8 @@ resource "kubernetes_manifest" "kube_prometheus_stack" {
                 podMonitorSelectorNilUsesHelmValues     = false
                 ruleSelectorNilUsesHelmValues           = false
                 probeSelectorNilUsesHelmValues          = false
-
-                retention = "7d"
+                enableRemoteWriteReceiver               = true
+                retention                               = "7d"
 
                 storageSpec = {
                   volumeClaimTemplate = {
@@ -601,6 +601,55 @@ resource "kubernetes_manifest" "istio_telemetry" {
   depends_on = [kubernetes_manifest.tempo]
 }
 
+# Istio monitors — PodMonitors + ServiceMonitor pointing Prometheus at sidecar,
+# istiod, Gateway API gateway, and ztunnel metrics endpoints.
+resource "kubernetes_manifest" "istio_monitors" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "istio-monitors"
+      namespace = var.argocd_namespace
+      annotations = {
+        "argocd.argoproj.io/sync-wave" = "4"
+      }
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = var.repo_url
+        targetRevision = var.target_revision
+        path           = "terraform/kubernetes/manifests/istio-monitors"
+        helm = {
+          values = yamlencode({
+            scrapeInterval = "15s"
+            gateways = {
+              namespaces = ["istio-ingress", "istio-ingress-internal"]
+              names      = ["public", "private"]
+            }
+            istiodNamespace  = "istio-system"
+            ztunnelNamespace = "istio-system"
+          })
+        }
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = kubernetes_namespace.monitoring.metadata[0].name
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = ["CreateNamespace=false"]
+      }
+    }
+  }
+
+  depends_on = [kubernetes_manifest.kube_prometheus_stack]
+}
+
 # Kubernetes Event Exporter
 resource "kubernetes_manifest" "kubernetes_event_exporter" {
   manifest = {
@@ -631,12 +680,12 @@ resource "kubernetes_manifest" "kubernetes_event_exporter" {
             }
 
             config = {
-              clusterName         = var.cluster_name
-              leaderElection      = {}
-              logFormat           = "pretty"
-              logLevel            = "debug"
-              maxEventAgeSeconds  = 3600
-              metricsNamePrefix   = "event_exporter_"
+              clusterName        = var.cluster_name
+              leaderElection     = {}
+              logFormat          = "pretty"
+              logLevel           = "debug"
+              maxEventAgeSeconds = 3600
+              metricsNamePrefix  = "event_exporter_"
 
               route = {
                 routes = [
@@ -778,8 +827,8 @@ resource "kubernetes_manifest" "users_microservice" {
                 name            = "users"
                 image           = local.users_microservice_image
                 imagePullPolicy = "Always"
-                configMapRef = [kubernetes_config_map.users_microservice.metadata[0].name]
-                secretRef    = [kubernetes_secret.users_microservice_db.metadata[0].name]
+                configMapRef    = [kubernetes_config_map.users_microservice.metadata[0].name]
+                secretRef       = [kubernetes_secret.users_microservice_db.metadata[0].name]
               },
             ]
 
@@ -876,4 +925,41 @@ resource "kubernetes_manifest" "store_ui" {
   }
 
   depends_on = [kubernetes_namespace.store_ui]
+}
+
+# * LOAD TESTING STACK
+
+resource "kubernetes_manifest" "k6_operator" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "k6-operator"
+      namespace = var.argocd_namespace
+      annotations = {
+        "argocd.argoproj.io/sync-wave"       = "0"
+        "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
+      }
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = "https://grafana.github.io/helm-charts"
+        chart          = "k6-operator"
+        targetRevision = var.k6_operator_chart_version
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = kubernetes_namespace.cnpg_system.metadata[0].name
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = ["CreateNamespace=false", "ServerSideApply=true", "ServerSideDiff=true"]
+      }
+    }
+  }
 }

@@ -11,3 +11,14 @@ resource "kubernetes_config_map" "users_microservice" {
     SEED_ON_STARTUP = "false"
   }
 }
+
+resource "kubernetes_config_map" "load_testing_script" {
+  metadata {
+    name      = "k6-write-heavy"
+    namespace = kubernetes_namespace.load_testing.metadata[0].name
+  }
+
+  data = {
+    "write-heavy.js" = file("${path.module}/../../load-testing/scripts/write-heavy.js")
+  }
+}

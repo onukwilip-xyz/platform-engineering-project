@@ -1,0 +1,4 @@
+apiVersion: v2
+name: istio-monitors
+version: 0.1.0
+description: Prometheus Operator PodMonitor and ServiceMonitor CRs that point kube-prometheus-stack at Istio's metrics endpoints — sidecars, istiod, Gateway API gateways, and ztunnel.
