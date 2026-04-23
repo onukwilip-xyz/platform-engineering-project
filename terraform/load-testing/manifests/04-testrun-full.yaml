@@ -18,9 +18,16 @@ spec:
       name: k6-write-heavy
       file: write-heavy.js
   runner:
+    nodeSelector:
+      cloud.google.com/gke-nodepool: load-test-node-pool
+    tolerations:
+      - key: workload-type
+        operator: Equal
+        value: load-test
+        effect: NoExecute
     env:
       - name: BASE_URL
-        value: "https://users.internal.pe.onukwilip.xyz"
+        value: "http://users-microservice-service.users.svc.cluster.local"
       - name: DURATION
         value: "1h"
       - name: WRITE_RATE

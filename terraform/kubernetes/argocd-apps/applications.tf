@@ -521,6 +521,15 @@ resource "kubernetes_manifest" "tempo" {
                   }
                 }
               }
+
+              metricsGenerator = {
+                enabled     = true
+                remoteWrite = [{ url = "http://prometheus-operated.monitoring.svc:9090/api/v1/write" }]
+              }
+
+              serviceGraph = {
+                enabled = true
+              }
             }
 
             persistence = {
@@ -535,6 +544,162 @@ resource "kubernetes_manifest" "tempo" {
               annotations = {
                 "iam.gke.io/gcp-service-account" = var.tempo_gcs_sa_email
               }
+            }
+          })
+        }
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = kubernetes_namespace.tracing.metadata[0].name
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = ["CreateNamespace=false", "ServerSideApply=true", "ServerSideDiff=true"]
+      }
+    }
+  }
+
+  depends_on = [kubernetes_namespace.tracing]
+}
+
+# Kiali
+resource "kubernetes_manifest" "kiali" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "kiali"
+      namespace = var.argocd_namespace
+      annotations = {
+        "argocd.argoproj.io/sync-wave"       = "2"
+        "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
+      }
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = "https://kiali.org/helm-charts"
+        chart          = "kiali-operator"
+        targetRevision = var.kiali_chart_version
+        helm = {
+          values = yamlencode(
+            {
+              cr = {
+                create    = true
+                namespace = kubernetes_namespace.tracing.metadata[0].name
+                spec = {
+                  auth = {
+                    strategy = "anonymous"
+                  }
+                  deployment = {
+                    accessible_namespaces = ["**"]
+                    cluster_wide_access   = true
+                  }
+                  external_services = {
+                    prometheus = {
+                      url = "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090"
+                    }
+                    grafana = {
+                      enabled        = true
+                      in_cluster_url = "http://grafana.grafana.svc.cluster.local:80"
+                    }
+                    tracing = {
+                      enabled      = true
+                      provider     = "jaeger"
+                      internal_url = "http://jaeger-query.tracing.svc.cluster.local:16685"
+                      use_grpc     = true
+                    }
+                  }
+                }
+              }
+            }
+          )
+        }
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = kubernetes_namespace.tracing.metadata[0].name
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = ["CreateNamespace=false", "ServerSideApply=true", "ServerSideDiff=true"]
+      }
+    }
+  }
+
+  depends_on = [kubernetes_namespace.tracing]
+}
+
+# Jaeger
+resource "kubernetes_manifest" "jaeger" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "jaeger"
+      namespace = var.argocd_namespace
+      annotations = {
+        "argocd.argoproj.io/sync-wave"       = "2"
+        "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
+      }
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = "https://jaegertracing.github.io/helm-charts"
+        chart          = "jaeger"
+        targetRevision = var.jaeger_chart_version
+        helm = {
+          values = yamlencode({
+            provisionDataStore = {
+              elasticsearch = true
+            }
+            allInOne = {
+              enabled = false
+            }
+            storage = {
+              type = "elasticsearch"
+            }
+            elasticsearch = {
+              master = {
+                masterOnly   = false
+                replicaCount = 1
+              }
+              data = {
+                replicaCount = 0
+              }
+              coordinating = {
+                replicaCount = 0
+              }
+              ingest = {
+                replicaCount = 0
+              }
+            }
+            collector = {
+              enabled = true
+              service = {
+                otlp = {
+                  grpc = {
+                    name = "otlp-grpc"
+                    port = 4317
+                  }
+                  http = {
+                    name = "otlp-http"
+                    port = 4318
+                  }
+                }
+              }
+            }
+            query = {
+              enabled = true
             }
           })
         }
@@ -951,7 +1116,7 @@ resource "kubernetes_manifest" "k6_operator" {
       }
       destination = {
         server    = "https://kubernetes.default.svc"
-        namespace = kubernetes_namespace.cnpg_system.metadata[0].name
+        namespace = kubernetes_namespace.load_testing.metadata[0].name
       }
       syncPolicy = {
         automated = {

@@ -54,6 +54,13 @@ resource "helm_release" "istiod" {
               port    = 4317
             }
           },
+          {
+            name = "jaeger-otel"
+            opentelemetry = {
+              service = "jaeger-collector.${var.tracing_namespace}.svc.cluster.local"
+              port    = 4317
+            }
+          }
         ]
       }
     })
@@ -70,7 +77,7 @@ resource "helm_release" "istio_cni" {
   repository       = "https://istio-release.storage.googleapis.com/charts"
   chart            = "cni"
   version          = var.istio_chart_version
-  namespace        = "kube-system"  # CNI must live in kube-system on GKE
+  namespace        = "kube-system" # CNI must live in kube-system on GKE
   create_namespace = false
 
   values = [
@@ -78,8 +85,8 @@ resource "helm_release" "istio_cni" {
       profile = "ambient"
 
       cni = {
-        cniBinDir  = "/home/kubernetes/bin"
-        chained    = true
+        cniBinDir = "/home/kubernetes/bin"
+        chained   = true
       }
 
       ambient = {
