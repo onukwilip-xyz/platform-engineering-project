@@ -38,7 +38,15 @@ spec:
       annotations:
         sidecar.istio.io/inject: "false"
     spec:
-      containers: []
+      containers:
+       -  name: pgbouncer
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone
