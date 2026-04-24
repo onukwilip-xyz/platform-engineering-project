@@ -985,7 +985,7 @@ resource "kubernetes_manifest" "users_microservice" {
         helm = {
           values = yamlencode({
             useDeployment = true
-            replicas      = 1
+            replicas      = 2
 
             containers = [
               {
@@ -1008,7 +1008,7 @@ resource "kubernetes_manifest" "users_microservice" {
               enabled                        = true
               minReplicas                    = 2
               maxReplicas                    = 6
-              targetCPUUtilizationPercentage = 80
+              targetCPUUtilizationPercentage = 75
             }
           })
         }

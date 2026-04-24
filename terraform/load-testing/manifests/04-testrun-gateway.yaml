@@ -32,7 +32,7 @@ spec:
       - name: SSL_CERT_FILE                         # k6/Go reads this env var
         value: "/etc/ssl/trust/ca.crt"
       - name: DURATION
-        value: "1m"
+        value: "5m"
       - name: WRITE_RATE
         value: "25"
       - name: READ_RATE
