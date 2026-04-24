@@ -12,11 +12,12 @@ metadata:
   name: k6-full-write-gateway
   namespace: load-testing
 spec:
-  parallelism: 10
+  parallelism: 1
   script:
     configMap:
       name: k6-write-heavy
       file: write-heavy.js
+  arguments: "--out experimental-prometheus-rw --tag testid=full-gateway-run"
   runner:
     nodeSelector:
       cloud.google.com/gke-nodepool: load-test-node-pool
@@ -31,7 +32,7 @@ spec:
       - name: SSL_CERT_FILE                         # k6/Go reads this env var
         value: "/etc/ssl/trust/ca.crt"
       - name: DURATION
-        value: "1h"
+        value: "1m"
       - name: WRITE_RATE
         value: "25"
       - name: READ_RATE
@@ -40,6 +41,16 @@ spec:
         value: "50"
       - name: READ_VUS
         value: "30"
+      # NEW — Prometheus remote-write config
+      - name: K6_PROMETHEUS_RW_SERVER_URL
+        value: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
+      - name: K6_PROMETHEUS_RW_TREND_STATS
+        value: "p(50),p(90),p(95),p(99),min,max,avg,count"
+      - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
+        value: "5s"
+      # Tag every metric with the test run name so you can filter in Grafana
+      - name: K6_PROMETHEUS_RW_STALE_MARKERS
+        value: "true"
     volumes:
       - name: internal-ca
         secret:

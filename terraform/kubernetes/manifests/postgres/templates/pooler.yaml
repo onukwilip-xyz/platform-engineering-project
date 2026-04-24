@@ -17,10 +17,10 @@ spec:
   pgbouncer:
     poolMode: transaction
     parameters:
-      max_client_conn: "200"
-      default_pool_size: "20"
-      min_pool_size: "5"
-      reserve_pool_size: "5"
+      max_client_conn: "500"
+      default_pool_size: "25"
+      min_pool_size: "10"
+      reserve_pool_size: "10"
       server_idle_timeout: "600"
       server_login_retry: "15"
 
