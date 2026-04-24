@@ -1006,7 +1006,7 @@ resource "kubernetes_manifest" "users_microservice" {
 
             hpa = {
               enabled                        = true
-              minReplicas                    = 1
+              minReplicas                    = 2
               maxReplicas                    = 6
               targetCPUUtilizationPercentage = 80
             }

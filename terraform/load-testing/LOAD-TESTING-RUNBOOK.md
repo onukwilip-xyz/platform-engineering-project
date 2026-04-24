@@ -295,3 +295,12 @@ kubectl exec -n postgres postgres-cluster-1 -- \
 
 Record observations (HPA replica count, p95 latency, error rate) at each
 phase — you'll use this to write up capacity findings.
+
+## What to prepare for writeup
+Whatever you do, capture these for later (portfolio, blog post, whatever):
+
+- Dashboard screenshots at each phase
+- PGBouncer stats before/during/after
+- The `SHOW POOLS` output showing multiplexing in action
+- A summary table of "phase vs observed metrics"
+- The story of the debugging journey — the DATABASE_URL misconfig, the connection pool investigation, the Kiali graph reading. This is genuinely good platform engineering storytelling.
