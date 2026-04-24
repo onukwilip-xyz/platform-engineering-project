@@ -994,6 +994,16 @@ resource "kubernetes_manifest" "users_microservice" {
                 imagePullPolicy = "Always"
                 configMapRef    = [kubernetes_config_map.users_microservice.metadata[0].name]
                 secretRef       = [kubernetes_secret.users_microservice_db.metadata[0].name]
+                resources = {
+                  requests = {
+                    cpu    = "250m"
+                    memory = "256Mi"
+                  }
+                  limits = {
+                    cpu    = "1000m"
+                    memory = "512Mi"
+                  }
+                }
               },
             ]
 
@@ -1006,8 +1016,8 @@ resource "kubernetes_manifest" "users_microservice" {
 
             hpa = {
               enabled                        = true
-              minReplicas                    = 2
-              maxReplicas                    = 6
+              minReplicas                    = 4
+              maxReplicas                    = 12
               targetCPUUtilizationPercentage = 75
             }
           })
