@@ -17,8 +17,8 @@ spec:
   pgbouncer:
     poolMode: transaction
     parameters:
-      max_client_conn: "500"
-      default_pool_size: "25"
+      max_client_conn: "1500"
+      default_pool_size: "50"
       min_pool_size: "10"
       reserve_pool_size: "10"
       server_idle_timeout: "600"
@@ -46,7 +46,7 @@ spec:
               memory: 128Mi
             limits:
               cpu: 500m
-              memory: 256Mi
+              memory: 512Mi
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone

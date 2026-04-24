@@ -32,6 +32,8 @@ spec:
   postgresql:
     parameters:
       pg_stat_statements.track: "all"
+      max_connections: "200"
+      shared_buffers: "256MB"
 
   certificates:
     serverTLSSecret: postgres-server-tls
@@ -43,7 +45,7 @@ spec:
       memory: "512Mi"
     limits:
       cpu: "1"
-      memory: "1Gi"
+      memory: "2500Mi"
 
   storage:
     size: 10Gi

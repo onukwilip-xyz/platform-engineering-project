@@ -1001,7 +1001,29 @@ resource "kubernetes_manifest" "users_microservice" {
                   }
                   limits = {
                     cpu    = "1000m"
-                    memory = "512Mi"
+                    memory = "1Gi"
+                  }
+                }
+                otherSpecs = {
+                  readinessProbe = {
+                    httpGet = {
+                      path = "/health"
+                      port = 9090
+                    }
+                    initialDelaySeconds = 5
+                    periodSeconds       = 10
+                    timeoutSeconds      = 2
+                    failureThreshold    = 3
+                  }
+                  livenessProbe = {
+                    httpGet = {
+                      path = "/health"
+                      port = 9090
+                    }
+                    initialDelaySeconds = 15
+                    periodSeconds       = 20
+                    timeoutSeconds      = 3
+                    failureThreshold    = 3
                   }
                 }
               },
