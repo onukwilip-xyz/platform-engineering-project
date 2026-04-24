@@ -1,0 +1,9 @@
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: postgres-cluster-high
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+value: 100000
+globalDefault: false
+description: "High priority for the postgres-cluster workload. Protects DB pods from preemption and node-pressure eviction ahead of lower-priority workloads."
