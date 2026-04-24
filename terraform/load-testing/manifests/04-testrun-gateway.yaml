@@ -19,8 +19,8 @@ spec:
       file: write-heavy.js
   arguments: "--out experimental-prometheus-rw --tag testid=full-gateway-run"
   runner:
-    nodeSelector:
-      cloud.google.com/gke-nodepool: load-test-node-pool
+    # nodeSelector:
+    #   cloud.google.com/gke-nodepool: load-test-node-pool
     tolerations:
       - key: workload-type
         operator: Equal

@@ -18,8 +18,8 @@ spec:
       name: k6-write-heavy
       file: write-heavy.js
   runner:
-    nodeSelector:
-      cloud.google.com/gke-nodepool: load-test-node-pool
+    # nodeSelector:
+    #   cloud.google.com/gke-nodepool: load-test-node-pool
     tolerations:
       - key: workload-type
         operator: Equal
