@@ -1,0 +1,75 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# FULL RUN — 10 parallel pods simulating traffic from 10 distinct sources
+#   • 10 runner pods, each with its own source IP
+#   • 1 hour duration
+#   • ~25 writes/sec + ~15 reads/sec PER POD
+#   • Total: ~400 req/s → ~1.44M req/hr
+#   • Scale RATES up after the demo succeeds — don't jump straight here.
+# ═══════════════════════════════════════════════════════════════════════════
+apiVersion: k6.io/v1alpha1
+kind: TestRun
+metadata:
+  name: k6-full-write-gateway
+  namespace: load-testing
+spec:
+  parallelism: 10
+  script:
+    configMap:
+      name: k6-write-heavy
+      file: write-heavy.js
+  runner:
+    nodeSelector:
+      cloud.google.com/gke-nodepool: load-test-node-pool
+    tolerations:
+      - key: workload-type
+        operator: Equal
+        value: load-test
+        effect: NoExecute
+    env:
+      - name: BASE_URL
+        value: "https://users.internal.pe.onukwilip.xyz"
+      - name: SSL_CERT_FILE                         # k6/Go reads this env var
+        value: "/etc/ssl/trust/ca.crt"
+      - name: DURATION
+        value: "1h"
+      - name: WRITE_RATE
+        value: "25"
+      - name: READ_RATE
+        value: "15"
+      - name: WRITE_VUS
+        value: "50"
+      - name: READ_VUS
+        value: "30"
+    volumes:
+      - name: internal-ca
+        secret:
+          secretName: internal-ca-bundle
+          items:
+            - key: ca.crt
+              path: ca.crt
+    volumeMounts:
+      - name: internal-ca
+        mountPath: /etc/ssl/trust
+        readOnly: true
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+    # Spread the 10 runner pods across different nodes so they actually
+    # use different source IPs (not just different pod IPs on same node).
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: k6_cr
+                    operator: In
+                    values:
+                      - k6-full-write-gateway
+              topologyKey: kubernetes.io/hostname
+  separate: false

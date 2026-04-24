@@ -21,6 +21,8 @@ spec:
     topologyKey: kubernetes.io/hostname
     podAntiAffinityType: required
     
+  priorityClassName: postgres-cluster-high
+
   primaryUpdateStrategy: unsupervised
   primaryUpdateMethod: switchover
 
@@ -34,6 +36,14 @@ spec:
   certificates:
     serverTLSSecret: postgres-server-tls
     serverCASecret: postgres-server-ca
+
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "1Gi"
 
   storage:
     size: 10Gi

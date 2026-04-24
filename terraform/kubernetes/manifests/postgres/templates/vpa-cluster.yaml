@@ -7,11 +7,11 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
 spec:
   targetRef:
-    apiVersion: apps/v1
-    kind: StatefulSet
+    apiVersion: postgresql.cnpg.io/v1
+    kind: Cluster
     name: postgres-cluster
   updatePolicy:
-    updateMode: Auto
+    updateMode: "Off"
   resourcePolicy:
     containerPolicies:
       - containerName: postgres

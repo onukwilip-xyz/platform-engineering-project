@@ -47,3 +47,9 @@ variable "cert_manager_k8s_service_account_name" {
   description = "Name of the Kubernetes service account created by the cert-manager Helm chart."
   default     = "cert-manager"
 }
+
+variable "trust_manager_chart_version" {
+  type        = string
+  description = "Version of the trust-manager Helm chart to install."
+  default     = "0.22.1"
+}
