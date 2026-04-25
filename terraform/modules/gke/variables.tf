@@ -106,7 +106,7 @@ variable "enable_vpa" {
 variable "enable_managed_prometheus" {
   type        = bool
   description = "Whether to enable Managed Service for Prometheus (managed collection) for the cluster."
-  default     = true
+  default     = false
 }
 
 variable "enable_cost_management" {

@@ -12,7 +12,7 @@ metadata:
   name: k6-full-write-gateway
   namespace: load-testing
 spec:
-  parallelism: 1
+  parallelism: 5
   script:
     configMap:
       name: k6-write-heavy
@@ -32,11 +32,11 @@ spec:
       - name: SSL_CERT_FILE                         # k6/Go reads this env var
         value: "/etc/ssl/trust/ca.crt"
       - name: DURATION
-        value: "5m"
+        value: "1h"
       - name: WRITE_RATE
-        value: "25"
+        value: "30"
       - name: READ_RATE
-        value: "15"
+        value: "20"
       - name: WRITE_VUS
         value: "50"
       - name: READ_VUS
@@ -64,8 +64,8 @@ spec:
         readOnly: true
     resources:
       requests:
-        cpu: "500m"
-        memory: "512Mi"
+        cpu: "250m"
+        memory: "256Mi"
       limits:
         cpu: "1000m"
         memory: "1Gi"

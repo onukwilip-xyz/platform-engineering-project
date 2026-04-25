@@ -1000,8 +1000,8 @@ resource "kubernetes_manifest" "users_microservice" {
                     memory = "256Mi"
                   }
                   limits = {
-                    cpu    = "1000m"
-                    memory = "1Gi"
+                    cpu    = "1200m"
+                    memory = "3Gi"
                   }
                 }
                 otherSpecs = {
