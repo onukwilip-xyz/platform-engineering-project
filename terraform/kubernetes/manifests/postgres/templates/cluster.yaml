@@ -8,6 +8,12 @@ metadata:
 spec:
   instances: 3
 
+  postgresql:
+    parameters:
+      pg_stat_statements.track: "all"
+      max_connections: "200"
+      shared_buffers: "1GB"
+
   topologySpreadConstraints:
     - maxSkew: 1
       topologyKey: topology.kubernetes.io/zone
@@ -19,7 +25,7 @@ spec:
   affinity:
     enablePodAntiAffinity: true
     topologyKey: kubernetes.io/hostname
-    podAntiAffinityType: required
+    podAntiAffinityType: preferred
     
   priorityClassName: postgres-cluster-high
 
@@ -28,12 +34,6 @@ spec:
 
   minSyncReplicas: 1
   maxSyncReplicas: 1
-
-  postgresql:
-    parameters:
-      pg_stat_statements.track: "all"
-      max_connections: "200"
-      shared_buffers: "256MB"
 
   certificates:
     serverTLSSecret: postgres-server-tls
@@ -44,8 +44,8 @@ spec:
       cpu: "200m"
       memory: "512Mi"
     limits:
-      cpu: "1"
-      memory: "2500Mi"
+      cpu: "1500m"
+      memory: "5Gi"
 
   storage:
     size: 10Gi

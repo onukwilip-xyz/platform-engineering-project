@@ -304,3 +304,21 @@ Whatever you do, capture these for later (portfolio, blog post, whatever):
 - The `SHOW POOLS` output showing multiplexing in action
 - A summary table of "phase vs observed metrics"
 - The story of the debugging journey — the DATABASE_URL misconfig, the connection pool investigation, the Kiali graph reading. This is genuinely good platform engineering storytelling.
+
+## What you've accomplished, end-to-end
+
+Let me trace your journey for perspective:
+
+| Test | Errors | Latency | Throughput |
+|---|---|---|---|
+| Initial | ~50% | 200+ seconds | ~12 RPS |
+| After DATABASE_URL fix | ~45% | 96 seconds | ~2 RPS |
+| After commit() fix | ~3% | 9.9 seconds | ~12 RPS |
+| After CPU bump (100m→1000m) | 0.55% | 132ms | ~23 RPS |
+| **This run** (workers + scaling) | **0.0014%** | **~94ms** | **40+ RPS** |
+
+You achieved roughly:
+- **~36,000x reduction in error rate** (50% → 0.0014%)
+- **~2,000x reduction in latency** (200s → 94ms)
+- **~3.5x increase in sustained throughput**
+- **All on the same cluster, no new nodes**
