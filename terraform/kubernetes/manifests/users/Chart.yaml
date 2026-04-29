@@ -1,0 +1,4 @@
+apiVersion: v2
+name: users-retry-requests
+version: 0.1.0
+description: Implement retries at the sidecar level, to eject after 5 connection timeouts, instead of 5xx errors.
