@@ -238,6 +238,14 @@ resource "kubernetes_manifest" "grafana" {
                 passwordKey    = "admin-password"
               }
 
+              persistence = {
+                enabled          = true
+                type             = "pvc"
+                size             = "5Gi"
+                storageClassName = "standard"
+                accessModes      = ["ReadWriteOnce"]
+              }
+
               # HTTPRoute through the private Gateway is added separately.
               ingress = { enabled = false }
 
@@ -450,6 +458,20 @@ resource "kubernetes_manifest" "alloy" {
               mounts = {
                 varlog = true
               }
+
+              # Expose the node name to the Alloy config — the discovery.kubernetes
+              # field selector needs `spec.nodeName=<node>`, but HOSTNAME inside the
+              # pod is the pod name. Without this, Alloy scrapes zero pod logs.
+              extraEnv = [
+                {
+                  name = "NODE_NAME"
+                  valueFrom = {
+                    fieldRef = {
+                      fieldPath = "spec.nodeName"
+                    }
+                  }
+                },
+              ]
 
               configMap = {
                 content = file("${path.module}/alloy-config.alloy")
@@ -1010,9 +1032,9 @@ resource "kubernetes_manifest" "users_microservice" {
                       path = "/health"
                       port = 9090
                     }
-                    initialDelaySeconds = 5
-                    periodSeconds       = 10
-                    timeoutSeconds      = 2
+                    initialDelaySeconds = 10
+                    periodSeconds       = 15
+                    timeoutSeconds      = 10
                     failureThreshold    = 3
                   }
                   livenessProbe = {
@@ -1020,10 +1042,10 @@ resource "kubernetes_manifest" "users_microservice" {
                       path = "/health"
                       port = 9090
                     }
-                    initialDelaySeconds = 15
-                    periodSeconds       = 20
-                    timeoutSeconds      = 3
-                    failureThreshold    = 3
+                    initialDelaySeconds = 30
+                    periodSeconds       = 30
+                    timeoutSeconds      = 10
+                    failureThreshold    = 5
                   }
                 }
               },
@@ -1038,7 +1060,7 @@ resource "kubernetes_manifest" "users_microservice" {
 
             hpa = {
               enabled                        = true
-              minReplicas                    = 4
+              minReplicas                    = 8
               maxReplicas                    = 12
               targetCPUUtilizationPercentage = 75
             }

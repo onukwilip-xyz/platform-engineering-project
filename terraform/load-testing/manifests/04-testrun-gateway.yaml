@@ -12,12 +12,12 @@ metadata:
   name: k6-full-write-gateway
   namespace: load-testing
 spec:
-  parallelism: 5
+  parallelism: 2
   script:
     configMap:
       name: k6-write-heavy
       file: write-heavy.js
-  arguments: "--out experimental-prometheus-rw --tag testid=full-gateway-run"
+  arguments: "--out experimental-prometheus-rw --tag testid=full-gateway-run-mini"
   runner:
     # nodeSelector:
     #   cloud.google.com/gke-nodepool: load-test-node-pool
@@ -36,7 +36,7 @@ spec:
       - name: WRITE_RATE
         value: "30"
       - name: READ_RATE
-        value: "20"
+        value: "15"
       - name: WRITE_VUS
         value: "50"
       - name: READ_VUS
@@ -68,7 +68,7 @@ spec:
         memory: "256Mi"
       limits:
         cpu: "1000m"
-        memory: "1Gi"
+        memory: "3Gi"
     # Spread the 10 runner pods across different nodes so they actually
     # use different source IPs (not just different pod IPs on same node).
     affinity:
