@@ -314,3 +314,28 @@ curl -s http://localhost:9090/api/v1/query?query=cnpg_pgbouncer_pools | jq '.dat
 ```
 
 Want me to package all these PodMonitor/ServiceMonitor manifests + a dashboards ConfigMap skeleton into the load-testing module, or keep them as a separate "observability-monitors" ArgoCD app?
+
+## Other metrics to monitor
+
+```bash
+# CPU throttling rate (% of periods that got throttled)
+sum(rate(container_cpu_cfs_throttled_periods_total[2m])) by (pod)
+/
+sum(rate(container_cpu_cfs_periods_total[2m])) by (pod)
+
+# Total time spent throttled (in seconds)
+sum(rate(container_cpu_cfs_throttled_seconds_total[2m])) by (pod)
+
+# Average CPU usage in 10s windows (catches bursts)
+rate(container_cpu_usage_seconds_total[10s])
+
+# Retry attempts per second
+sum(rate(envoy_cluster_upstream_rq_retry{namespace="users"}[1m]))
+
+# Retries that eventually failed
+sum(rate(envoy_cluster_upstream_rq_retry_overflow{namespace="users"}[1m]))
+
+# Successful retries (the value we care about)
+sum(rate(envoy_cluster_upstream_rq_retry_success{namespace="users"}[1m]))
+```
+
