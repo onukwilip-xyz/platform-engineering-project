@@ -1,0 +1,29 @@
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: {{ .Values.destinationRule.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  host: {{ .Values.service.name }}.{{ .Release.Namespace }}.svc.cluster.local
+  trafficPolicy:
+    {{- with .Values.destinationRule.connectionPool }}
+    {{- if .enabled }}
+    connectionPool:
+      tcp:
+        maxConnections: {{ .tcp.maxConnections }}
+      http:
+        http1MaxPendingRequests: {{ .http.http1MaxPendingRequests }}
+        http2MaxRequests: {{ .http.http2MaxRequests }}
+        maxRequestsPerConnection: {{ .http.maxRequestsPerConnection }}
+        maxRetries: {{ .http.maxRetries }}
+    {{- end }}
+    {{- end }}
+    {{- with .Values.destinationRule.outlierDetection }}
+    outlierDetection:
+      consecutiveLocalOriginFailures: {{ .consecutiveLocalOriginFailures }}
+      consecutive5xxErrors: {{ .consecutive5xxErrors }}
+      splitExternalLocalOriginErrors: {{ .splitExternalLocalOriginErrors }}
+      interval: {{ .interval }}
+      baseEjectionTime: {{ .baseEjectionTime }}
+      maxEjectionPercent: {{ .maxEjectionPercent }}
+    {{- end }}

@@ -1000,73 +1000,94 @@ resource "kubernetes_manifest" "users_microservice" {
     }
     spec = {
       project = "default"
-      source = {
-        repoURL        = var.repo_url
-        targetRevision = var.target_revision
-        path           = "helm/custom-charts/microservice"
-        helm = {
-          values = yamlencode({
-            useDeployment = true
-            replicas      = 2
+      sources = [
+        {
+          repoURL        = var.repo_url
+          targetRevision = var.target_revision
+          path           = "helm/custom-charts/microservice"
+          helm = {
+            values = yamlencode({
+              useDeployment = true
+              replicas      = 2
 
-            containers = [
-              {
-                name            = "users"
-                image           = local.users_microservice_image
-                imagePullPolicy = "Always"
-                configMapRef    = [kubernetes_config_map.users_microservice.metadata[0].name]
-                secretRef       = [kubernetes_secret.users_microservice_db.metadata[0].name]
-                resources = {
-                  requests = {
-                    cpu    = "250m"
-                    memory = "256Mi"
-                  }
-                  limits = {
-                    cpu    = "1200m"
-                    memory = "3Gi"
-                  }
-                }
-                otherSpecs = {
-                  readinessProbe = {
-                    httpGet = {
-                      path = "/health"
-                      port = 9090
+              containers = [
+                {
+                  name            = "users"
+                  image           = local.users_microservice_image
+                  imagePullPolicy = "Always"
+                  configMapRef    = [kubernetes_config_map.users_microservice.metadata[0].name]
+                  secretRef       = [kubernetes_secret.users_microservice_db.metadata[0].name]
+                  resources = {
+                    requests = {
+                      cpu    = "250m"
+                      memory = "256Mi"
                     }
-                    initialDelaySeconds = 10
-                    periodSeconds       = 15
-                    timeoutSeconds      = 10
-                    failureThreshold    = 3
-                  }
-                  livenessProbe = {
-                    httpGet = {
-                      path = "/health"
-                      port = 9090
+                    limits = {
+                      cpu    = "1000m"
+                      memory = "3Gi"
                     }
-                    initialDelaySeconds = 30
-                    periodSeconds       = 30
-                    timeoutSeconds      = 10
-                    failureThreshold    = 5
                   }
+                  otherSpecs = {
+                    readinessProbe = {
+                      httpGet = {
+                        path = "/health"
+                        port = 9090
+                      }
+                      initialDelaySeconds = 10
+                      periodSeconds       = 15
+                      timeoutSeconds      = 10
+                      failureThreshold    = 3
+                    }
+                    livenessProbe = {
+                      httpGet = {
+                        path = "/health"
+                        port = 9090
+                      }
+                      initialDelaySeconds = 30
+                      periodSeconds       = 30
+                      timeoutSeconds      = 10
+                      failureThreshold    = 5
+                    }
+                  }
+                },
+              ]
+
+              service = {
+                enabled    = true
+                type       = "ClusterIP"
+                port       = 80
+                targetPort = 9090
+              }
+
+              hpa = {
+                enabled                        = true
+                minReplicas                    = 2
+                maxReplicas                    = 12
+                targetCPUUtilizationPercentage = 75
+              }
+            })
+          }
+        },
+        {
+          repoURL        = var.repo_url
+          targetRevision = var.target_revision
+          path           = "terraform/kubernetes/manifests/users"
+          helm = {
+            values = yamlencode({
+              service = {
+                name         = "users-microservice-service"
+                externalHost = "users.internal.pe.onukwilip.xyz"
+              }
+              gateways = ["mesh", "istio-ingress-internal/private"]
+              destinationRule = {
+                connectionPool = {
+                  enabled = false
                 }
-              },
-            ]
-
-            service = {
-              enabled    = true
-              type       = "ClusterIP"
-              port       = 80
-              targetPort = 9090
-            }
-
-            hpa = {
-              enabled                        = true
-              minReplicas                    = 8
-              maxReplicas                    = 12
-              targetCPUUtilizationPercentage = 75
-            }
-          })
-        }
-      }
+              }
+            })
+          }
+        },
+      ]
       destination = {
         server    = "https://kubernetes.default.svc"
         namespace = kubernetes_namespace.users.metadata[0].name
