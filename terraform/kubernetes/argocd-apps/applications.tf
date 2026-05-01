@@ -1023,7 +1023,7 @@ resource "kubernetes_manifest" "users_microservice" {
                       memory = "256Mi"
                     }
                     limits = {
-                      cpu    = "1200m"
+                      cpu    = "1000m"
                       memory = "3Gi"
                     }
                   }
@@ -1061,7 +1061,7 @@ resource "kubernetes_manifest" "users_microservice" {
 
               hpa = {
                 enabled                        = true
-                minReplicas                    = 8
+                minReplicas                    = 2
                 maxReplicas                    = 12
                 targetCPUUtilizationPercentage = 75
               }
