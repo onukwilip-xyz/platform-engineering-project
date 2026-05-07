@@ -1068,25 +1068,25 @@ resource "kubernetes_manifest" "users_microservice" {
             })
           }
         },
-        {
-          repoURL        = var.repo_url
-          targetRevision = var.target_revision
-          path           = "terraform/kubernetes/manifests/users"
-          helm = {
-            values = yamlencode({
-              service = {
-                name         = "users-microservice-service"
-                externalHost = "users.internal.pe.onukwilip.xyz"
-              }
-              gateways = ["mesh", "istio-ingress-internal/private"]
-              destinationRule = {
-                connectionPool = {
-                  enabled = false
-                }
-              }
-            })
-          }
-        },
+        # {
+        #   repoURL        = var.repo_url
+        #   targetRevision = var.target_revision
+        #   path           = "terraform/kubernetes/manifests/users"
+        #   helm = {
+        #     values = yamlencode({
+        #       service = {
+        #         name         = "users-microservice-service"
+        #         externalHost = "users.internal.pe.onukwilip.xyz"
+        #       }
+        #       gateways = ["mesh", "istio-ingress-internal/private"]
+        #       destinationRule = {
+        #         connectionPool = {
+        #           enabled = false
+        #         }
+        #       }
+        #     })
+        #   }
+        # },
       ]
       destination = {
         server    = "https://kubernetes.default.svc"

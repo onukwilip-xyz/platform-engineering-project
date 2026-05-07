@@ -339,3 +339,28 @@ sum(rate(envoy_cluster_upstream_rq_retry_overflow{namespace="users"}[1m]))
 sum(rate(envoy_cluster_upstream_rq_retry_success{namespace="users"}[1m]))
 ```
 
+## How to interpret the `Detailed CPU Usage dashboard` during a load test
+When you're watching during the next test, look for these patterns:
+
+**Healthy under load:**
+
+- Throttling rate stays <2%
+- Peak CPU stays <80% of limit
+- Node CPU stays <70%
+- Variance ratio (peak/avg) <2
+
+**Brewing problems:**
+
+- Throttling rate creeping up to 5-15%
+- Peak CPU spiking to 90%+ but average stays low
+- Node CPU 70-85%
+- Variance ratio 3-5
+
+**Active failure:**
+
+- Throttling rate >25%
+- Peak CPU pinned at limit
+- Node CPU >85% sustained
+- Variance ratio >5
+
+The variance ratio is genuinely the most useful single number for "is my dashboard lying to me about CPU usage?" — **if it's >3**, your average dashboards aren't telling the truth.

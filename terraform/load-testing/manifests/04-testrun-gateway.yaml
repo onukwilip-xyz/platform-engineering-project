@@ -17,7 +17,7 @@ spec:
     configMap:
       name: k6-write-heavy
       file: write-heavy.js
-  arguments: "--out experimental-prometheus-rw --tag testid=full-gateway-run-mini"
+  arguments: "--out experimental-prometheus-rw --tag testid=full-gateway-run-test-x"
   runner:
     # nodeSelector:
     #   cloud.google.com/gke-nodepool: load-test-node-pool
@@ -32,11 +32,11 @@ spec:
       - name: SSL_CERT_FILE                         # k6/Go reads this env var
         value: "/etc/ssl/trust/ca.crt"
       - name: DURATION
-        value: "1h"
+        value: "15m"
       - name: WRITE_RATE
-        value: "30"
+        value: "45"
       - name: READ_RATE
-        value: "15"
+        value: "25"
       - name: WRITE_VUS
         value: "50"
       - name: READ_VUS
