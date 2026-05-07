@@ -23,12 +23,39 @@ resource "helm_release" "cert_manager" {
 
   wait          = true
   wait_for_jobs = true
-  # Default Helm timeout (5 min) is too short when cert-manager pods restart
-  # after an upgrade (e.g. adding --enable-gateway-api). 10 min is safe.
-  timeout = 600
+  timeout       = 600
 
   depends_on = [
     kubernetes_namespace.cert_manager,
     google_service_account_iam_member.cert_manager_workload_identity,
   ]
+}
+
+resource "helm_release" "trust_manager" {
+  name             = "trust-manager"
+  repository       = "https://charts.jetstack.io"
+  chart            = "trust-manager"
+  version          = var.trust_manager_chart_version
+  namespace        = kubernetes_namespace.cert_manager.metadata[0].name
+  create_namespace = false
+
+  values = [
+    yamlencode({
+      app = {
+        trust = {
+          namespace = kubernetes_namespace.cert_manager.metadata[0].name
+        }
+      }
+      secretTargets = {
+        enabled           = true
+        authorizedSecrets = ["internal-ca-bundle"]
+      }
+    })
+  ]
+
+  wait          = true
+  wait_for_jobs = true
+  timeout       = 600
+
+  depends_on = [helm_release.cert_manager]
 }

@@ -1,0 +1,45 @@
+service:
+  name: users-microservice-service
+  externalHost: users.internal.pe.onukwilip.xyz
+
+gateways:
+  - mesh
+  - istio-ingress-internal/private
+
+virtualService:
+  name: users-retry-policy
+  rules:
+    - methodRegex: "^(GET|HEAD|OPTIONS)$"
+      retries:
+        attempts: 2
+        perTryTimeout: 3s
+        retryOn: "gateway-error,connect-failure,refused-stream,reset"
+    - methodRegex: "^(POST|PATCH)$"
+      retries:
+        attempts: 2
+        perTryTimeout: 3s
+        retryOn: "connect-failure,refused-stream"
+    - methodRegex: "^(PUT|DELETE)$"
+      retries:
+        attempts: 2
+        perTryTimeout: 3s
+        retryOn: "gateway-error,connect-failure,refused-stream,reset"
+
+destinationRule:
+  name: users-traffic-policy
+  connectionPool:
+    enabled: false
+    tcp:
+      maxConnections: 200
+    http:
+      http1MaxPendingRequests: 100
+      http2MaxRequests: 200
+      maxRequestsPerConnection: 100
+      maxRetries: 3
+  outlierDetection:
+    consecutiveLocalOriginFailures: 5
+    consecutive5xxErrors: 0
+    splitExternalLocalOriginErrors: true
+    interval: 10s
+    baseEjectionTime: 30s
+    maxEjectionPercent: 30

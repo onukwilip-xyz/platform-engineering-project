@@ -102,6 +102,19 @@ variable "loki_gcs_sa_email" {
   description = "Email of the GCP SA Loki impersonates via WIF. Used to annotate Loki's KSA. Sourced from observability-infra."
 }
 
+variable "kiali_chart_version" {
+  type        = string
+  description = "Version of the Kiali Helm chart to install. Must be compatible with the version of Istio installed."
+  default     = "2.25.0"
+}
+
+variable "jaeger_chart_version" {
+  type        = string
+  description = "Version of the Jaeger Helm chart to install. Must be compatible with the version of Istio installed."
+  default     = "4.0.0"
+  
+}
+
 variable "tempo_chart_version" {
   type        = string
   description = "Pinned version of the grafana/tempo (single binary) Helm chart. Bump via PR to roll Tempo forward."
@@ -168,4 +181,12 @@ variable "store_ui_image_tag" {
   type        = string
   description = "Tag of the store-ui Docker image to deploy. Bump here to roll out a new version."
   default     = "v1"
+}
+
+# ── Load Testing ─────────────────────────────────────────────────────────────
+
+variable "k6_operator_chart_version" {
+  type        = string
+  description = "Pinned version of the grafana/k6-operator Helm chart. Bump via PR to roll the operator forward."
+  default     = "4.3.2"
 }

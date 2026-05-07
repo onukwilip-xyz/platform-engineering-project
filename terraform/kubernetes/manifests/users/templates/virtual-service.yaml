@@ -1,0 +1,26 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: {{ .Values.virtualService.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  hosts:
+    - {{ .Values.service.name }}.{{ .Release.Namespace }}.svc.cluster.local
+    - {{ .Values.service.externalHost }}
+  gateways:
+    {{- range .Values.gateways }}
+    - {{ . }}
+    {{- end }}
+  http:
+    {{- range .Values.virtualService.rules }}
+    - match:
+        - method:
+            regex: {{ .methodRegex | quote }}
+      route:
+        - destination:
+            host: {{ $.Values.service.name }}.{{ $.Release.Namespace }}.svc.cluster.local
+      retries:
+        attempts: {{ .retries.attempts }}
+        perTryTimeout: {{ .retries.perTryTimeout }}
+        retryOn: {{ .retries.retryOn | quote }}
+    {{- end }}

@@ -28,10 +28,6 @@ resource "kubernetes_manifest" "grafana_httproute" {
           ]
           backendRefs = [
             {
-              # kube-prometheus-stack's grafana subchart collapses its fullname
-              # to just the release name when the release name matches the chart
-              # name. The ArgoCD Application is named "grafana", so the Service
-              # ends up as `grafana` (not `grafana-grafana`).
               name = "grafana"
               port = 80
             }
@@ -42,6 +38,90 @@ resource "kubernetes_manifest" "grafana_httproute" {
   }
 
   depends_on = [kubernetes_manifest.grafana]
+}
+
+# Prometheus
+resource "kubernetes_manifest" "prometheus_httproute" {
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "HTTPRoute"
+    metadata = {
+      name      = "prometheus"
+      namespace = kubernetes_namespace.monitoring.metadata[0].name
+    }
+    spec = {
+      parentRefs = [
+        {
+          name        = var.private_gateway_name
+          namespace   = var.private_gateway_namespace
+          sectionName = "https"
+        }
+      ]
+      hostnames = ["prometheus.${var.private_domain}"]
+      rules = [
+        {
+          matches = [
+            {
+              path = {
+                type  = "PathPrefix"
+                value = "/"
+              }
+            }
+          ]
+          backendRefs = [
+            {
+              name = "kube-prometheus-stack-prometheus"
+              port = 9090
+            }
+          ]
+        }
+      ]
+    }
+  }
+
+  depends_on = [kubernetes_manifest.kube_prometheus_stack]
+}
+
+# Kiali
+resource "kubernetes_manifest" "kiali_httproute" {
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "HTTPRoute"
+    metadata = {
+      name      = "kiali"
+      namespace = kubernetes_namespace.tracing.metadata[0].name
+    }
+    spec = {
+      parentRefs = [
+        {
+          name        = var.private_gateway_name
+          namespace   = var.private_gateway_namespace
+          sectionName = "https"
+        }
+      ]
+      hostnames = ["kiali.${var.private_domain}"]
+      rules = [
+        {
+          matches = [
+            {
+              path = {
+                type  = "PathPrefix"
+                value = "/"
+              }
+            }
+          ]
+          backendRefs = [
+            {
+              name = "kiali"
+              port = 20001
+            }
+          ]
+        }
+      ]
+    }
+  }
+
+  depends_on = [kubernetes_manifest.kiali]
 }
 
 # * MICROSERVICES STACK

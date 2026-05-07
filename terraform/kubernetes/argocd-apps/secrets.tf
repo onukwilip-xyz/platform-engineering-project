@@ -49,7 +49,7 @@ resource "kubernetes_secret" "users_microservice_db" {
   type = "Opaque"
 
   data = {
-    DATABASE_URL = "postgresql+asyncpg://${local.users_db_username}:${random_password.users_db.result}@postgres-cluster-rw.postgres.svc:5432/${local.users_db_name}"
+    DATABASE_URL = "postgresql+asyncpg://${local.users_db_username}:${random_password.users_db.result}@postgres-pooler-rw.postgres.svc.cluster.local:5432/${local.users_db_name}"
   }
 }
 

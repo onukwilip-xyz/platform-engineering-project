@@ -128,4 +128,6 @@ Apply Terraform
 terraform apply -var-file=".tfvars"
 # OR
 terraform apply --auto-approve -var-file=".tfvars"
+# OR
+terragrunt run --all apply
 ```

@@ -11,13 +11,16 @@ spec:
   type: rw
   instances: 3
 
+  monitoring:
+    enablePodMonitor: true
+
   pgbouncer:
     poolMode: transaction
     parameters:
-      max_client_conn: "200"
-      default_pool_size: "20"
-      min_pool_size: "5"
-      reserve_pool_size: "5"
+      max_client_conn: "1500"
+      default_pool_size: "50"
+      min_pool_size: "10"
+      reserve_pool_size: "10"
       server_idle_timeout: "600"
       server_login_retry: "15"
 
@@ -35,7 +38,15 @@ spec:
       annotations:
         sidecar.istio.io/inject: "false"
     spec:
-      containers: []
+      containers:
+       -  name: pgbouncer
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone

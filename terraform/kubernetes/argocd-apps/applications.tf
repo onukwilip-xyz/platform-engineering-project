@@ -9,7 +9,7 @@ resource "kubernetes_manifest" "cnpg_operator" {
       name      = "cnpg-operator"
       namespace = var.argocd_namespace
       annotations = {
-        "argocd.argoproj.io/sync-wave" = "0"
+        "argocd.argoproj.io/sync-wave"       = "0"
         "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
       }
       finalizers = ["resources-finalizer.argocd.argoproj.io"]
@@ -141,8 +141,8 @@ resource "kubernetes_manifest" "kube_prometheus_stack" {
                 podMonitorSelectorNilUsesHelmValues     = false
                 ruleSelectorNilUsesHelmValues           = false
                 probeSelectorNilUsesHelmValues          = false
-
-                retention = "7d"
+                enableRemoteWriteReceiver               = true
+                retention                               = "7d"
 
                 storageSpec = {
                   volumeClaimTemplate = {
@@ -238,6 +238,14 @@ resource "kubernetes_manifest" "grafana" {
                 passwordKey    = "admin-password"
               }
 
+              persistence = {
+                enabled          = true
+                type             = "pvc"
+                size             = "5Gi"
+                storageClassName = "standard"
+                accessModes      = ["ReadWriteOnce"]
+              }
+
               # HTTPRoute through the private Gateway is added separately.
               ingress = { enabled = false }
 
@@ -266,7 +274,7 @@ resource "kubernetes_manifest" "grafana" {
                 {
                   name   = "Tempo"
                   type   = "tempo"
-                  url    = "http://tempo.tracing.svc:3100"
+                  url    = "http://tempo.tracing.svc:3200"
                   access = "proxy"
                 },
               ]
@@ -364,10 +372,10 @@ resource "kubernetes_manifest" "loki" {
             }
 
             singleBinary = {
-              replicas = 1
+              replicas = 2
               persistence = {
                 enabled      = true
-                size         = "4Gi"
+                size         = "2Gi"
                 storageClass = "standard"
               }
             }
@@ -451,6 +459,20 @@ resource "kubernetes_manifest" "alloy" {
                 varlog = true
               }
 
+              # Expose the node name to the Alloy config — the discovery.kubernetes
+              # field selector needs `spec.nodeName=<node>`, but HOSTNAME inside the
+              # pod is the pod name. Without this, Alloy scrapes zero pod logs.
+              extraEnv = [
+                {
+                  name = "NODE_NAME"
+                  valueFrom = {
+                    fieldRef = {
+                      fieldPath = "spec.nodeName"
+                    }
+                  }
+                },
+              ]
+
               configMap = {
                 content = file("${path.module}/alloy-config.alloy")
               }
@@ -521,6 +543,15 @@ resource "kubernetes_manifest" "tempo" {
                   }
                 }
               }
+
+              metricsGenerator = {
+                enabled     = true
+                remoteWrite = [{ url = "http://prometheus-operated.monitoring.svc:9090/api/v1/write" }]
+              }
+
+              serviceGraph = {
+                enabled = true
+              }
             }
 
             persistence = {
@@ -535,6 +566,162 @@ resource "kubernetes_manifest" "tempo" {
               annotations = {
                 "iam.gke.io/gcp-service-account" = var.tempo_gcs_sa_email
               }
+            }
+          })
+        }
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = kubernetes_namespace.tracing.metadata[0].name
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = ["CreateNamespace=false", "ServerSideApply=true", "ServerSideDiff=true"]
+      }
+    }
+  }
+
+  depends_on = [kubernetes_namespace.tracing]
+}
+
+# Kiali
+resource "kubernetes_manifest" "kiali" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "kiali"
+      namespace = var.argocd_namespace
+      annotations = {
+        "argocd.argoproj.io/sync-wave"       = "2"
+        "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
+      }
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = "https://kiali.org/helm-charts"
+        chart          = "kiali-operator"
+        targetRevision = var.kiali_chart_version
+        helm = {
+          values = yamlencode(
+            {
+              cr = {
+                create    = true
+                namespace = kubernetes_namespace.tracing.metadata[0].name
+                spec = {
+                  auth = {
+                    strategy = "anonymous"
+                  }
+                  deployment = {
+                    accessible_namespaces = ["**"]
+                    cluster_wide_access   = true
+                  }
+                  external_services = {
+                    prometheus = {
+                      url = "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090"
+                    }
+                    grafana = {
+                      enabled        = true
+                      in_cluster_url = "http://grafana.grafana.svc.cluster.local:80"
+                    }
+                    tracing = {
+                      enabled      = true
+                      provider     = "jaeger"
+                      internal_url = "http://jaeger-query.tracing.svc.cluster.local:16685"
+                      use_grpc     = true
+                    }
+                  }
+                }
+              }
+            }
+          )
+        }
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = kubernetes_namespace.tracing.metadata[0].name
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = ["CreateNamespace=false", "ServerSideApply=true", "ServerSideDiff=true"]
+      }
+    }
+  }
+
+  depends_on = [kubernetes_namespace.tracing]
+}
+
+# Jaeger
+resource "kubernetes_manifest" "jaeger" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "jaeger"
+      namespace = var.argocd_namespace
+      annotations = {
+        "argocd.argoproj.io/sync-wave"       = "2"
+        "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
+      }
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = "https://jaegertracing.github.io/helm-charts"
+        chart          = "jaeger"
+        targetRevision = var.jaeger_chart_version
+        helm = {
+          values = yamlencode({
+            provisionDataStore = {
+              elasticsearch = true
+            }
+            allInOne = {
+              enabled = false
+            }
+            storage = {
+              type = "elasticsearch"
+            }
+            elasticsearch = {
+              master = {
+                masterOnly   = false
+                replicaCount = 1
+              }
+              data = {
+                replicaCount = 0
+              }
+              coordinating = {
+                replicaCount = 0
+              }
+              ingest = {
+                replicaCount = 0
+              }
+            }
+            collector = {
+              enabled = true
+              service = {
+                otlp = {
+                  grpc = {
+                    name = "otlp-grpc"
+                    port = 4317
+                  }
+                  http = {
+                    name = "otlp-http"
+                    port = 4318
+                  }
+                }
+              }
+            }
+            query = {
+              enabled = true
             }
           })
         }
@@ -601,6 +788,55 @@ resource "kubernetes_manifest" "istio_telemetry" {
   depends_on = [kubernetes_manifest.tempo]
 }
 
+# Istio monitors — PodMonitors + ServiceMonitor pointing Prometheus at sidecar,
+# istiod, Gateway API gateway, and ztunnel metrics endpoints.
+resource "kubernetes_manifest" "istio_monitors" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "istio-monitors"
+      namespace = var.argocd_namespace
+      annotations = {
+        "argocd.argoproj.io/sync-wave" = "4"
+      }
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = var.repo_url
+        targetRevision = var.target_revision
+        path           = "terraform/kubernetes/manifests/istio-monitors"
+        helm = {
+          values = yamlencode({
+            scrapeInterval = "15s"
+            gateways = {
+              namespaces = ["istio-ingress", "istio-ingress-internal"]
+              names      = ["public", "private"]
+            }
+            istiodNamespace  = "istio-system"
+            ztunnelNamespace = "istio-system"
+          })
+        }
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = kubernetes_namespace.monitoring.metadata[0].name
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = ["CreateNamespace=false"]
+      }
+    }
+  }
+
+  depends_on = [kubernetes_manifest.kube_prometheus_stack]
+}
+
 # Kubernetes Event Exporter
 resource "kubernetes_manifest" "kubernetes_event_exporter" {
   manifest = {
@@ -631,12 +867,12 @@ resource "kubernetes_manifest" "kubernetes_event_exporter" {
             }
 
             config = {
-              clusterName         = var.cluster_name
-              leaderElection      = {}
-              logFormat           = "pretty"
-              logLevel            = "debug"
-              maxEventAgeSeconds  = 3600
-              metricsNamePrefix   = "event_exporter_"
+              clusterName        = var.cluster_name
+              leaderElection     = {}
+              logFormat          = "pretty"
+              logLevel           = "debug"
+              maxEventAgeSeconds = 3600
+              metricsNamePrefix  = "event_exporter_"
 
               route = {
                 routes = [
@@ -764,41 +1000,94 @@ resource "kubernetes_manifest" "users_microservice" {
     }
     spec = {
       project = "default"
-      source = {
-        repoURL        = var.repo_url
-        targetRevision = var.target_revision
-        path           = "helm/custom-charts/microservice"
-        helm = {
-          values = yamlencode({
-            useDeployment = true
-            replicas      = 1
+      sources = [
+        {
+          repoURL        = var.repo_url
+          targetRevision = var.target_revision
+          path           = "helm/custom-charts/microservice"
+          helm = {
+            values = yamlencode({
+              useDeployment = true
+              replicas      = 2
 
-            containers = [
-              {
-                name            = "users"
-                image           = local.users_microservice_image
-                imagePullPolicy = "Always"
-                configMapRef = [kubernetes_config_map.users_microservice.metadata[0].name]
-                secretRef    = [kubernetes_secret.users_microservice_db.metadata[0].name]
-              },
-            ]
+              containers = [
+                {
+                  name            = "users"
+                  image           = local.users_microservice_image
+                  imagePullPolicy = "Always"
+                  configMapRef    = [kubernetes_config_map.users_microservice.metadata[0].name]
+                  secretRef       = [kubernetes_secret.users_microservice_db.metadata[0].name]
+                  resources = {
+                    requests = {
+                      cpu    = "250m"
+                      memory = "256Mi"
+                    }
+                    limits = {
+                      cpu    = "1000m"
+                      memory = "3Gi"
+                    }
+                  }
+                  otherSpecs = {
+                    readinessProbe = {
+                      httpGet = {
+                        path = "/health"
+                        port = 9090
+                      }
+                      initialDelaySeconds = 10
+                      periodSeconds       = 15
+                      timeoutSeconds      = 10
+                      failureThreshold    = 3
+                    }
+                    livenessProbe = {
+                      httpGet = {
+                        path = "/health"
+                        port = 9090
+                      }
+                      initialDelaySeconds = 30
+                      periodSeconds       = 30
+                      timeoutSeconds      = 10
+                      failureThreshold    = 5
+                    }
+                  }
+                },
+              ]
 
-            service = {
-              enabled    = true
-              type       = "ClusterIP"
-              port       = 80
-              targetPort = 9090
-            }
+              service = {
+                enabled    = true
+                type       = "ClusterIP"
+                port       = 80
+                targetPort = 9090
+              }
 
-            hpa = {
-              enabled                        = true
-              minReplicas                    = 1
-              maxReplicas                    = 6
-              targetCPUUtilizationPercentage = 80
-            }
-          })
-        }
-      }
+              hpa = {
+                enabled                        = true
+                minReplicas                    = 2
+                maxReplicas                    = 12
+                targetCPUUtilizationPercentage = 75
+              }
+            })
+          }
+        },
+        # {
+        #   repoURL        = var.repo_url
+        #   targetRevision = var.target_revision
+        #   path           = "terraform/kubernetes/manifests/users"
+        #   helm = {
+        #     values = yamlencode({
+        #       service = {
+        #         name         = "users-microservice-service"
+        #         externalHost = "users.internal.pe.onukwilip.xyz"
+        #       }
+        #       gateways = ["mesh", "istio-ingress-internal/private"]
+        #       destinationRule = {
+        #         connectionPool = {
+        #           enabled = false
+        #         }
+        #       }
+        #     })
+        #   }
+        # },
+      ]
       destination = {
         server    = "https://kubernetes.default.svc"
         namespace = kubernetes_namespace.users.metadata[0].name
@@ -876,4 +1165,41 @@ resource "kubernetes_manifest" "store_ui" {
   }
 
   depends_on = [kubernetes_namespace.store_ui]
+}
+
+# * LOAD TESTING STACK
+
+resource "kubernetes_manifest" "k6_operator" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "k6-operator"
+      namespace = var.argocd_namespace
+      annotations = {
+        "argocd.argoproj.io/sync-wave"       = "0"
+        "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
+      }
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = "https://grafana.github.io/helm-charts"
+        chart          = "k6-operator"
+        targetRevision = var.k6_operator_chart_version
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = kubernetes_namespace.load_testing.metadata[0].name
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = ["CreateNamespace=false", "ServerSideApply=true", "ServerSideDiff=true"]
+      }
+    }
+  }
 }

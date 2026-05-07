@@ -23,6 +23,8 @@ module "gke" {
   region                 = var.region
   zone                   = var.zone
 
+  monitoring_components = var.monitoring_components
+
   network_self_link             = local.shared.vpc_self_link
   subnet_self_link              = local.shared.gke_subnet_self_link
   pods_secondary_range_name     = local.shared.pods_secondary_range_name

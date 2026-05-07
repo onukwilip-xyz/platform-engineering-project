@@ -29,6 +29,11 @@ resource "google_container_cluster" "gke_cluster" {
   remove_default_node_pool = true
   initial_node_count       = 1
 
+  node_config {
+    disk_type    = "pd-standard"
+    disk_size_gb = 20
+  }
+
   private_cluster_config {
     enable_private_nodes    = var.enable_private_nodes
     enable_private_endpoint = var.enable_private_endpoint
@@ -83,6 +88,13 @@ resource "google_container_cluster" "gke_cluster" {
 
   gateway_api_config {
     channel = "CHANNEL_STANDARD"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      initial_node_count,
+      node_config,
+    ]
   }
 
   deletion_protection = var.deletion_protection

@@ -33,6 +33,11 @@ variable "cluster_name" {
   description = "Name of the GKE cluster."
 }
 
+variable "monitoring_components" {
+  type        = list(string)
+  description = "List of monitoring components to enable (commonly SYSTEM_COMPONENTS and WORKLOADS)."
+}
+
 variable "master_ipv4_cidr_block" {
   type        = string
   description = "/28 CIDR for the GKE control plane."

@@ -13,9 +13,12 @@
 discovery.kubernetes "pods" {
   role = "pod"
 
+  // HOSTNAME inside a pod is the pod name, not the node name. Use the
+  // downward-API-injected NODE_NAME env var (see alloy.extraEnv in the chart
+  // values) so each Alloy pod only watches pods scheduled on its own node.
   selectors {
     role  = "pod"
-    field = "spec.nodeName=" + sys.env("HOSTNAME")
+    field = "spec.nodeName=" + sys.env("NODE_NAME")
   }
 }
 
