@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec > >(tee -a /var/log/ddos-sim-startup.log) 2>&1
+
+echo "[ddos-sim] $(date -u +%FT%TZ) startup script begin"
+
+# ── 1. Wait for nic1 (Shared VPC interface) to be ready ─────────────────────
+# nic0 is up immediately; nic1 may take a few seconds longer.
+for i in $(seq 1 30); do
+  if ip -4 -o addr show | grep -E ' (eth1|ens5)' | grep -q 'inet '; then
+    break
+  fi
+  sleep 1
+done
+ip -4 -o addr show
+
+# ── 2. Read instance metadata ───────────────────────────────────────────────
+META="http://metadata.google.internal/computeMetadata/v1/instance/attributes"
+fetch_meta() {
+  curl -sf -H "Metadata-Flavor: Google" "$${META}/$1" || true
+}
+
+TARGET_HOST=$(fetch_meta target_host)
+TARGET_USES_IP=$(fetch_meta target_uses_ip)
+TARGET_HOST_HEADER=$(fetch_meta target_host_header)
+PROMETHEUS_IP=$(fetch_meta prometheus_ip)
+PROMETHEUS_METRICS_HOST=$(fetch_meta prometheus_metrics_host)
+WRITE_RPS=$(fetch_meta write_rps)
+READ_RPS=$(fetch_meta read_rps)
+TEST_DURATION=$(fetch_meta test_duration)
+MIG_LABEL=$(fetch_meta mig_label)
+CA_SECRET_NAME=$(fetch_meta ca_secret_name)
+
+PROJECT_ID=$(curl -sf -H "Metadata-Flavor: Google" \
+  http://metadata.google.internal/computeMetadata/v1/project/project-id || true)
+
+echo "[ddos-sim] mig_label=$${MIG_LABEL} target_host=$${TARGET_HOST} target_uses_ip=$${TARGET_USES_IP} write_rps=$${WRITE_RPS} read_rps=$${READ_RPS} duration=$${TEST_DURATION}"
+
+# ── 3. /etc/hosts override for the metrics endpoint ─────────────────────────
+# Bypasses Cloud DNS so the Prometheus FQDN resolves to the private gateway IP
+# delivered to nic1 — DNS in the attacker project doesn't know about the host
+# project's private zone.
+if [ -n "$${PROMETHEUS_IP}" ] && [ -n "$${PROMETHEUS_METRICS_HOST}" ]; then
+  if ! grep -q "$${PROMETHEUS_METRICS_HOST}" /etc/hosts; then
+    echo "$${PROMETHEUS_IP}  $${PROMETHEUS_METRICS_HOST}" >> /etc/hosts
+    echo "[ddos-sim] /etc/hosts: added $${PROMETHEUS_METRICS_HOST} -> $${PROMETHEUS_IP}"
+  fi
+fi
+
+# ── 4. Install Docker (load tool will likely run in a container) ────────────
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y --no-install-recommends \
+  ca-certificates \
+  curl \
+  jq \
+  docker.io
+systemctl enable --now docker
+
+# ── 5. Pull internal CA cert from Secret Manager into the system trust ──────
+# Path used by the system trust store + a copy under /opt/load-test/ca.crt
+# that future containerised load tools can mount directly.
+mkdir -p /opt/load-test
+if [ -n "$${CA_SECRET_NAME}" ] && [ -n "$${PROJECT_ID}" ]; then
+  if gcloud secrets versions access latest \
+        --secret="$${CA_SECRET_NAME}" \
+        --project="$${PROJECT_ID}" \
+        > /opt/load-test/ca.crt 2>/var/log/ddos-sim-ca-fetch.log; then
+    cp /opt/load-test/ca.crt /usr/local/share/ca-certificates/internal-ca.crt
+    update-ca-certificates
+    echo "[ddos-sim] internal CA cert installed (system trust + /opt/load-test/ca.crt)"
+  else
+    echo "[ddos-sim] WARNING: failed to fetch CA cert from Secret Manager"
+    cat /var/log/ddos-sim-ca-fetch.log || true
+  fi
+fi
+
+# ── 6. Connectivity smoke checks ────────────────────────────────────────────
+# These confirm both NICs are routing correctly before any load tool starts.
+echo "[ddos-sim] smoke check: nic0 egress IP"
+curl -sf --max-time 5 https://ifconfig.me || echo "  (ifconfig.me unreachable)"
+echo
+
+echo "[ddos-sim] smoke check: target_host reachable"
+if [ "$${TARGET_USES_IP}" = "true" ]; then
+  curl -skf --max-time 5 -H "Host: $${TARGET_HOST_HEADER}" "https://$${TARGET_HOST}/" \
+    -o /dev/null -w "  HTTP %{http_code} from $${TARGET_HOST} (Host: $${TARGET_HOST_HEADER})\n" \
+    || echo "  target unreachable"
+else
+  curl -sf --max-time 5 "https://$${TARGET_HOST}/" \
+    -o /dev/null -w "  HTTP %{http_code} from $${TARGET_HOST}\n" \
+    || echo "  target unreachable"
+fi
+
+echo "[ddos-sim] smoke check: Prometheus health via nic1"
+curl -sf --max-time 5 "https://$${PROMETHEUS_METRICS_HOST}/-/healthy" \
+  -w "  HTTP %{http_code} from $${PROMETHEUS_METRICS_HOST}\n" \
+  || echo "  Prometheus unreachable"
+
+# ── 7. Done ─────────────────────────────────────────────────────────────────
+echo "[ddos-sim] $(date -u +%FT%TZ) startup complete — VM ready, awaiting load tool deployment"

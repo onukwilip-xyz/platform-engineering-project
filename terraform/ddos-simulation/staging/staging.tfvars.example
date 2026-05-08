@@ -1,0 +1,13 @@
+# Copy to `.tfvars` (gitignored, somewhere up the tree from this dir, since
+# the unit reads it via find_in_parent_folders) and fill in.
+#
+# All Shared-VPC, gateway-IP, and CA-cert values are now read from remote
+# state at apply time — no need to look them up by hand.
+
+# ── Project / billing / org ──────────────────────────────────────────────
+org_id                = "REPLACE-WITH-ORG-ID"
+billing_account_id    = "REPLACE-WITH-BILLING-ACCOUNT-ID"
+attacker_project_name = "pe-ddos-sim"
+
+# ── Target endpoint (operator chooses the subdomain) ─────────────────────
+target_public_host = "users.public.pe.onukwilip.xyz"

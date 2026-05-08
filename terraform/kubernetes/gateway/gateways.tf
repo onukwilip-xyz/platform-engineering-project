@@ -10,18 +10,13 @@ resource "kubernetes_manifest" "gateway_public" {
       }
     }
     spec = {
+      gatewayClassName = var.public_gateway_class_name
       addresses = [
         {
-          type  = "IPAddress"
-          value = google_compute_address.public_gateway.address
+          type  = "NamedAddress"
+          value = google_compute_global_address.public_gateway.name
         }
       ]
-      infrastructure = {
-        annotations = {
-          "networking.gke.io/load-balancer-type" = "External"
-        }
-      }
-      gatewayClassName = var.gateway_class_name
       listeners = [
         {
           name     = "https"
@@ -48,7 +43,7 @@ resource "kubernetes_manifest" "gateway_public" {
     }
   }
 
-  depends_on = [google_compute_address.public_gateway]
+  depends_on = [google_compute_global_address.public_gateway]
 }
 
 resource "kubernetes_manifest" "gateway_internal" {

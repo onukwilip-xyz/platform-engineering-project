@@ -21,12 +21,12 @@ variable "private_domain" {
 
 variable "private_gateway_name" {
   type        = string
-  description = "Name of the private (internal) Gateway CR. Passed from istio-gateway outputs."
+  description = "Name of the private (internal) Gateway CR. Passed from gateway outputs."
   default     = "private"
 }
 
 variable "private_gateway_namespace" {
   type        = string
-  description = "Namespace of the private (internal) Gateway. Passed from istio-gateway outputs."
+  description = "Namespace of the private (internal) Gateway. Passed from gateway outputs."
   default     = "istio-ingress-internal"
 }

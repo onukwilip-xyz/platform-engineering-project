@@ -55,18 +55,18 @@ variable "private_domain" {
 
 variable "public_domain" {
   type        = string
-  description = "Root DNS name for public-facing services (e.g. example.com). Used to build hostnames for HTTPRoutes attached to the public Istio Gateway (e.g. store.<public_domain>)."
+  description = "Root DNS name for public-facing services (e.g. example.com). Used to build hostnames for HTTPRoutes attached to the public Gateway (e.g. store.<public_domain>)."
 }
 
 variable "public_gateway_name" {
   type        = string
-  description = "Name of the public Istio Gateway CR. HTTPRoutes for internet-facing services reference this as parentRef."
+  description = "Name of the public Gateway CR (GKE Gateway class). HTTPRoutes for internet-facing services reference this as parentRef."
   default     = "public"
 }
 
 variable "public_gateway_namespace" {
   type        = string
-  description = "Namespace where the public Istio Gateway lives. Sourced from the istio-gateway module output."
+  description = "Namespace where the public Gateway lives. Sourced from the gateway module output."
 }
 
 variable "private_gateway_name" {
@@ -77,7 +77,7 @@ variable "private_gateway_name" {
 
 variable "private_gateway_namespace" {
   type        = string
-  description = "Namespace where the internal Istio Gateway lives. Sourced from the istio-gateway module output."
+  description = "Namespace where the internal Istio Gateway lives. Sourced from the gateway module output."
 }
 
 variable "loki_chart_version" {

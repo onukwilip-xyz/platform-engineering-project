@@ -1,5 +1,5 @@
 output "istio_system_namespace" {
-  description = "Name of the istio-system namespace. Consumed by downstream units (gateway-api, istio-gateway)."
+  description = "Name of the istio-system namespace. Consumed by downstream units (gateway-api, gateway)."
   value       = kubernetes_namespace.istio_system.metadata[0].name
 }
 

@@ -42,11 +42,11 @@ dependency "cert_manager_config" {
   mock_outputs                            = local.k8s.cert_manager_config_mock_outputs
 }
 
-dependency "istio_gateway" {
-  config_path = "../istio-gateway"
+dependency "gateway" {
+  config_path = "../gateway"
 
   mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
-  mock_outputs                            = local.k8s.istio_gateway_mock_outputs
+  mock_outputs                            = local.k8s.gateway_mock_outputs
 }
 
 dependency "observability_infra" {
@@ -103,10 +103,10 @@ inputs = {
   backup_bucket_name        = dependency.cnpg_infra.outputs.backup_bucket_name
   shared_vip_address        = dependency.tcp_services.outputs.shared_vip_address
   cluster_issuer_name       = dependency.cert_manager_config.outputs.internal_cluster_issuer_name
-  private_gateway_name      = dependency.istio_gateway.outputs.internal_gateway_name
-  private_gateway_namespace = dependency.istio_gateway.outputs.internal_gateway_namespace
-  public_gateway_name       = dependency.istio_gateway.outputs.public_gateway_name
-  public_gateway_namespace  = dependency.istio_gateway.outputs.public_gateway_namespace
+  private_gateway_name      = dependency.gateway.outputs.internal_gateway_name
+  private_gateway_namespace = dependency.gateway.outputs.internal_gateway_namespace
+  public_gateway_name       = dependency.gateway.outputs.public_gateway_name
+  public_gateway_namespace  = dependency.gateway.outputs.public_gateway_namespace
   loki_gcs_bucket_name      = dependency.observability_infra.outputs.loki_bucket_name
   loki_gcs_sa_email         = dependency.observability_infra.outputs.loki_gcp_sa_email
   tempo_gcs_bucket_name     = dependency.observability_infra.outputs.tempo_bucket_name

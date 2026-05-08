@@ -5,8 +5,41 @@ variable "istio_chart_version" {
 
 variable "gateway_class_name" {
   type        = string
-  description = "Name of the GatewayClass to use for both gateways. Passed from the gateway-api module output."
+  description = "GatewayClass name for the PRIVATE (internal) Gateway. Defaults to the Istio class so internal traffic continues to flow through the Istio ingress dataplane."
   default     = "istio"
+}
+
+variable "public_gateway_class_name" {
+  type        = string
+  description = "GatewayClass name for the PUBLIC Gateway. Defaults to GKE-managed global external L7 (provisions a Google Cloud HTTPS LB), enabling Cloud Armor attachment via GCPBackendPolicy."
+  default     = "gke-l7-global-external-managed"
+}
+
+variable "public_gateway_backend_services" {
+  type = list(object({
+    name      = string
+    namespace = string
+  }))
+  description = "Backend Kubernetes Services exposed through the public Gateway. Each entry gets a GCPBackendPolicy attaching the Cloud Armor security policy + custom timeout + access logging."
+  default     = []
+}
+
+variable "public_gateway_backend_timeout_sec" {
+  type        = number
+  description = "Backend service request timeout (seconds) on the GCP HTTPS LB for services attached to the public Gateway. Sized to accommodate Istio sidecar retries (2 attempts × 3s perTry) plus actual processing."
+  default     = 30
+}
+
+variable "public_gateway_backend_log_sample_rate" {
+  type        = number
+  description = "Sampling rate (0.0–1.0) for backend access logs on the public Gateway's auto-provisioned backend services. Denies are always logged at 100%; this only controls allows."
+  default     = 0.1
+}
+
+variable "cloud_armor_security_policy_name" {
+  type        = string
+  description = "Name of the Cloud Armor security policy to attach via GCPBackendPolicy to every public-facing backend Service. Sourced from the cloud-armor unit output."
+  default     = ""
 }
 
 # ── ClusterIssuer names ───────────────────────────────────────────────────────
