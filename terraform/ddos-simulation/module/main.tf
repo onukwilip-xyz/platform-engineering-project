@@ -24,8 +24,12 @@ module "attacker_apis" {
     "iam.googleapis.com",
     "logging.googleapis.com",
     "monitoring.googleapis.com",
-    "secretmanager.googleapis.com",
+    "storage.googleapis.com",
     "iap.googleapis.com",
+    # OS Login is enabled via the `enable-oslogin = "TRUE"` instance metadata
+    # on master + workers. Without this API, IAP-tunneled SSH hangs trying
+    # to auto-enable it (and the user's impersonated SA can't always do so).
+    "oslogin.googleapis.com",
   ]
 
   depends_on = [module.attacker_project]
@@ -45,7 +49,7 @@ module "attacker_platform_iam" {
     { role = "roles/compute.securityAdmin", member = "serviceAccount:${var.tf_platform_sa_email}" },
     { role = "roles/iam.serviceAccountAdmin", member = "serviceAccount:${var.tf_platform_sa_email}" },
     { role = "roles/iam.serviceAccountUser", member = "serviceAccount:${var.tf_platform_sa_email}" },
-    { role = "roles/secretmanager.admin", member = "serviceAccount:${var.tf_platform_sa_email}" },
+    { role = "roles/storage.admin", member = "serviceAccount:${var.tf_platform_sa_email}" },
     { role = "roles/serviceusage.serviceUsageAdmin", member = "serviceAccount:${var.tf_platform_sa_email}" },
   ]
 

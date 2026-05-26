@@ -6,14 +6,15 @@ locals {
   state_bucket = get_env("TF_STATE_BUCKET", "pe-tf-state-bucket")
   env    = "staging"
   region = "us-central1"
+  zone   = "us-central1-a"
 
   tf_network_sa_email  = "tf-network@pe-terraform-project.iam.gserviceaccount.com"
   tf_platform_sa_email = "tf-platform@pe-terraform-project.iam.gserviceaccount.com"
-  shared_state_prefix              = "shared"
-  gateway_state_prefix             = "${local.env}/kubernetes/gateway/terraform.tfstate"
-  cert_manager_config_state_prefix = "${local.env}/kubernetes/cert-manager-config/terraform.tfstate"
+  shared_state_prefix  = "shared"
+  gateway_state_prefix = "${local.env}/kubernetes/gateway/terraform.tfstate"
 }
 
+# Inline state backend — independent prefix so destroys don't touch envs/ state.
 remote_state {
   backend = "gcs"
   config = {
@@ -46,8 +47,12 @@ terraform {
   source = "${get_repo_root()}//terraform/ddos-simulation/module"
 
   extra_arguments "secrets" {
-    commands           = get_terraform_commands_that_need_vars()
-    optional_var_files = [find_in_parent_folders(".tfvars")]
+    commands = get_terraform_commands_that_need_vars()
+    # Look for .tfvars in the unit's own directory first (unit-local), then
+    # fall back to a shared one up the tree. compact() drops the misses.
+    # find_in_parent_folders excludes the current dir, so the local lookup
+    # is necessary when the operator keeps .tfvars next to terragrunt.hcl.
+    optional_var_files = ["${get_terragrunt_dir()}/.tfvars"]
   }
 }
 
@@ -55,16 +60,10 @@ inputs = {
   tf_platform_sa_email = local.tf_platform_sa_email
 
   # Where to read live values from
-  state_bucket                     = local.state_bucket
-  shared_state_prefix              = local.shared_state_prefix
-  gateway_state_prefix             = local.gateway_state_prefix
-  cert_manager_config_state_prefix = local.cert_manager_config_state_prefix
-
-  # Region of the GKE subnet (matches the staging env's region)
+  state_bucket         = local.state_bucket
+  shared_state_prefix  = local.shared_state_prefix
+  gateway_state_prefix = local.gateway_state_prefix
   gke_subnet_region = local.region
-
-  # Attack/baseline regions (per agreed plan)
-  attack_region   = "us-central1"
-  baseline_region = "europe-west1"
-  test_duration   = "30m"
+  attack_region     = local.region
+  attack_zone       = local.zone
 }

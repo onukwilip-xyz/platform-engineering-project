@@ -2,6 +2,16 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
+include "env" {
+  path   = find_in_parent_folders("env.hcl")
+  expose = true
+}
+
+exclude {
+  if = include.env.locals.ddos_protection != "cloud-armor"
+  actions = ["all_except_output"]
+}
+
 locals {
   env = read_terragrunt_config(find_in_parent_folders("env.hcl")).locals
 }

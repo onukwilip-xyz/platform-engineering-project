@@ -112,7 +112,7 @@ variable "jaeger_chart_version" {
   type        = string
   description = "Version of the Jaeger Helm chart to install. Must be compatible with the version of Istio installed."
   default     = "4.0.0"
-  
+
 }
 
 variable "tempo_chart_version" {
@@ -189,4 +189,24 @@ variable "k6_operator_chart_version" {
   type        = string
   description = "Pinned version of the grafana/k6-operator Helm chart. Bump via PR to roll the operator forward."
   default     = "4.3.2"
+}
+
+# ── Public Gateway backend policies ───────────────────────────────────────────
+
+variable "public_gateway_backend_timeout_sec" {
+  type        = number
+  description = "Backend service request timeout (seconds) on the GCP HTTPS LB for services attached to the public Gateway. Sized to accommodate Istio sidecar retries (2 attempts × 3s perTry) plus actual processing."
+  default     = 30
+}
+
+variable "public_gateway_backend_log_sample_rate" {
+  type        = number
+  description = "Sampling rate (0.0–1.0) for backend access logs on the public Gateway's auto-provisioned backend services. Denies are always logged at 100%; this only controls allows."
+  default     = 100000
+}
+
+variable "cloud_armor_security_policy_name" {
+  type        = string
+  description = "Name of the Cloud Armor security policy to attach via GCPBackendPolicy to public-facing backend Services. Sourced from the cloud-armor unit output. Pass empty string to skip the securityPolicy attachment (e.g. while the SECURITY_POLICIES quota is being raised)."
+  default     = ""
 }

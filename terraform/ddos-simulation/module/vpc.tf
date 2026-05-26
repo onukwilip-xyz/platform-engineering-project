@@ -10,18 +10,10 @@ resource "google_compute_network" "attack" {
   ]
 }
 
-resource "google_compute_subnetwork" "attack_primary" {
+resource "google_compute_subnetwork" "attack" {
   project       = module.attacker_project.project.project_id
-  name          = "attack-subnet-primary"
+  name          = "attack-subnet"
   network       = google_compute_network.attack.id
   ip_cidr_range = var.attack_subnet_cidr
   region        = var.attack_region
-}
-
-resource "google_compute_subnetwork" "attack_baseline" {
-  project       = module.attacker_project.project.project_id
-  name          = "attack-subnet-baseline"
-  network       = google_compute_network.attack.id
-  ip_cidr_range = var.baseline_subnet_cidr
-  region        = var.baseline_region
 }

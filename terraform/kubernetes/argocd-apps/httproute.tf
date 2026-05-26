@@ -210,7 +210,7 @@ resource "kubernetes_manifest" "users_microservice_httproute" {
   depends_on = [kubernetes_manifest.users_microservice]
 }
 
-# Users — TEMP: public HTTPRoute for the DDoS simulation. Comment out once
+# * TEMP: public Users HTTPRoute for the DDoS simulation. Comment out once
 # the simulation is concluded; the users service should not stay publicly
 # exposed in steady state.
 resource "kubernetes_manifest" "users_microservice_public_httproute" {

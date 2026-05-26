@@ -13,11 +13,3 @@ data "terraform_remote_state" "gateway" {
     prefix = var.gateway_state_prefix
   }
 }
-
-data "terraform_remote_state" "cert_manager_config" {
-  backend = "gcs"
-  config = {
-    bucket = var.state_bucket
-    prefix = var.cert_manager_config_state_prefix
-  }
-}

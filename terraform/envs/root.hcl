@@ -12,7 +12,8 @@
 #   export TF_STATE_BUCKET=pe-tf-state-bucket
 
 locals {
-  state_bucket = get_env("TF_STATE_BUCKET", "pe-tf-state-bucket")
+  # state_bucket = get_env("TF_STATE_BUCKET", "pe-tf-state-bucket")
+  state_bucket = get_env("TF_STATE_BUCKET", "pe-tf-state-bucket-1")
 }
 
 remote_state {

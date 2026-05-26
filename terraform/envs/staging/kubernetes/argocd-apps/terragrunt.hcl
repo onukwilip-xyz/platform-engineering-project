@@ -70,6 +70,15 @@ dependency "artifact_registry" {
   mock_outputs                            = local.k8s.artifact_registry_mock_outputs
 }
 
+dependency "cloud_armor" {
+  config_path = "../../cloud-armor"
+
+  enabled = local.env.ddos_protection == "cloud-armour"
+
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
+  mock_outputs                            = local.k8s.cloud_armor_mock_outputs
+}
+
 generate "providers" {
   path      = "providers_gen.tf"
   if_exists = "overwrite_terragrunt"
@@ -114,4 +123,9 @@ inputs = {
   service_project_id        = dependency.project.outputs.service_project_id
   artifact_registry_images_repo_id = dependency.artifact_registry.outputs.repositories["images"].repository_id
   cluster_name              = dependency.gke.outputs.gke_cluster_name
+  cloud_armor_security_policy_name = local.env.ddos_protection == "cloud-armour" ? dependency.cloud_armor.outputs.security_policy_name : ""
+
+  # * TEMP
+  # cloud_armor_security_policy_name = ""
+  # cloud_armor_security_policy_name = dependency.cloud_armor.outputs.security_policy_name
 }

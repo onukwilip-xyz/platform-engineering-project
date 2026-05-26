@@ -1,3 +1,5 @@
+# ── Attack VPC firewalls (in the attacker project) ──────────────────────────
+
 resource "google_compute_firewall" "attack_iap_ssh" {
   project = module.attacker_project.project.project_id
   network = google_compute_network.attack.name
@@ -35,21 +37,45 @@ resource "google_compute_firewall" "attack_egress_internet" {
   }
 }
 
-# Allow attacker VMs (matched by network tag on nic1) to reach the private
-# gateway IP on 443. Scoped tightly to that single IP, not the whole subnet.
-resource "google_compute_firewall" "host_vpc_attacker_to_private_gateway" {
-  provider = google.net
-  project  = local.shared_vpc_host_project_id
-  network  = local.shared_vpc_self_link
-  name     = "allow-ddos-sim-metrics"
+resource "google_compute_firewall" "workers_to_master" {
+  project = module.attacker_project.project.project_id
+  network = google_compute_network.attack.name
+  name    = "allow-workers-to-master"
 
-  direction          = "INGRESS"
-  source_tags        = [var.metrics_egress_network_tag]
-  destination_ranges = ["${local.private_gateway_ip}/32"]
+  direction     = "INGRESS"
+  source_ranges = [google_compute_subnetwork.attack.ip_cidr_range]
+  target_tags   = [var.master_network_tag]
 
   allow {
     protocol = "tcp"
-    ports    = ["443"]
+    ports    = ["5557", "5558", "5559"]
+  }
+
+  log_config {
+    metadata = "INCLUDE_ALL_METADATA"
+  }
+}
+
+# ── Shared VPC firewall — Locust web UI access from NetBird (commented out) ──
+# The NetBird routing peer already has implicit reachability to other VMs in
+# the host VPC, so this rule shouldn't be necessary. If browsing the Locust
+# UIs at ddos-plane.<private_domain>:{8089,8090,8091} fails after apply,
+# uncomment this resource to allow traffic from the GKE subnet to reach the
+# master's nic1 on the web UI ports.
+#
+resource "google_compute_firewall" "host_vpc_to_master_ui" {
+  provider = google.net
+  project  = local.shared_vpc_host_project_id
+  network  = local.shared_vpc_self_link
+  name     = "allow-ddos-plane-ui"
+
+  direction          = "INGRESS"
+  source_ranges      = [data.terraform_remote_state.shared.outputs.gke_subnet_cidr]
+  destination_ranges = ["${google_compute_address.master_nic1.address}/32"]
+
+  allow {
+    protocol = "tcp"
+    ports    = ["8089", "8090", "8091"]
   }
 
   log_config {

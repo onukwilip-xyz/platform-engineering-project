@@ -656,6 +656,11 @@ resource "kubernetes_manifest" "kiali" {
     }
   }
 
+  provisioner "local-exec" {
+    when    = destroy
+    command = "kubectl patch application ${self.manifest.metadata.name} -n ${self.manifest.metadata.namespace} --type=merge -p '{\"metadata\":{\"finalizers\":[]}}' || true"
+  }
+
   depends_on = [kubernetes_namespace.tracing]
 }
 

@@ -28,13 +28,6 @@ dependency "cert_manager_config" {
   mock_outputs                            = local.k8s.cert_manager_config_mock_outputs
 }
 
-dependency "cloud_armor" {
-  config_path = "../../cloud-armor"
-
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "destroy", "state"]
-  mock_outputs                            = local.k8s.cloud_armor_mock_outputs
-}
-
 generate "providers" {
   path      = "providers_gen.tf"
   if_exists = "overwrite_terragrunt"
@@ -82,14 +75,8 @@ inputs = {
   public_cluster_issuer_name   = dependency.cert_manager_config.outputs.public_cluster_issuer_name
   internal_cluster_issuer_name = dependency.cert_manager_config.outputs.internal_cluster_issuer_name
 
-  # Cloud Armor protection on the public Gateway's auto-provisioned backend services
-  cloud_armor_security_policy_name = dependency.cloud_armor.outputs.security_policy_name
-  public_gateway_backend_services = [
-    {
-      name      = "users-microservice-service"
-      namespace = "users"
-    },
-  ]
+  # GCPBackendPolicy resources have moved to argocd-apps so they share the
+  # same lifecycle as the namespaces + HTTPRoutes they reference.
 
   # Static IP / DNS — sourced from the GKE unit which re-exports shared-state values
   host_project_id       = dependency.gke.outputs.host_project_id
