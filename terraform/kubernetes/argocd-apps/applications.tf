@@ -917,6 +917,29 @@ resource "kubernetes_manifest" "kubernetes_event_exporter" {
                       container = "kubernetes-event-exporter"
                       source    = "kubernetes-event-exporter"
                     }
+                    layout = {
+                      message      = "{{ .Message }}"
+                      reason       = "{{ .Reason }}"
+                      type         = "{{ .Type }}"
+                      count        = "{{ .Count }}"
+                      cluster_name = "{{ .ClusterName }}"
+
+                      # InvolvedObject (old-style) & Regarding (new-style)
+                      namespace = "{{ .InvolvedObject.Namespace }}"
+                      kind      = "{{ .InvolvedObject.Kind }}"
+                      name      = "{{ .InvolvedObject.Name }}"
+
+                      # Source component: old-style uses Source.Component, new-style uses
+                      # ReportingComponent directly on the event
+                      component           = "{{ .Source.Component }}"
+                      host                = "{{ .Source.Host }}"
+
+                      # Timestamps: old-style uses FirstTimestamp/LastTimestamp,
+                      # new-style uses EventTime
+                      first_time = "{{ .FirstTimestamp }}"
+                      last_time  = "{{ .LastTimestamp }}"
+                      event_time = "{{ .EventTime }}"
+                    }
                   }
                 },
               ]
