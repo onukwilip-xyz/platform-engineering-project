@@ -456,7 +456,8 @@ resource "kubernetes_manifest" "alloy" {
 
             alloy = {
               mounts = {
-                varlog = true
+                # varlog = true
+                varlog = false
               }
 
               # Expose the node name to the Alloy config — the discovery.kubernetes
