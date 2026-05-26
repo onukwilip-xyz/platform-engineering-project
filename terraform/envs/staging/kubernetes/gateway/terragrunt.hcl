@@ -61,7 +61,7 @@ generate "providers" {
 }
 
 terraform {
-  source = "${get_repo_root()}//terraform/kubernetes/istio-gateway"
+  source = "${get_repo_root()}//terraform/kubernetes/gateway"
 
   extra_arguments "secrets" {
     commands           = get_terraform_commands_that_need_vars()
@@ -74,6 +74,9 @@ inputs = {
   gateway_class_name           = dependency.istio.outputs.gateway_class_name
   public_cluster_issuer_name   = dependency.cert_manager_config.outputs.public_cluster_issuer_name
   internal_cluster_issuer_name = dependency.cert_manager_config.outputs.internal_cluster_issuer_name
+
+  # GCPBackendPolicy resources have moved to argocd-apps so they share the
+  # same lifecycle as the namespaces + HTTPRoutes they reference.
 
   # Static IP / DNS — sourced from the GKE unit which re-exports shared-state values
   host_project_id       = dependency.gke.outputs.host_project_id

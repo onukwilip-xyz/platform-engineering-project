@@ -1,9 +1,10 @@
 # Terraform
 
 ```bash
-export TF_PROJECT="pe-terraform-project"
+export TF_PROJECT="pe-terraform-project-1"
 export TF_PROJECT_NAME="terraform-project"
-export ORG_ID="256391743797"
+# export ORG_ID="256391743797"
+export ORG_ID="1034410590770"
 
 export TF_NETWORK_SA="tf-network"
 export TF_PLATFORM_SA="tf-platform"
@@ -11,10 +12,14 @@ export TF_PLATFORM_SA="tf-platform"
 export TF_NETWORK_SA_EMAIL="$TF_NETWORK_SA@${TF_PROJECT}.iam.gserviceaccount.com"
 export TF_PLATFORM_SA_EMAIL="$TF_PLATFORM_SA@${TF_PROJECT}.iam.gserviceaccount.com"
 
-export BILLING_ACCOUNT_ID="01E4F5-FFA2DF-D86AC5"
-export USER="onukwilip@onukwilip.xyz"
+# export BILLING_ACCOUNT_ID="01E4F5-FFA2DF-D86AC5"
+# export USER="onukwilip@onukwilip.xyz"
 
-export TF_STATE_BUCKET="pe-tf-state-bucket"
+export BILLING_ACCOUNT_ID="011B25-F5FCD8-43553E"
+export USER="prince@onukwilip.me"
+
+# export TF_STATE_BUCKET="pe-tf-state-bucket"
+export TF_STATE_BUCKET="pe-tf-state-bucket-1"
 export LOCATION=us
 ```
 
@@ -61,7 +66,8 @@ gcloud organizations add-iam-policy-binding "$ORG_ID" \
 
 Enable Billing on the created project
 ```bash
-export BILLING_ACCOUNT_ID="01E4F5-FFA2DF-D86AC5"
+# export BILLING_ACCOUNT_ID="01E4F5-FFA2DF-D86AC5"
+export BILLING_ACCOUNT_ID="011B25-F5FCD8-43553E"
 
 gcloud billing projects link "$TF_PROJECT" --billing-account="$BILLING_ACCOUNT_ID"
 ```
@@ -75,7 +81,8 @@ gcloud beta billing accounts add-iam-policy-binding "$BILLING_ACCOUNT_ID" \
 
 For manual run, allow the gcloud authenticated user impersonate the created TF Network and Platform SAs
 ```bash
-export USER="onukwilip@onukwilip.xyz"
+# export USER="onukwilip@onukwilip.xyz"
+export USER="prince@onukwilip.me"
 
 gcloud iam service-accounts add-iam-policy-binding "$TF_NETWORK_SA_EMAIL" \
   --project "$TF_PROJECT" \
@@ -90,7 +97,8 @@ gcloud iam service-accounts add-iam-policy-binding "$TF_PLATFORM_SA_EMAIL" \
 
 Create the Storage Bucket which will be used as the Terraform backend
 ```bash
-export TF_STATE_BUCKET="pe-tf-state-bucket"
+# export TF_STATE_BUCKET="pe-tf-state-bucket"
+export TF_STATE_BUCKET="pe-tf-state-bucket-1"
 export LOCATION=us
 
 gcloud storage buckets create "gs://$TF_STATE_BUCKET" \
@@ -110,6 +118,7 @@ gcloud auth login
 Initialize Terraform
 ```bash
 TF_LOG=DEBUG
+cd terraform/shared 
 terraform init -backend-config="bucket=$TF_STATE_BUCKET"
 ```
 

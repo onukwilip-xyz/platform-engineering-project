@@ -1,5 +1,51 @@
 include "root" {
-  path = find_in_parent_folders("root.hcl")
+  path   = find_in_parent_folders("root.hcl")
+  expose = true
+}
+
+include "env" {
+  path   = find_in_parent_folders("env.hcl")
+  expose = true
+}
+
+include "kubernetes" {
+  path   = find_in_parent_folders("kubernetes.hcl")
+  expose = true
+}
+
+# Only execute this unit if ddos_protection is set to "cloudflare"
+
+exclude {
+  if = include.env.locals.ddos_protection != "cloudflare"
+  actions = ["all_except_output"]
+}
+
+terraform {
+  source = "../../../../modules//cloudflare-ddos"
+
+  extra_arguments "secrets" {
+    commands           = get_terraform_commands_that_need_vars()
+    optional_var_files = [find_in_parent_folders(".tfvars")]
+  }
+}
+
+dependency "project" {
+  config_path = "../../project"
+
+  mock_outputs_allowed_terraform_commands = [
+    "init", "validate", "plan"
+  ]
+
+  mock_outputs = {
+    service_project_id     = "mock-service-project-id"
+    service_project_number = "000000000000"
+  }
+}
+
+dependencies {
+  paths = [
+    "../argocd-apps"
+  ]
 }
 
 locals {
@@ -12,15 +58,6 @@ dependency "gke" {
 
   mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
   mock_outputs                            = local.k8s.gke_mock_outputs
-}
-
-# Pull the private gateway name and namespace from the gateway unit
-# so ArgoCD's HTTPRoute always references the exact gateway that was created.
-dependency "gateway" {
-  config_path = "../gateway"
-
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
-  mock_outputs                            = local.k8s.gateway_mock_outputs
 }
 
 generate "providers" {
@@ -46,19 +83,15 @@ generate "providers" {
         cluster_ca_certificate = base64decode("${dependency.gke.outputs.gke_cluster_ca_certificate}")
       }
     }
+
+    provider "cloudflare" {
+      api_token = var.cloudflare_api_token
+    }
+
+    provider "tls" {}
   EOF
 }
 
-terraform {
-  source = "${get_repo_root()}//terraform/kubernetes/argocd"
-
-  extra_arguments "secrets" {
-    commands           = get_terraform_commands_that_need_vars()
-    optional_var_files = [find_in_parent_folders(".tfvars")]
-  }
-}
-
 inputs = {
-  private_gateway_name      = dependency.gateway.outputs.internal_gateway_name
-  private_gateway_namespace = dependency.gateway.outputs.internal_gateway_namespace
+  service_project_id = dependency.project.outputs.service_project_id
 }

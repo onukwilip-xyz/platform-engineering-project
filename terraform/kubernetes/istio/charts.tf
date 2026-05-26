@@ -14,6 +14,7 @@ resource "helm_release" "istio_base" {
 
   wait          = true
   wait_for_jobs = true
+  timeout = 600
 
   depends_on = [kubernetes_namespace.istio_system]
 }
@@ -68,6 +69,7 @@ resource "helm_release" "istiod" {
 
   wait          = true
   wait_for_jobs = true
+  timeout = 600
 
   depends_on = [helm_release.istio_base]
 }
@@ -97,6 +99,7 @@ resource "helm_release" "istio_cni" {
 
   wait          = true
   wait_for_jobs = true
+  timeout = 600
 
   depends_on = [helm_release.istio_base]
 }

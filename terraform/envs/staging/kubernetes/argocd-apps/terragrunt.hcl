@@ -42,11 +42,11 @@ dependency "cert_manager_config" {
   mock_outputs                            = local.k8s.cert_manager_config_mock_outputs
 }
 
-dependency "istio_gateway" {
-  config_path = "../istio-gateway"
+dependency "gateway" {
+  config_path = "../gateway"
 
   mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
-  mock_outputs                            = local.k8s.istio_gateway_mock_outputs
+  mock_outputs                            = local.k8s.gateway_mock_outputs
 }
 
 dependency "observability_infra" {
@@ -68,6 +68,15 @@ dependency "artifact_registry" {
 
   mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
   mock_outputs                            = local.k8s.artifact_registry_mock_outputs
+}
+
+dependency "cloud_armor" {
+  config_path = "../../cloud-armor"
+
+  enabled = local.env.ddos_protection == "cloud-armour"
+
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
+  mock_outputs                            = local.k8s.cloud_armor_mock_outputs
 }
 
 generate "providers" {
@@ -103,10 +112,10 @@ inputs = {
   backup_bucket_name        = dependency.cnpg_infra.outputs.backup_bucket_name
   shared_vip_address        = dependency.tcp_services.outputs.shared_vip_address
   cluster_issuer_name       = dependency.cert_manager_config.outputs.internal_cluster_issuer_name
-  private_gateway_name      = dependency.istio_gateway.outputs.internal_gateway_name
-  private_gateway_namespace = dependency.istio_gateway.outputs.internal_gateway_namespace
-  public_gateway_name       = dependency.istio_gateway.outputs.public_gateway_name
-  public_gateway_namespace  = dependency.istio_gateway.outputs.public_gateway_namespace
+  private_gateway_name      = dependency.gateway.outputs.internal_gateway_name
+  private_gateway_namespace = dependency.gateway.outputs.internal_gateway_namespace
+  public_gateway_name       = dependency.gateway.outputs.public_gateway_name
+  public_gateway_namespace  = dependency.gateway.outputs.public_gateway_namespace
   loki_gcs_bucket_name      = dependency.observability_infra.outputs.loki_bucket_name
   loki_gcs_sa_email         = dependency.observability_infra.outputs.loki_gcp_sa_email
   tempo_gcs_bucket_name     = dependency.observability_infra.outputs.tempo_bucket_name
@@ -114,4 +123,9 @@ inputs = {
   service_project_id        = dependency.project.outputs.service_project_id
   artifact_registry_images_repo_id = dependency.artifact_registry.outputs.repositories["images"].repository_id
   cluster_name              = dependency.gke.outputs.gke_cluster_name
+  cloud_armor_security_policy_name = local.env.ddos_protection == "cloud-armour" ? dependency.cloud_armor.outputs.security_policy_name : ""
+
+  # * TEMP
+  # cloud_armor_security_policy_name = ""
+  # cloud_armor_security_policy_name = dependency.cloud_armor.outputs.security_policy_name
 }

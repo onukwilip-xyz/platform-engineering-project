@@ -23,7 +23,7 @@ resource "helm_release" "cert_manager" {
 
   wait          = true
   wait_for_jobs = true
-  timeout       = 600
+  timeout       = 1200
 
   depends_on = [
     kubernetes_namespace.cert_manager,

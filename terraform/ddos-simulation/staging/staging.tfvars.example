@@ -1,0 +1,7 @@
+# ── Project / billing / org ──────────────────────────────────────────────
+org_id                = "REPLACE-WITH-ORG-ID"
+billing_account_id    = "REPLACE-WITH-BILLING-ACCOUNT-ID"
+attacker_project_name = "pe-ddos-sim"
+
+# ── Target endpoint (operator chooses the subdomain) ─────────────────────
+target_public_host = "users.public.pe.onukwilip.xyz"

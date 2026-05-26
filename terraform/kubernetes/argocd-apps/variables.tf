@@ -55,18 +55,18 @@ variable "private_domain" {
 
 variable "public_domain" {
   type        = string
-  description = "Root DNS name for public-facing services (e.g. example.com). Used to build hostnames for HTTPRoutes attached to the public Istio Gateway (e.g. store.<public_domain>)."
+  description = "Root DNS name for public-facing services (e.g. example.com). Used to build hostnames for HTTPRoutes attached to the public Gateway (e.g. store.<public_domain>)."
 }
 
 variable "public_gateway_name" {
   type        = string
-  description = "Name of the public Istio Gateway CR. HTTPRoutes for internet-facing services reference this as parentRef."
+  description = "Name of the public Gateway CR (GKE Gateway class). HTTPRoutes for internet-facing services reference this as parentRef."
   default     = "public"
 }
 
 variable "public_gateway_namespace" {
   type        = string
-  description = "Namespace where the public Istio Gateway lives. Sourced from the istio-gateway module output."
+  description = "Namespace where the public Gateway lives. Sourced from the gateway module output."
 }
 
 variable "private_gateway_name" {
@@ -77,7 +77,7 @@ variable "private_gateway_name" {
 
 variable "private_gateway_namespace" {
   type        = string
-  description = "Namespace where the internal Istio Gateway lives. Sourced from the istio-gateway module output."
+  description = "Namespace where the internal Istio Gateway lives. Sourced from the gateway module output."
 }
 
 variable "loki_chart_version" {
@@ -112,7 +112,7 @@ variable "jaeger_chart_version" {
   type        = string
   description = "Version of the Jaeger Helm chart to install. Must be compatible with the version of Istio installed."
   default     = "4.0.0"
-  
+
 }
 
 variable "tempo_chart_version" {
@@ -189,4 +189,24 @@ variable "k6_operator_chart_version" {
   type        = string
   description = "Pinned version of the grafana/k6-operator Helm chart. Bump via PR to roll the operator forward."
   default     = "4.3.2"
+}
+
+# ── Public Gateway backend policies ───────────────────────────────────────────
+
+variable "public_gateway_backend_timeout_sec" {
+  type        = number
+  description = "Backend service request timeout (seconds) on the GCP HTTPS LB for services attached to the public Gateway. Sized to accommodate Istio sidecar retries (2 attempts × 3s perTry) plus actual processing."
+  default     = 30
+}
+
+variable "public_gateway_backend_log_sample_rate" {
+  type        = number
+  description = "Sampling rate (0.0–1.0) for backend access logs on the public Gateway's auto-provisioned backend services. Denies are always logged at 100%; this only controls allows."
+  default     = 100000
+}
+
+variable "cloud_armor_security_policy_name" {
+  type        = string
+  description = "Name of the Cloud Armor security policy to attach via GCPBackendPolicy to public-facing backend Services. Sourced from the cloud-armor unit output. Pass empty string to skip the securityPolicy attachment (e.g. while the SECURITY_POLICIES quota is being raised)."
+  default     = ""
 }

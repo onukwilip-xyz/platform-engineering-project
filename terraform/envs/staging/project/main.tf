@@ -23,6 +23,7 @@ module "service_iam" {
     { role = "roles/container.admin",                member = "serviceAccount:${var.tf_platform_sa_email}" },
     { role = "roles/compute.instanceAdmin.v1",       member = "serviceAccount:${var.tf_platform_sa_email}" },
     { role = "roles/compute.loadBalancerAdmin",      member = "serviceAccount:${var.tf_platform_sa_email}" },
+    { role = "roles/compute.securityAdmin",          member = "serviceAccount:${var.tf_platform_sa_email}" },
     { role = "roles/iam.serviceAccountAdmin",        member = "serviceAccount:${var.tf_platform_sa_email}" },
     { role = "roles/iam.serviceAccountUser",         member = "serviceAccount:${var.tf_platform_sa_email}" },
     { role = "roles/artifactregistry.admin",         member = "serviceAccount:${var.tf_platform_sa_email}" },

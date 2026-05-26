@@ -5,8 +5,14 @@ variable "istio_chart_version" {
 
 variable "gateway_class_name" {
   type        = string
-  description = "Name of the GatewayClass to use for both gateways. Passed from the gateway-api module output."
+  description = "GatewayClass name for the PRIVATE (internal) Gateway. Defaults to the Istio class so internal traffic continues to flow through the Istio ingress dataplane."
   default     = "istio"
+}
+
+variable "public_gateway_class_name" {
+  type        = string
+  description = "GatewayClass name for the PUBLIC Gateway. Defaults to GKE-managed global external L7 (provisions a Google Cloud HTTPS LB)."
+  default     = "gke-l7-global-external-managed"
 }
 
 # ── ClusterIssuer names ───────────────────────────────────────────────────────

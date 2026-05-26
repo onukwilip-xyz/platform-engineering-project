@@ -26,6 +26,6 @@ resource "google_dns_record_set" "public_gateway_wildcard" {
   managed_zone = var.public_dns_zone_name
   type         = "A"
   ttl          = 300
-  rrdatas      = [google_compute_address.public_gateway.address]
+  rrdatas      = [google_compute_global_address.public_gateway.address]
   project      = var.host_project_id
 }
