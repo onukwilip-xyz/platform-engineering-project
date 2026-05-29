@@ -10,8 +10,8 @@ locals {
   # Maps each dashboard JSON filename to the Grafana folder it lands in.
   # Add new entries here when new JSON files are dropped into grafana-dashboards/.
   dashboard_folders = {
-    "Kube-Events-Exporter.json"       = "Kubernetes Events"
-    "Detailed CPU Usage Metrics.json" = "Kubernetes"
-    "CloudNativePG.json"              = "Database"
+    "kube-events-exporter.json"       = "Kubernetes Events"
+    "detailed-cpu-usage-metrics.json" = "Kubernetes"
+    "cloud-native-pg.json"            = "Database"
   }
 }

@@ -250,6 +250,15 @@ resource "kubernetes_manifest" "grafana" {
               ingress = { enabled = false }
 
               sidecar = {
+                # Watches grafana_alert=1 ConfigMaps, mounts them as raw files
+                # into /etc/grafana/provisioning/alerting/ — no tpl processing,
+                # so Grafana's own {{ }} template syntax works correctly.
+                alerts = {
+                  enabled         = true
+                  label           = "grafana_alert"
+                  labelValue      = "1"
+                  searchNamespace = "ALL"
+                }
                 dashboards = {
                   enabled          = true
                   label            = "grafana_dashboard"
@@ -299,10 +308,12 @@ resource "kubernetes_manifest" "grafana" {
               # provisioning files can reference them as $__env{KEY_NAME}.
               envFromSecret = kubernetes_secret.grafana_alerting_secrets.metadata[0].name
 
-              alerting = {
+              # alerting provisioning is handled via grafana_alert=1 ConfigMaps
+              # (see grafana-alerting.tf) — kept out of Helm values to avoid
+              # the chart's tpl rendering breaking Grafana's {{ }} templates.
 
-                # ── Contact Points ───────────────────────────────────────────
-                "contactpoints.yaml" = {
+              # placeholder-end-of-grafana-values
+              "end-of-grafana-values-placeholder" = {
                   apiVersion = 1
                   contactPoints = [
                     {
@@ -1282,7 +1293,7 @@ resource "kubernetes_manifest" "alloy" {
               ]
 
               configMap = {
-                content = file("${path.module}/alloy-config.alloy")
+                content = file("${path.module}/config/alloy-config.alloy")
               }
             }
           })
