@@ -210,3 +210,29 @@ variable "cloud_armor_security_policy_name" {
   description = "Name of the Cloud Armor security policy to attach via GCPBackendPolicy to public-facing backend Services. Sourced from the cloud-armor unit output. Pass empty string to skip the securityPolicy attachment (e.g. while the SECURITY_POLICIES quota is being raised)."
   default     = ""
 }
+
+# ── Grafana Alerting ──────────────────────────────────────────────────────────
+
+variable "slack_webhook_scale_workloads" {
+  type        = string
+  sensitive   = true
+  description = "Slack incoming webhook URL for the scale-workloads contact point (pod CPU/memory/throttle, PVC, and node saturation alerts)."
+}
+
+variable "slack_webhook_critical" {
+  type        = string
+  sensitive   = true
+  description = "Slack incoming webhook URL for the critical contact point (postgres/cnpg-system outages and pod crashes in critical namespaces)."
+}
+
+variable "slack_webhook_error" {
+  type        = string
+  sensitive   = true
+  description = "Slack incoming webhook URL for the error contact point (pod crash loops and 0-replica deployments in non-critical namespaces)."
+}
+
+variable "slack_webhook_warning" {
+  type        = string
+  sensitive   = true
+  description = "Slack incoming webhook URL for the warning contact point (pod unschedulable, node memory pressure)."
+}

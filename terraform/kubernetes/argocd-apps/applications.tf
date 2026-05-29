@@ -249,9 +249,14 @@ resource "kubernetes_manifest" "grafana" {
               # HTTPRoute through the private Gateway is added separately.
               ingress = { enabled = false }
 
-              # The chart's default auto-datasource targets this release's own
-              # (disabled) Prometheus. Point at the monitoring release instead.
               sidecar = {
+                dashboards = {
+                  enabled          = true
+                  label            = "grafana_dashboard"
+                  labelValue       = "1"
+                  searchNamespace  = "ALL"
+                  folderAnnotation = "grafana_folder"
+                }
                 datasources = {
                   defaultDatasourceEnabled = false
                 }
@@ -261,6 +266,7 @@ resource "kubernetes_manifest" "grafana" {
                 {
                   name      = "Prometheus"
                   type      = "prometheus"
+                  uid       = "prometheus-main"
                   url       = "http://prometheus-operated.monitoring.svc:9090"
                   access    = "proxy"
                   isDefault = true
@@ -268,12 +274,14 @@ resource "kubernetes_manifest" "grafana" {
                 {
                   name   = "Loki"
                   type   = "loki"
+                  uid    = "loki-main"
                   url    = "http://loki-gateway.logging.svc"
                   access = "proxy"
                 },
                 {
                   name   = "Tempo"
                   type   = "tempo"
+                  uid    = "tempo-main"
                   url    = "http://tempo.tracing.svc:3200"
                   access = "proxy"
                 },
@@ -285,6 +293,802 @@ resource "kubernetes_manifest" "grafana" {
                 server = {
                   root_url = "https://grafana.${var.private_domain}"
                 }
+              }
+
+              # Mounts every key from the alerting secrets as an env var so
+              # provisioning files can reference them as $__env{KEY_NAME}.
+              envFromSecret = kubernetes_secret.grafana_alerting_secrets.metadata[0].name
+
+              alerting = {
+
+                # ── Contact Points ───────────────────────────────────────────
+                "contactpoints.yaml" = {
+                  apiVersion = 1
+                  contactPoints = [
+                    {
+                      orgId = 1
+                      name  = "scale-workloads"
+                      receivers = [{
+                        uid  = "cp-scale-workloads"
+                        type = "slack"
+                        settings = {
+                          url        = "$__env{SLACK_WEBHOOK_SCALE_WORKLOADS}"
+                          title      = "[{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}"
+                          text       = "{{ range .Alerts }}*Namespace:* {{ .Labels.namespace }}\n*Pod:* {{ .Labels.pod }}\n*Message:* {{ .Annotations.description }}\n{{ end }}"
+                          icon_emoji = ":arrows_counterclockwise:"
+                          username   = "Grafana | Scale Workloads"
+                        }
+                        disableResolveMessage = false
+                      }]
+                    },
+                    {
+                      orgId = 1
+                      name  = "critical"
+                      receivers = [{
+                        uid  = "cp-critical"
+                        type = "slack"
+                        settings = {
+                          url        = "$__env{SLACK_WEBHOOK_CRITICAL}"
+                          title      = ":red_circle: [CRITICAL] {{ .GroupLabels.alertname }}"
+                          text       = "{{ range .Alerts }}*Namespace:* {{ .Labels.namespace }}\n*Resource:* {{ .Labels.name }}\n*Message:* {{ .Annotations.description }}\n{{ end }}"
+                          icon_emoji = ":red_circle:"
+                          username   = "Grafana | Critical"
+                        }
+                        disableResolveMessage = false
+                      }]
+                    },
+                    {
+                      orgId = 1
+                      name  = "error"
+                      receivers = [{
+                        uid  = "cp-error"
+                        type = "slack"
+                        settings = {
+                          url        = "$__env{SLACK_WEBHOOK_ERROR}"
+                          title      = ":warning: [ERROR] {{ .GroupLabels.alertname }}"
+                          text       = "{{ range .Alerts }}*Namespace:* {{ .Labels.namespace }}\n*Pod:* {{ .Labels.pod }}\n*Message:* {{ .Annotations.description }}\n{{ end }}"
+                          icon_emoji = ":warning:"
+                          username   = "Grafana | Error"
+                        }
+                        disableResolveMessage = false
+                      }]
+                    },
+                    {
+                      orgId = 1
+                      name  = "warning"
+                      receivers = [{
+                        uid  = "cp-warning"
+                        type = "slack"
+                        settings = {
+                          url        = "$__env{SLACK_WEBHOOK_WARNING}"
+                          title      = ":large_yellow_circle: [WARNING] {{ .GroupLabels.alertname }}"
+                          text       = "{{ range .Alerts }}*Namespace:* {{ .Labels.namespace }}\n*Message:* {{ .Annotations.description }}\n{{ end }}"
+                          icon_emoji = ":large_yellow_circle:"
+                          username   = "Grafana | Warning"
+                        }
+                        disableResolveMessage = false
+                      }]
+                    },
+                  ]
+                }
+
+                # ── Notification Policy ──────────────────────────────────────
+                # Routes on the `channel` label every alert rule sets explicitly.
+                # The default catch-all is `warning`; routes override per channel.
+                "policies.yaml" = {
+                  apiVersion = 1
+                  policies = [
+                    {
+                      orgId          = 1
+                      receiver       = "warning"
+                      groupBy        = ["alertname", "namespace", "channel"]
+                      groupWait      = "30s"
+                      groupInterval  = "5m"
+                      repeatInterval = "4h"
+                      routes = [
+                        {
+                          receiver = "critical"
+                          matchers = ["channel=\"critical\"", "alertname!=\"DatasourceError\"", "alertname!=\"DatasourceNoData\""]
+                          groupBy  = ["alertname", "namespace"]
+                          continue = false
+                        },
+                        {
+                          receiver = "error"
+                          matchers = ["channel=\"error\"", "alertname!=\"DatasourceError\"", "alertname!=\"DatasourceNoData\""]
+                          groupBy  = ["alertname", "namespace"]
+                          continue = false
+                        },
+                        {
+                          receiver = "scale-workloads"
+                          matchers = ["channel=\"scale-workloads\"", "alertname!=\"DatasourceError\"", "alertname!=\"DatasourceNoData\""]
+                          groupBy  = ["alertname", "namespace", "pod"]
+                          continue = false
+                        },
+                        {
+                          receiver = "warning"
+                          matchers = ["channel=\"warning\"", "alertname!=\"DatasourceError\"", "alertname!=\"DatasourceNoData\""]
+                          groupBy  = ["alertname", "namespace"]
+                          continue = false
+                        },
+                      ]
+                    },
+                  ]
+                }
+
+                # ── Alert Rules ──────────────────────────────────────────────
+                "rules.yaml" = {
+                  apiVersion = 1
+                  groups = [
+
+                    # ── Group 1: Pod Health ──────────────────────────────────
+                    {
+                      orgId    = 1
+                      name     = "pod-health"
+                      folder   = "Platform Alerts"
+                      interval = "1m"
+                      rules = [
+
+                        {
+                          uid       = "pod-crashloop-error"
+                          title     = "Pod CrashLoopBackOff"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "kube_pod_container_status_restarts_total{namespace!~\"${local.critical_namespaces}\"} >= 3"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [0] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "5m"
+                          annotations = {
+                            summary     = "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash-looping"
+                            description = "Container {{ $labels.container }} has restarted {{ $value }} times. Investigate with: kubectl logs {{ $labels.pod }} -n {{ $labels.namespace }} --previous"
+                          }
+                          labels = { severity = "error", channel = "error" }
+                        },
+
+                        {
+                          uid       = "pod-crashloop-critical"
+                          title     = "Critical Pod CrashLoopBackOff"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "kube_pod_container_status_restarts_total{namespace=~\"${local.critical_namespaces}\"} >= 3"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [0] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "2m"
+                          annotations = {
+                            summary     = "CRITICAL: Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash-looping"
+                            description = "Container {{ $labels.container }} has restarted {{ $value }} times in a critical namespace. Immediate investigation required."
+                          }
+                          labels = { severity = "critical", channel = "critical" }
+                        },
+
+                        {
+                          uid       = "pod-cpu-limit-80"
+                          title     = "Pod CPU Near Limit"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "(rate(container_cpu_usage_seconds_total{container!=\"\", container!=\"POD\", image!=\"\"}[5m]) / on(namespace, pod, container) kube_pod_container_resource_limits{resource=\"cpu\"}) > 0 and on(namespace, pod, container) kube_pod_container_resource_limits{resource=\"cpu\"} > 0"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [0.80] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "5m"
+                          annotations = {
+                            summary     = "Pod {{ $labels.namespace }}/{{ $labels.pod }} CPU at {{ $value | humanizePercentage }} of limit"
+                            description = "Container {{ $labels.container }} is using {{ $value | humanizePercentage }} of its CPU limit. Consider scaling or raising the limit."
+                          }
+                          labels = { severity = "warning", channel = "scale-workloads" }
+                        },
+
+                        {
+                          uid       = "pod-memory-limit-80"
+                          title     = "Pod Memory Near Limit"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "(container_memory_working_set_bytes{container!=\"\", container!=\"POD\", image!=\"\"} / on(namespace, pod, container) kube_pod_container_resource_limits{resource=\"memory\"}) > 0 and on(namespace, pod, container) kube_pod_container_resource_limits{resource=\"memory\"} > 0"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [0.80] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "5m"
+                          annotations = {
+                            summary     = "Pod {{ $labels.namespace }}/{{ $labels.pod }} memory at {{ $value | humanizePercentage }} of limit"
+                            description = "Container {{ $labels.container }} is using {{ $value | humanizePercentage }} of its memory limit. OOMKill risk if this continues."
+                          }
+                          labels = { severity = "warning", channel = "scale-workloads" }
+                        },
+
+                        {
+                          uid       = "pod-cpu-throttle-rate-warning"
+                          title     = "Pod CPU Throttling High"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "sum by (namespace, pod, container) (rate(container_cpu_cfs_throttled_periods_total{container!=\"\", container!=\"POD\"}[1m])) / sum by (namespace, pod, container) (rate(container_cpu_cfs_periods_total{container!=\"\", container!=\"POD\"}[1m])) * 100"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [25] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "5m"
+                          annotations = {
+                            summary     = "Pod {{ $labels.namespace }}/{{ $labels.pod }} CPU throttled {{ $value | printf \"%.1f\" }}% of periods"
+                            description = "Container {{ $labels.container }} is being throttled >25% of CPU scheduling periods. Raise the CPU limit or reduce CPU request to allow more headroom."
+                          }
+                          labels = { severity = "warning", channel = "scale-workloads" }
+                        },
+
+                        {
+                          uid       = "pod-cpu-throttle-rate-error"
+                          title     = "Pod CPU Throttling Severe"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "sum by (namespace, pod, container) (rate(container_cpu_cfs_throttled_periods_total{container!=\"\", container!=\"POD\"}[1m])) / sum by (namespace, pod, container) (rate(container_cpu_cfs_periods_total{container!=\"\", container!=\"POD\"}[1m])) * 100"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [50] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "5m"
+                          annotations = {
+                            summary     = "Pod {{ $labels.namespace }}/{{ $labels.pod }} CPU throttled {{ $value | printf \"%.1f\" }}% — probe failures likely"
+                            description = "Container {{ $labels.container }} is being throttled >50% of CPU scheduling periods. Liveness/readiness probe failures and request timeouts are likely. Immediate CPU limit increase needed."
+                          }
+                          labels = { severity = "error", channel = "error" }
+                        },
+
+                        {
+                          uid       = "pod-cpu-throttle-seconds-warning"
+                          title     = "Pod CPU Frozen Time High"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "sum by (namespace, pod, container) (rate(container_cpu_cfs_throttled_seconds_total{container!=\"\", container!=\"POD\"}[1m]))"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [0.25] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "5m"
+                          annotations = {
+                            summary     = "Pod {{ $labels.namespace }}/{{ $labels.pod }} frozen {{ $value | printf \"%.2f\" }}s per second"
+                            description = "Container {{ $labels.container }} is frozen >25% of wall-clock time due to CPU throttling. Consider increasing CPU limits."
+                          }
+                          labels = { severity = "warning", channel = "scale-workloads" }
+                        },
+
+                        {
+                          uid       = "pod-cpu-throttle-seconds-error"
+                          title     = "Pod CPU Barely Running"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "sum by (namespace, pod, container) (rate(container_cpu_cfs_throttled_seconds_total{container!=\"\", container!=\"POD\"}[1m]))"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [0.5] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "5m"
+                          annotations = {
+                            summary     = "Pod {{ $labels.namespace }}/{{ $labels.pod }} frozen {{ $value | printf \"%.2f\" }}s/s — barely running"
+                            description = "Container {{ $labels.container }} is frozen >50% of wall-clock time. This pod is effectively non-functional. Raise CPU limits immediately."
+                          }
+                          labels = { severity = "error", channel = "error" }
+                        },
+
+                        {
+                          uid       = "pod-unschedulable"
+                          title     = "Pod Unschedulable"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 600, to = 0 }
+                              model = {
+                                expr  = "kube_pod_status_unschedulable == 1"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 600, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [0] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "10m"
+                          annotations = {
+                            summary     = "Pod {{ $labels.namespace }}/{{ $labels.pod }} cannot be scheduled"
+                            description = "Pod has been unschedulable for >10 minutes. Check node resources, taints, and affinities: kubectl describe pod {{ $labels.pod }} -n {{ $labels.namespace }}"
+                          }
+                          labels = { severity = "warning", channel = "warning" }
+                        },
+
+                      ]
+                    },
+
+                    # ── Group 2: Workload Availability ───────────────────────
+                    {
+                      orgId    = 1
+                      name     = "workload-availability"
+                      folder   = "Platform Alerts"
+                      interval = "1m"
+                      rules = [
+
+                        {
+                          uid       = "deployment-zero-replicas-error"
+                          title     = "Deployment Zero Replicas"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "(kube_deployment_status_replicas_available{namespace!~\"${local.critical_namespaces}\"} == 0 and kube_deployment_spec_replicas{namespace!~\"${local.critical_namespaces}\"} > 0)"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [0] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "3m"
+                          annotations = {
+                            summary     = "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has 0 available replicas"
+                            description = "Deployment has 0 available replicas but spec requests > 0. Service may be down."
+                          }
+                          labels = { severity = "error", channel = "error" }
+                        },
+
+                        {
+                          uid       = "statefulset-zero-replicas-error"
+                          title     = "StatefulSet Zero Replicas"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "(kube_statefulset_status_replicas_ready{namespace!~\"${local.critical_namespaces}\"} == 0 and kube_statefulset_replicas{namespace!~\"${local.critical_namespaces}\"} > 0)"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [0] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "3m"
+                          annotations = {
+                            summary     = "StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} has 0 ready replicas"
+                            description = "StatefulSet has 0 ready replicas but spec requests > 0. Stateful service may be down."
+                          }
+                          labels = { severity = "error", channel = "error" }
+                        },
+
+                        {
+                          uid       = "deployment-zero-replicas-critical"
+                          title     = "Critical Deployment Zero Replicas"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "(kube_deployment_status_replicas_available{namespace=~\"${local.critical_namespaces}\"} == 0 and kube_deployment_spec_replicas{namespace=~\"${local.critical_namespaces}\"} > 0)"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [0] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "1m"
+                          annotations = {
+                            summary     = "CRITICAL: Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has 0 replicas"
+                            description = "Critical deployment is fully down. Immediate action required."
+                          }
+                          labels = { severity = "critical", channel = "critical" }
+                        },
+
+                        {
+                          uid       = "statefulset-zero-replicas-critical"
+                          title     = "Critical StatefulSet Zero Replicas"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "(kube_statefulset_status_replicas_ready{namespace=~\"${local.critical_namespaces}\"} == 0 and kube_statefulset_replicas{namespace=~\"${local.critical_namespaces}\"} > 0)"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [0] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "1m"
+                          annotations = {
+                            summary     = "CRITICAL: StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} has 0 ready replicas"
+                            description = "Critical stateful workload is fully down. Immediate action required."
+                          }
+                          labels = { severity = "critical", channel = "critical" }
+                        },
+
+                        # CNPG creates pods directly (not via a StatefulSet), so the
+                        # StatefulSet metric above won't catch a downed CNPG cluster.
+                        # This rule uses pod-count with an absent() fallback instead.
+                        {
+                          uid       = "cnpg-cluster-down"
+                          title     = "CNPG Cluster Down"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "(count by(namespace) (kube_pod_status_ready{namespace=\"postgres\", condition=\"true\"}) == 0) or (absent(kube_pod_status_ready{namespace=\"postgres\", condition=\"true\"}))"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [0] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "Alerting"
+                          execErrState = "Error"
+                          "for"        = "1m"
+                          annotations = {
+                            summary     = "CRITICAL: CNPG cluster in namespace postgres has no ready pods"
+                            description = "The CloudNativePG cluster has 0 ready pods. Database connectivity is lost. Check: kubectl get cluster -n postgres"
+                          }
+                          labels = { severity = "critical", channel = "critical" }
+                        },
+
+                      ]
+                    },
+
+                    # ── Group 3: Node & Storage Health ───────────────────────
+                    {
+                      orgId    = 1
+                      name     = "node-and-storage"
+                      folder   = "Platform Alerts"
+                      interval = "1m"
+                      rules = [
+
+                        {
+                          uid       = "pvc-disk-85"
+                          title     = "PVC Disk Near Full"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "(kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) * 100"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [85] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "5m"
+                          annotations = {
+                            summary     = "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} is {{ $value | printf \"%.1f\" }}% full"
+                            description = "Volume is above 85% capacity. Expand the PVC or clean up data to avoid pod failures."
+                          }
+                          labels = { severity = "warning", channel = "scale-workloads" }
+                        },
+
+                        {
+                          uid       = "node-cpu-75"
+                          title     = "Node CPU Saturated"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "100 - (avg by(node) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [75] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "10m"
+                          annotations = {
+                            summary     = "Node {{ $labels.node }} CPU at {{ $value | printf \"%.1f\" }}%"
+                            description = "Node CPU has been above 75% for 10+ minutes. Consider adding nodes or moving workloads."
+                          }
+                          labels = { severity = "warning", channel = "scale-workloads" }
+                        },
+
+                        {
+                          uid       = "node-memory-75"
+                          title     = "Node Memory Saturated"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "((node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes) * 100"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [75] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "10m"
+                          annotations = {
+                            summary     = "Node {{ $labels.instance }} memory at {{ $value | printf \"%.1f\" }}%"
+                            description = "Node memory has been above 75% for 10+ minutes. OOMKill risk for pods without memory limits."
+                          }
+                          labels = { severity = "warning", channel = "scale-workloads" }
+                        },
+
+                        {
+                          uid       = "node-memory-pressure"
+                          title     = "Node MemoryPressure"
+                          condition = "B"
+                          data = [
+                            {
+                              refId             = "A"
+                              datasourceUid     = "prometheus-main"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                expr  = "kube_node_status_condition{condition=\"MemoryPressure\",status=\"true\"} == 1"
+                                refId = "A"
+                              }
+                            },
+                            {
+                              refId             = "B"
+                              datasourceUid     = "__expr__"
+                              relativeTimeRange = { from = 300, to = 0 }
+                              model = {
+                                type       = "threshold"
+                                refId      = "B"
+                                conditions = [{ evaluator = { type = "gt", params = [0] }, query = { params = ["A"] } }]
+                              }
+                            },
+                          ]
+                          noDataState  = "NoData"
+                          execErrState = "Error"
+                          "for"        = "1m"
+                          annotations = {
+                            summary     = "Node {{ $labels.node }} is under MemoryPressure"
+                            description = "Kubelet has set MemoryPressure=True on this node. Pod evictions may already be in progress. Check: kubectl describe node {{ $labels.node }}"
+                          }
+                          labels = { severity = "warning", channel = "warning" }
+                        },
+
+                      ]
+                    },
+
+                  ]
+                }
+
               }
             }
           })
@@ -304,7 +1108,10 @@ resource "kubernetes_manifest" "grafana" {
     }
   }
 
-  depends_on = [kubernetes_secret.grafana_admin]
+  depends_on = [
+    kubernetes_secret.grafana_admin,
+    kubernetes_secret.grafana_alerting_secrets,
+  ]
 }
 
 # Loki
@@ -659,7 +1466,20 @@ resource "kubernetes_manifest" "kiali" {
 
   provisioner "local-exec" {
     when    = destroy
-    command = "kubectl patch application ${self.manifest.metadata.name} -n ${self.manifest.metadata.namespace} --type=merge -p '{\"metadata\":{\"finalizers\":[]}}' || true"
+    command = <<-CMD
+      # 1. Strip ArgoCD finalizer from the Application so ArgoCD cascade-deletes immediately
+      kubectl patch application ${self.manifest.metadata.name} \
+        -n ${self.manifest.metadata.namespace} \
+        --type=merge -p '{"metadata":{"finalizers":[]}}' || true
+
+      # 2. Strip kiali.io/finalizer from all Kiali CRs in the destination namespace.
+      kubectl get kialis.kiali.io \
+        -n ${self.manifest.spec.destination.namespace} \
+        -o name 2>/dev/null | \
+        xargs -I {} kubectl patch {} \
+          -n ${self.manifest.spec.destination.namespace} \
+          --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+    CMD
   }
 
   depends_on = [kubernetes_namespace.tracing]
