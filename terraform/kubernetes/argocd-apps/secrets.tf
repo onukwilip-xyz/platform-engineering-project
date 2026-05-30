@@ -68,6 +68,8 @@ resource "kubernetes_secret" "grafana_alerting_secrets" {
     SLACK_WEBHOOK_CRITICAL        = var.slack_webhook_critical
     SLACK_WEBHOOK_ERROR           = var.slack_webhook_error
     SLACK_WEBHOOK_WARNING         = var.slack_webhook_warning
+    SLACK_WEBHOOK_DATASOURCE_ERRORS = var.slack_webhook_datasource_errors
+    SLACK_WEBHOOK_DEFAULT = var.slack_webhook_default
   }
 }
 

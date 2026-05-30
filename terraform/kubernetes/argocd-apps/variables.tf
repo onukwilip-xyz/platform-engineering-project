@@ -236,3 +236,15 @@ variable "slack_webhook_warning" {
   sensitive   = true
   description = "Slack incoming webhook URL for the warning contact point (pod unschedulable, node memory pressure)."
 }
+
+variable "slack_webhook_datasource_errors" {
+  type        = string
+  sensitive   = true
+  description = "Slack incoming webhook URL for the datasource-errors contact point (datasource errors)."
+}
+
+variable "slack_webhook_default" {
+  type        = string
+  sensitive   = true
+  description = "Slack incoming webhook URL for the default contact point."
+}
