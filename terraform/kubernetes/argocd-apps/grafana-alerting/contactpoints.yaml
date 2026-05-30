@@ -1,0 +1,85 @@
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: default-catchall
+    receivers:
+      - uid: cp-default-catchall
+        type: slack
+        settings:
+          url: $__env{SLACK_WEBHOOK_DEFAULT}
+          title: '[UNROUTED] {{ .GroupLabels.alertname }}'
+          text: |
+            {{ range .Alerts }}
+            *Alert:* {{ .Labels.alertname }}
+            *Labels:* {{ .Labels }}
+            *Summary:* {{ .Annotations.summary }}
+            {{ end }}
+          icon_emoji: ":question:"
+          username: "Grafana | Unrouted"
+        disableResolveMessage: false
+
+  - orgId: 1
+    name: scale-workloads
+    receivers:
+      - uid: scale-workloads-slack
+        type: slack
+        settings:
+          url: $__env{SLACK_WEBHOOK_SCALE_WORKLOADS}
+          title: '{{ .CommonLabels.alertname }}'
+          text: "{{ range .Alerts }}*Status:* {{ .Status | toUpper }}\n*Summary:* {{ .Annotations.summary }}\n*Description:* {{ .Annotations.description }}\n{{ end }}"
+          iconEmoji: ':warning:'
+        disableResolveMessage: false
+
+  - orgId: 1
+    name: critical
+    receivers:
+      - uid: critical-slack
+        type: slack
+        settings:
+          url: $__env{SLACK_WEBHOOK_CRITICAL}
+          title: ':fire: CRITICAL: {{ .CommonLabels.alertname }}'
+          text: "{{ range .Alerts }}*Status:* {{ .Status | toUpper }}\n*Summary:* {{ .Annotations.summary }}\n*Description:* {{ .Annotations.description }}\n{{ end }}"
+          iconEmoji: ':fire:'
+        disableResolveMessage: false
+
+  - orgId: 1
+    name: error
+    receivers:
+      - uid: error-slack
+        type: slack
+        settings:
+          url: $__env{SLACK_WEBHOOK_ERROR}
+          title: ':red_circle: ERROR: {{ .CommonLabels.alertname }}'
+          text: "{{ range .Alerts }}*Status:* {{ .Status | toUpper }}\n*Summary:* {{ .Annotations.summary }}\n*Description:* {{ .Annotations.description }}\n{{ end }}"
+          iconEmoji: ':red_circle:'
+        disableResolveMessage: false
+
+  - orgId: 1
+    name: warning
+    receivers:
+      - uid: warning-slack
+        type: slack
+        settings:
+          url: $__env{SLACK_WEBHOOK_WARNING}
+          title: ':warning: WARNING: {{ .CommonLabels.alertname }}'
+          text: "{{ range .Alerts }}*Status:* {{ .Status | toUpper }}\n*Summary:* {{ .Annotations.summary }}\n*Description:* {{ .Annotations.description }}\n{{ end }}"
+          iconEmoji: ':warning:'
+        disableResolveMessage: false
+  
+  - orgId: 1
+    name: datasource-errors
+    receivers:
+      - uid: cp-datasource-errors
+        type: slack
+        settings:
+          url: $__env{SLACK_WEBHOOK_DATASOURCE_ERRORS}
+          title: ':rotating_light: [DATASOURCE ERROR] {{ .GroupLabels.alertname }}'
+          text: |
+            {{ range .Alerts }}
+            *Rule:* {{ .Labels.alertname }}
+            *Summary:* {{ .Annotations.summary }}
+            *Generator:* {{ .GeneratorURL }}
+            {{ end }}
+          icon_emoji: ":rotating_light:"
+          username: "Grafana | Datasource Errors"
+        disableResolveMessage: true

@@ -249,9 +249,20 @@ resource "kubernetes_manifest" "grafana" {
               # HTTPRoute through the private Gateway is added separately.
               ingress = { enabled = false }
 
-              # The chart's default auto-datasource targets this release's own
-              # (disabled) Prometheus. Point at the monitoring release instead.
               sidecar = {
+                alerts = {
+                  enabled         = true
+                  label           = "grafana_alert"
+                  labelValue      = "1"
+                  searchNamespace = "ALL"
+                }
+                dashboards = {
+                  enabled          = true
+                  label            = "grafana_dashboard"
+                  labelValue       = "1"
+                  searchNamespace  = "ALL"
+                  folderAnnotation = "grafana_folder"
+                }
                 datasources = {
                   defaultDatasourceEnabled = false
                 }
@@ -261,6 +272,7 @@ resource "kubernetes_manifest" "grafana" {
                 {
                   name      = "Prometheus"
                   type      = "prometheus"
+                  uid       = "prometheus-main"
                   url       = "http://prometheus-operated.monitoring.svc:9090"
                   access    = "proxy"
                   isDefault = true
@@ -268,12 +280,14 @@ resource "kubernetes_manifest" "grafana" {
                 {
                   name   = "Loki"
                   type   = "loki"
+                  uid    = "loki-main"
                   url    = "http://loki-gateway.logging.svc"
                   access = "proxy"
                 },
                 {
                   name   = "Tempo"
                   type   = "tempo"
+                  uid    = "tempo-main"
                   url    = "http://tempo.tracing.svc:3200"
                   access = "proxy"
                 },
@@ -286,6 +300,10 @@ resource "kubernetes_manifest" "grafana" {
                   root_url = "https://grafana.${var.private_domain}"
                 }
               }
+
+              # Mounts every key from the alerting secrets as an env var so
+              # provisioning files can reference them as $__env{KEY_NAME}.
+              envFromSecret = kubernetes_secret.grafana_alerting_secrets.metadata[0].name
             }
           })
         }
@@ -304,7 +322,13 @@ resource "kubernetes_manifest" "grafana" {
     }
   }
 
-  depends_on = [kubernetes_secret.grafana_admin]
+  depends_on = [
+    kubernetes_secret.grafana_admin,
+    kubernetes_secret.grafana_alerting_secrets,
+    kubernetes_config_map.grafana_alerting_contactpoints,
+    kubernetes_config_map.grafana_alerting_policies,
+    kubernetes_config_map.grafana_alerting_rules,
+  ]
 }
 
 # Loki
@@ -475,7 +499,7 @@ resource "kubernetes_manifest" "alloy" {
               ]
 
               configMap = {
-                content = file("${path.module}/alloy-config.alloy")
+                content = file("${path.module}/config/alloy-config.alloy")
               }
             }
           })
@@ -659,7 +683,20 @@ resource "kubernetes_manifest" "kiali" {
 
   provisioner "local-exec" {
     when    = destroy
-    command = "kubectl patch application ${self.manifest.metadata.name} -n ${self.manifest.metadata.namespace} --type=merge -p '{\"metadata\":{\"finalizers\":[]}}' || true"
+    command = <<-CMD
+      # 1. Strip ArgoCD finalizer from the Application so ArgoCD cascade-deletes immediately
+      kubectl patch application ${self.manifest.metadata.name} \
+        -n ${self.manifest.metadata.namespace} \
+        --type=merge -p '{"metadata":{"finalizers":[]}}' || true
+
+      # 2. Strip kiali.io/finalizer from all Kiali CRs in the destination namespace.
+      kubectl get kialis.kiali.io \
+        -n ${self.manifest.spec.destination.namespace} \
+        -o name 2>/dev/null | \
+        xargs -I {} kubectl patch {} \
+          -n ${self.manifest.spec.destination.namespace} \
+          --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+    CMD
   }
 
   depends_on = [kubernetes_namespace.tracing]
@@ -916,6 +953,29 @@ resource "kubernetes_manifest" "kubernetes_event_exporter" {
                     streamLabels = {
                       container = "kubernetes-event-exporter"
                       source    = "kubernetes-event-exporter"
+                    }
+                    layout = {
+                      message      = "{{ .Message }}"
+                      reason       = "{{ .Reason }}"
+                      type         = "{{ .Type }}"
+                      count        = "{{ .Count }}"
+                      cluster_name = "{{ .ClusterName }}"
+
+                      # InvolvedObject (old-style) & Regarding (new-style)
+                      namespace = "{{ .InvolvedObject.Namespace }}"
+                      kind      = "{{ .InvolvedObject.Kind }}"
+                      name      = "{{ .InvolvedObject.Name }}"
+
+                      # Source component: old-style uses Source.Component, new-style uses
+                      # ReportingComponent directly on the event
+                      component           = "{{ .Source.Component }}"
+                      host                = "{{ .Source.Host }}"
+
+                      # Timestamps: old-style uses FirstTimestamp/LastTimestamp,
+                      # new-style uses EventTime
+                      first_time = "{{ .FirstTimestamp }}"
+                      last_time  = "{{ .LastTimestamp }}"
+                      event_time = "{{ .EventTime }}"
                     }
                   }
                 },

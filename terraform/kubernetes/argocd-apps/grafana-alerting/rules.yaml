@@ -1,0 +1,929 @@
+apiVersion: 1
+groups:
+
+  # ── Workload Saturation ──────────────────────────────────────────────────────
+
+  - orgId: 1
+    name: workload-saturation
+    folder: Platform Alerts
+    interval: 1m
+    rules:
+
+      - uid: pod-cpu-limit-80
+        title: Pod CPU Usage > 80% of Limit
+        condition: C
+        for: 5m
+        labels:
+          channel: scale-workloads
+          severity: warning
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} CPU usage is above 80% of its limit'
+          description: 'CPU usage is {{ $values.B.Value | printf "%.1f" }}% of limit. Container: {{ $labels.container }}.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: >-
+                sum by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{container!="",container!="POD"}[5m]))
+                / sum by (namespace, pod, container) (kube_pod_container_resource_limits{resource="cpu",container!=""})
+                * 100
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [80]
+                    type: gt
+                  unloadEvaluator:
+                    params: [70]
+                    type: lt
+
+      - uid: pod-memory-limit-80
+        title: Pod Memory Usage > 80% of Limit
+        condition: C
+        for: 5m
+        labels:
+          channel: scale-workloads
+          severity: warning
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} memory usage is above 80% of its limit'
+          description: 'Memory usage is {{ $values.B.Value | printf "%.1f" }}% of limit. Container: {{ $labels.container }}.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: >-
+                sum by (namespace, pod, container) (container_memory_working_set_bytes{container!="",container!="POD"})
+                / sum by (namespace, pod, container) (kube_pod_container_resource_limits{resource="memory",container!=""})
+                * 100
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [80]
+                    type: gt
+                  unloadEvaluator:
+                    params: [70]
+                    type: lt
+
+      - uid: pod-cpu-throttle-rate-warning
+        title: Pod CPU Throttle Rate > 25%
+        condition: C
+        for: 10m
+        labels:
+          channel: scale-workloads
+          severity: warning
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} CPU is being throttled'
+          description: 'CPU throttle rate is {{ $values.B.Value | printf "%.1f" }}%. Container: {{ $labels.container }}.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: >-
+                sum by (namespace, pod, container) (increase(container_cpu_cfs_throttled_periods_total{container!=""}[5m]))
+                / sum by (namespace, pod, container) (increase(container_cpu_cfs_periods_total{container!=""}[5m]))
+                * 100
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [25]
+                    type: gt
+                  unloadEvaluator:
+                    params: [15]
+                    type: lt
+
+      - uid: pod-cpu-throttle-rate-error
+        title: Pod CPU Throttle Rate > 50%
+        condition: C
+        for: 5m
+        labels:
+          channel: error
+          severity: error
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} CPU is heavily throttled'
+          description: 'CPU throttle rate is {{ $values.B.Value | printf "%.1f" }}%. Container: {{ $labels.container }}.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: >-
+                sum by (namespace, pod, container) (increase(container_cpu_cfs_throttled_periods_total{container!=""}[5m]))
+                / sum by (namespace, pod, container) (increase(container_cpu_cfs_periods_total{container!=""}[5m]))
+                * 100
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [50]
+                    type: gt
+                  unloadEvaluator:
+                    params: [35]
+                    type: lt
+
+      - uid: pod-cpu-throttle-seconds-warning
+        title: Pod CPU Throttled Seconds > 10% of window
+        condition: C
+        for: 10m
+        labels:
+          channel: scale-workloads
+          severity: warning
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} is accumulating CPU throttle time'
+          description: 'CPU throttled rate is {{ $values.B.Value | printf "%.3f" }}s/s. Container: {{ $labels.container }}.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'sum by (namespace, pod, container) (rate(container_cpu_cfs_throttled_seconds_total{container!=""}[5m]))'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0.1]
+                    type: gt
+                  unloadEvaluator:
+                    params: [0.05]
+                    type: lt
+
+      - uid: pod-cpu-throttle-seconds-error
+        title: Pod CPU Throttled Seconds > 50% of window
+        condition: C
+        for: 5m
+        labels:
+          channel: error
+          severity: error
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} is heavily throttled by CPU time'
+          description: 'CPU throttled rate is {{ $values.B.Value | printf "%.3f" }}s/s. Container: {{ $labels.container }}.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'sum by (namespace, pod, container) (rate(container_cpu_cfs_throttled_seconds_total{container!=""}[5m]))'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0.5]
+                    type: gt
+                  unloadEvaluator:
+                    params: [0.3]
+                    type: lt
+
+      - uid: pvc-disk-85
+        title: PVC Disk Usage > 85%
+        condition: C
+        for: 5m
+        labels:
+          channel: scale-workloads
+          severity: warning
+        annotations:
+          summary: 'PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} disk usage above 85%'
+          description: 'Disk usage is {{ $values.B.Value | printf "%.1f" }}%.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: '(kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) * 100'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [85]
+                    type: gt
+                  unloadEvaluator:
+                    params: [75]
+                    type: lt
+
+      - uid: node-cpu-75
+        title: Node CPU Usage > 75%
+        condition: C
+        for: 10m
+        labels:
+          channel: scale-workloads
+          severity: warning
+        annotations:
+          summary: 'Node {{ $labels.node }} CPU usage is above 75%'
+          description: 'Node CPU usage is {{ $values.B.Value | printf "%.1f" }}%.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: '(1 - avg by (node) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) * 100'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [75]
+                    type: gt
+                  unloadEvaluator:
+                    params: [65]
+                    type: lt
+
+      - uid: node-memory-75
+        title: Node Memory Usage > 75%
+        condition: C
+        for: 10m
+        labels:
+          channel: scale-workloads
+          severity: warning
+        annotations:
+          summary: 'Node {{ $labels.node }} memory usage is above 75%'
+          description: 'Node memory usage is {{ $values.B.Value | printf "%.1f" }}%.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: '(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [75]
+                    type: gt
+                  unloadEvaluator:
+                    params: [65]
+                    type: lt
+
+  # ── Pod Health ───────────────────────────────────────────────────────────────
+
+  - orgId: 1
+    name: pod-health
+    folder: Platform Alerts
+    interval: 1m
+    rules:
+
+      - uid: pod-crashloop-error
+        title: Pod CrashLoopBackOff (non-critical namespaces)
+        condition: C
+        for: 5m
+        labels:
+          channel: error
+          severity: error
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} is in CrashLoopBackOff'
+          description: Pod has been crash-looping for more than 5 minutes.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff",namespace!~"${critical_namespaces}"}'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+      - uid: pod-crashloop-critical
+        title: Pod CrashLoopBackOff (critical namespaces)
+        condition: C
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: 'CRITICAL: Pod {{ $labels.namespace }}/{{ $labels.pod }} is in CrashLoopBackOff'
+          description: Critical namespace pod has been crash-looping for more than 2 minutes.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff",namespace=~"${critical_namespaces}"}'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+      - uid: pod-unschedulable
+        title: Pod Unschedulable
+        condition: C
+        for: 5m
+        labels:
+          channel: warning
+          severity: warning
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} cannot be scheduled'
+          description: 'Pod has been unschedulable for more than 5 minutes. Possible causes: insufficient resources or taints.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_pod_status_unschedulable > 0'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+      - uid: node-memory-pressure
+        title: Node Memory Pressure
+        condition: C
+        for: 5m
+        labels:
+          channel: warning
+          severity: warning
+        annotations:
+          summary: 'Node {{ $labels.node }} is under memory pressure'
+          description: 'Kubernetes has flagged node {{ $labels.node }} with MemoryPressure condition.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_node_status_condition{condition="MemoryPressure",status="true"} == 1'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+  # ── Deployment Health ────────────────────────────────────────────────────────
+
+  - orgId: 1
+    name: deployment-health
+    folder: Platform Alerts
+    interval: 1m
+    rules:
+
+      - uid: deployment-zero-replicas-error
+        title: Deployment Zero Replicas (non-critical namespaces)
+        condition: C
+        for: 5m
+        labels:
+          channel: error
+          severity: error
+        annotations:
+          summary: 'Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has 0 ready replicas'
+          description: Deployment has had 0 ready replicas for more than 5 minutes.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_deployment_status_replicas_ready{namespace!~"${critical_namespaces}"} == 0'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+      - uid: statefulset-zero-replicas-error
+        title: StatefulSet Zero Replicas (non-critical namespaces)
+        condition: C
+        for: 5m
+        labels:
+          channel: error
+          severity: error
+        annotations:
+          summary: 'StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} has 0 ready replicas'
+          description: StatefulSet has had 0 ready replicas for more than 5 minutes.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_statefulset_status_replicas_ready{namespace!~"${critical_namespaces}"} == 0'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+      - uid: deployment-zero-replicas-critical
+        title: Deployment Zero Replicas (critical namespaces)
+        condition: C
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: 'CRITICAL: Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has 0 ready replicas'
+          description: Critical namespace deployment has had 0 ready replicas for more than 2 minutes.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_deployment_status_replicas_ready{namespace=~"${critical_namespaces}"} == 0'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+      - uid: statefulset-zero-replicas-critical
+        title: StatefulSet Zero Replicas (critical namespaces)
+        condition: C
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: 'CRITICAL: StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} has 0 ready replicas'
+          description: Critical namespace StatefulSet has had 0 ready replicas for more than 2 minutes.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_statefulset_status_replicas_ready{namespace=~"${critical_namespaces}"} == 0'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+      - uid: cnpg-cluster-down
+        title: CNPG Cluster Has No Ready Instances
+        condition: C
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: 'CRITICAL: CloudNativePG cluster {{ $labels.namespace }}/{{ $labels.cluster }} has no ready instances'
+          description: CNPG cluster has had 0 ready instances for more than 2 minutes. Database is unavailable.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'cnpg_cluster_ready_instances == 0'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt

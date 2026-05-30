@@ -1,3 +1,37 @@
+resource "null_resource" "argocd_crds" {
+  triggers = {
+    chart_version = var.argocd_chart_version
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      helm repo add argo https://argoproj.github.io/argo-helm --force-update
+      helm template argocd argo/argo-cd \
+        --version ${self.triggers.chart_version} \
+        --namespace argocd \
+        --include-crds \
+        --no-hooks \
+      | python3 -c 'import sys; docs=sys.stdin.read().split("\n---"); crds=[d for d in docs if "kind: CustomResourceDefinition" in d]; print("\n---".join(crds))' \
+      | kubectl apply --server-side --force-conflicts -f -
+    EOT
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      helm template argocd argo/argo-cd \
+        --version ${self.triggers.chart_version} \
+        --namespace argocd \
+        --include-crds \
+        --no-hooks \
+      | python3 -c 'import sys; docs=sys.stdin.read().split("\n---"); crds=[d for d in docs if "kind: CustomResourceDefinition" in d]; print("\n---".join(crds))' \
+      | kubectl delete --ignore-not-found=true -f -
+    EOT
+  }
+
+  depends_on = [kubernetes_namespace.argocd]
+}
+
 resource "helm_release" "argocd" {
   name             = "argocd"
   repository       = "https://argoproj.github.io/argo-helm"
@@ -8,6 +42,10 @@ resource "helm_release" "argocd" {
 
   values = [
     yamlencode({
+      crds = {
+        install = false
+      }
+
       global = {
         domain = var.argocd_domain
       }
@@ -74,5 +112,5 @@ resource "helm_release" "argocd" {
   wait_for_jobs = true
   timeout       = 600
 
-  depends_on = [kubernetes_namespace.argocd]
+  depends_on = [null_resource.argocd_crds, kubernetes_namespace.argocd]
 }

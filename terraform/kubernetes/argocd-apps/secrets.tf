@@ -53,6 +53,26 @@ resource "kubernetes_secret" "users_microservice_db" {
   }
 }
 
+# * GRAFANA ALERTING SECRETS
+
+resource "kubernetes_secret" "grafana_alerting_secrets" {
+  metadata {
+    name      = "grafana-alerting-secrets"
+    namespace = kubernetes_namespace.grafana.metadata[0].name
+  }
+
+  type = "Opaque"
+
+  data = {
+    SLACK_WEBHOOK_SCALE_WORKLOADS = var.slack_webhook_scale_workloads
+    SLACK_WEBHOOK_CRITICAL        = var.slack_webhook_critical
+    SLACK_WEBHOOK_ERROR           = var.slack_webhook_error
+    SLACK_WEBHOOK_WARNING         = var.slack_webhook_warning
+    SLACK_WEBHOOK_DATASOURCE_ERRORS = var.slack_webhook_datasource_errors
+    SLACK_WEBHOOK_DEFAULT = var.slack_webhook_default
+  }
+}
+
 # * ARGOCD OCI REPO REGISTRATIONS
 
 # Kubernetes Event Exporter
