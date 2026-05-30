@@ -813,6 +813,20 @@
   "templating": {
     "list": [
       {
+      "current": {
+        "selected": true,
+        "text": "Prometheus",
+        "value": "prometheus-main"
+      },
+      "hide": 0,
+      "includeAll": false,
+      "name": "DS_PROMETHEUS",
+      "options": [],
+      "query": "prometheus",
+      "refresh": 1,
+      "type": "datasource"
+    },
+      {
         "allValue": ".*",
         "current": {},
         "datasource": {
