@@ -927,3 +927,606 @@ groups:
                 - evaluator:
                     params: [0]
                     type: gt
+  # ── SLO Burn Rate Alerts ─────────────────────────────────────────────────────
+  # Multi-window burn rate alerts generated from Sloth recording rules.
+  # Threshold formula: burn_rate × (1 - objective_ratio)
+  # Page  (fast burn): 14.4× — short window 5m, long window 1h
+  # Ticket (slow burn):  6×  — short window 30m, long window 6h
+  # noDataState=OK: SLO is vacuously satisfied when no traffic flows.
+  # Adjust thresholds here once actual recording rule labels are confirmed.
+
+  - orgId: 1
+    name: slo-alerts
+    folder: Platform Alerts
+    interval: 1m
+    rules:
+
+    # ── users-microservice / requests-availability (99.5% SLO) ──────────────────
+
+    - uid: slo-users-availability-page
+      title: 'SLO: Users Service Availability Fast Burn (>14.4×)'
+      condition: D
+      noDataState: OK
+      execErrState: Error
+      for: 2m
+      labels:
+        channel: critical
+        severity: critical
+      annotations:
+        summary: 'Users service burning availability error budget at >14.4× rate'
+        description: '1h error ratio: {{ $values.A.Value | printf "%.4f" }}, 5m error ratio: {{ $values.B.Value | printf "%.4f" }}. At this rate the 30-day budget exhausts in ~2 days.'
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate1h{sloth_service="users-microservice",sloth_slo="requests-availability"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate5m{sloth_service="users-microservice",sloth_slo="requests-availability"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: math
+            refId: C
+            expression: '$A > 0.072 && $B > 0.072'
+        - refId: D
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: threshold
+            refId: D
+            expression: C
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+
+    - uid: slo-users-availability-ticket
+      title: 'SLO: Users Service Availability Slow Burn (>6×)'
+      condition: D
+      noDataState: OK
+      execErrState: Error
+      for: 15m
+      labels:
+        channel: error
+        severity: error
+      annotations:
+        summary: 'Users service slowly burning availability error budget at >6× rate'
+        description: '6h error ratio: {{ $values.A.Value | printf "%.4f" }}, 30m error ratio: {{ $values.B.Value | printf "%.4f" }}. At this rate the budget exhausts in ~5 days.'
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate6h{sloth_service="users-microservice",sloth_slo="requests-availability"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate30m{sloth_service="users-microservice",sloth_slo="requests-availability"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: math
+            refId: C
+            expression: '$A > 0.030 && $B > 0.030'
+        - refId: D
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: threshold
+            refId: D
+            expression: C
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+
+    # ── users-microservice / requests-latency (99.0% SLO) ───────────────────────
+
+    - uid: slo-users-latency-page
+      title: 'SLO: Users Service Latency Fast Burn (>14.4×)'
+      condition: D
+      noDataState: OK
+      execErrState: Error
+      for: 2m
+      labels:
+        channel: error
+        severity: error
+      annotations:
+        summary: 'Users service burning latency error budget at >14.4× rate'
+        description: '1h error ratio: {{ $values.A.Value | printf "%.4f" }}, 5m error ratio: {{ $values.B.Value | printf "%.4f" }}.'
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate1h{sloth_service="users-microservice",sloth_slo="requests-latency"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate5m{sloth_service="users-microservice",sloth_slo="requests-latency"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: math
+            refId: C
+            expression: '$A > 0.144 && $B > 0.144'
+        - refId: D
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: threshold
+            refId: D
+            expression: C
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+
+    - uid: slo-users-latency-ticket
+      title: 'SLO: Users Service Latency Slow Burn (>6×)'
+      condition: D
+      noDataState: OK
+      execErrState: Error
+      for: 15m
+      labels:
+        channel: scale-workloads
+        severity: warning
+      annotations:
+        summary: 'Users service slowly burning latency error budget at >6× rate'
+        description: '6h error ratio: {{ $values.A.Value | printf "%.4f" }}, 30m error ratio: {{ $values.B.Value | printf "%.4f" }}.'
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate6h{sloth_service="users-microservice",sloth_slo="requests-latency"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate30m{sloth_service="users-microservice",sloth_slo="requests-latency"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: math
+            refId: C
+            expression: '$A > 0.060 && $B > 0.060'
+        - refId: D
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: threshold
+            refId: D
+            expression: C
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+
+    # ── store-ui / requests-availability (99.0% SLO) ────────────────────────────
+
+    - uid: slo-store-ui-availability-page
+      title: 'SLO: Store UI Availability Fast Burn (>14.4×)'
+      condition: D
+      noDataState: OK
+      execErrState: Error
+      for: 2m
+      labels:
+        channel: error
+        severity: error
+      annotations:
+        summary: 'Store UI burning availability error budget at >14.4× rate'
+        description: '1h error ratio: {{ $values.A.Value | printf "%.4f" }}, 5m error ratio: {{ $values.B.Value | printf "%.4f" }}.'
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate1h{sloth_service="store-ui",sloth_slo="requests-availability"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate5m{sloth_service="store-ui",sloth_slo="requests-availability"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: math
+            refId: C
+            expression: '$A > 0.144 && $B > 0.144'
+        - refId: D
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: threshold
+            refId: D
+            expression: C
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+
+    - uid: slo-store-ui-availability-ticket
+      title: 'SLO: Store UI Availability Slow Burn (>6×)'
+      condition: D
+      noDataState: OK
+      execErrState: Error
+      for: 15m
+      labels:
+        channel: warning
+        severity: warning
+      annotations:
+        summary: 'Store UI slowly burning availability error budget at >6× rate'
+        description: '6h error ratio: {{ $values.A.Value | printf "%.4f" }}, 30m error ratio: {{ $values.B.Value | printf "%.4f" }}.'
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate6h{sloth_service="store-ui",sloth_slo="requests-availability"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate30m{sloth_service="store-ui",sloth_slo="requests-availability"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: math
+            refId: C
+            expression: '$A > 0.060 && $B > 0.060'
+        - refId: D
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: threshold
+            refId: D
+            expression: C
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+
+    # ── store-ui / requests-latency (99.0% SLO, 1000ms) ─────────────────────────
+
+    - uid: slo-store-ui-latency-page
+      title: 'SLO: Store UI Latency Fast Burn (>14.4×)'
+      condition: D
+      noDataState: OK
+      execErrState: Error
+      for: 2m
+      labels:
+        channel: error
+        severity: error
+      annotations:
+        summary: 'Store UI burning latency error budget at >14.4× rate'
+        description: '1h error ratio: {{ $values.A.Value | printf "%.4f" }}, 5m error ratio: {{ $values.B.Value | printf "%.4f" }}.'
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate1h{sloth_service="store-ui",sloth_slo="requests-latency"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate5m{sloth_service="store-ui",sloth_slo="requests-latency"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: math
+            refId: C
+            expression: '$A > 0.144 && $B > 0.144'
+        - refId: D
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: threshold
+            refId: D
+            expression: C
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+
+    - uid: slo-store-ui-latency-ticket
+      title: 'SLO: Store UI Latency Slow Burn (>6×)'
+      condition: D
+      noDataState: OK
+      execErrState: Error
+      for: 15m
+      labels:
+        channel: scale-workloads
+        severity: warning
+      annotations:
+        summary: 'Store UI slowly burning latency error budget at >6× rate'
+        description: '6h error ratio: {{ $values.A.Value | printf "%.4f" }}, 30m error ratio: {{ $values.B.Value | printf "%.4f" }}.'
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate6h{sloth_service="store-ui",sloth_slo="requests-latency"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate30m{sloth_service="store-ui",sloth_slo="requests-latency"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: math
+            refId: C
+            expression: '$A > 0.060 && $B > 0.060'
+        - refId: D
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: threshold
+            refId: D
+            expression: C
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+
+    # ── postgres-cluster / cluster-availability (99.9% SLO) ─────────────────────
+
+    - uid: slo-postgres-availability-page
+      title: 'SLO: Postgres Cluster Availability Fast Burn (>14.4×)'
+      condition: D
+      noDataState: OK
+      execErrState: Error
+      for: 2m
+      labels:
+        channel: critical
+        severity: critical
+      annotations:
+        summary: 'CNPG cluster burning availability error budget at >14.4× rate'
+        description: '1h error ratio: {{ $values.A.Value | printf "%.5f" }}, 5m error ratio: {{ $values.B.Value | printf "%.5f" }}.'
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate1h{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate5m{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: math
+            refId: C
+            expression: '$A > 0.01440 && $B > 0.01440'
+        - refId: D
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: threshold
+            refId: D
+            expression: C
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+
+    - uid: slo-postgres-availability-ticket
+      title: 'SLO: Postgres Cluster Availability Slow Burn (>6×)'
+      condition: D
+      noDataState: OK
+      execErrState: Error
+      for: 15m
+      labels:
+        channel: error
+        severity: error
+      annotations:
+        summary: 'CNPG cluster slowly burning availability error budget at >6× rate'
+        description: '6h error ratio: {{ $values.A.Value | printf "%.5f" }}, 30m error ratio: {{ $values.B.Value | printf "%.5f" }}.'
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate6h{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            expr: 'slo:sli_error:ratio_rate30m{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: math
+            refId: C
+            expression: '$A > 0.00600 && $B > 0.00600'
+        - refId: D
+          datasourceUid: __expr__
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            type: threshold
+            refId: D
+            expression: C
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt

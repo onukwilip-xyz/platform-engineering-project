@@ -1,0 +1,110 @@
+{{- if .Values.slo.enabled }}
+apiVersion: sloth.slok.dev/v1
+kind: PrometheusServiceLevel
+metadata:
+  name: users-microservice
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: users-microservice
+    team: platform
+spec:
+  service: "users-microservice"
+  labels:
+    team: platform
+    tier: microservice
+
+  slos:
+
+    - name: requests-availability
+      objective: {{ .Values.slo.availability.objective }}
+      description: >
+        {{ .Values.slo.availability.objective }}% of HTTP requests to the Users
+        microservice must complete with a clean response (1xx–4xx, no Envoy
+        transport error) over a 30-day window. Errors include 5xx responses,
+        timeouts (UT), upstream connection failures (UF/UC), and circuit-breaker
+        overflows (UO) recorded by the destination Envoy sidecar.
+      sli:
+        events:
+          # error = total − good; good = clean HTTP code (1xx-4xx) with no Envoy flag.
+          # Captures 5xx + response_code=0 transport failures (UT/UF/UC/DC/UO).
+          errorQuery: >-
+            sum(rate(istio_requests_total{
+              reporter="destination",
+              destination_service_name="{{ .Values.service.name }}",
+              destination_service_namespace="{{ .Release.Namespace }}"
+            }[{{`{{.window}}`}}]))
+            -
+            sum(rate(istio_requests_total{
+              reporter="destination",
+              destination_service_name="{{ .Values.service.name }}",
+              destination_service_namespace="{{ .Release.Namespace }}",
+              response_code=~"[1234]..",
+              response_flags="-"
+            }[{{`{{.window}}`}}]))
+          totalQuery: >-
+            sum(rate(istio_requests_total{
+              reporter="destination",
+              destination_service_name="{{ .Values.service.name }}",
+              destination_service_namespace="{{ .Release.Namespace }}"
+            }[{{`{{.window}}`}}]))
+      alerting:
+        name: UsersServiceHighErrorRate
+        labels:
+          tier: microservice
+          service: users-microservice
+        annotations:
+          summary: "Users service error rate is burning through the error budget"
+          runbook: "https://argocd.internal.pe.onukwilip.xyz/applications/users-microservice"
+        pageAlert:
+          labels:
+            channel: critical
+            severity: critical
+        ticketAlert:
+          labels:
+            channel: error
+            severity: error
+
+    - name: requests-latency
+      objective: {{ .Values.slo.latency.objective }}
+      description: >
+        {{ .Values.slo.latency.objective }}% of HTTP requests to the Users
+        microservice must complete within {{ .Values.slo.latency.thresholdMs }}ms
+        over a 30-day window.
+      sli:
+        events:
+          # Slow requests = total − requests within threshold bucket
+          errorQuery: >-
+            sum(rate(istio_requests_total{
+              reporter="destination",
+              destination_service_name="{{ .Values.service.name }}",
+              destination_service_namespace="{{ .Release.Namespace }}"
+            }[{{`{{.window}}`}}]))
+            -
+            sum(rate(istio_request_duration_milliseconds_bucket{
+              reporter="destination",
+              destination_service_name="{{ .Values.service.name }}",
+              destination_service_namespace="{{ .Release.Namespace }}",
+              le="{{ .Values.slo.latency.thresholdMs }}"
+            }[{{`{{.window}}`}}]))
+          totalQuery: >-
+            sum(rate(istio_requests_total{
+              reporter="destination",
+              destination_service_name="{{ .Values.service.name }}",
+              destination_service_namespace="{{ .Release.Namespace }}"
+            }[{{`{{.window}}`}}]))
+      alerting:
+        name: UsersServiceHighLatency
+        labels:
+          tier: microservice
+          service: users-microservice
+        annotations:
+          summary: "Users service latency is burning through the error budget"
+        pageAlert:
+          labels:
+            channel: error
+            severity: error
+        ticketAlert:
+          labels:
+            channel: scale-workloads
+            severity: warning
+{{- end }}

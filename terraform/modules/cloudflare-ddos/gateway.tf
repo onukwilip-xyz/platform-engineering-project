@@ -11,12 +11,6 @@ resource "kubernetes_manifest" "gateway_public_cf" {
     }
     spec = {
       gatewayClassName = "istio"
-      # addresses = [
-      #   {
-      #     type  = "IPAddress"
-      #     value = google_compute_address.cf_gateway_ip.address
-      #   }
-      # ]
       addresses = [
         {
           type  = "Hostname"
