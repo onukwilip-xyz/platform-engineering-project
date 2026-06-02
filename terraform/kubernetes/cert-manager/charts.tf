@@ -1,3 +1,37 @@
+resource "null_resource" "cert_manager_crds" {
+  triggers = {
+    chart_version = var.cert_manager_chart_version
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      helm repo add jetstack https://charts.jetstack.io --force-update
+      helm template cert-manager jetstack/cert-manager \
+        --version ${self.triggers.chart_version} \
+        --namespace cert-manager \
+        --set crds.enabled=true \
+        --no-hooks \
+      | python3 -c 'import sys; docs=sys.stdin.read().split("\n---"); crds=[d for d in docs if "kind: CustomResourceDefinition" in d]; print("\n---".join(crds))' \
+      | kubectl apply --server-side --force-conflicts -f -
+    EOT
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      helm template cert-manager jetstack/cert-manager \
+        --version ${self.triggers.chart_version} \
+        --namespace cert-manager \
+        --set crds.enabled=true \
+        --no-hooks \
+      | python3 -c 'import sys; docs=sys.stdin.read().split("\n---"); crds=[d for d in docs if "kind: CustomResourceDefinition" in d]; print("\n---".join(crds))' \
+      | kubectl delete --ignore-not-found=true -f -
+    EOT
+  }
+
+  depends_on = [kubernetes_namespace.cert_manager]
+}
+
 resource "helm_release" "cert_manager" {
   name             = "cert-manager"
   repository       = "https://charts.jetstack.io"
@@ -9,7 +43,7 @@ resource "helm_release" "cert_manager" {
   values = [
     yamlencode({
       crds = {
-        enabled = true
+        enabled = false
       },
       serviceAccount = {
         name = var.cert_manager_k8s_service_account_name
@@ -26,6 +60,7 @@ resource "helm_release" "cert_manager" {
   timeout       = 1200
 
   depends_on = [
+    null_resource.cert_manager_crds,
     kubernetes_namespace.cert_manager,
     google_service_account_iam_member.cert_manager_workload_identity,
   ]
