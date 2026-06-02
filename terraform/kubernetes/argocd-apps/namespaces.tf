@@ -70,15 +70,7 @@ resource "kubernetes_namespace" "tracing" {
     }
   }
 
-  # Safety net: strip any Kiali CR finalizers that the Kiali operator left behind.
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<-CMD
-      kubectl get kialis.kiali.io -n ${self.metadata[0].name} -o name 2>/dev/null | \
-        xargs -I {} kubectl patch {} -n ${self.metadata[0].name} \
-        --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-    CMD
-  }
+
 }
 
 resource "kubernetes_namespace" "events" {

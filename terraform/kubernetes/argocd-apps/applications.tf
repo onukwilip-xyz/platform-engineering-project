@@ -51,7 +51,7 @@ resource "kubernetes_manifest" "postgres_cluster" {
       name      = "postgres-cluster"
       namespace = var.argocd_namespace
       annotations = {
-        "argocd.argoproj.io/sync-wave" = "1"
+        "argocd.argoproj.io/sync-wave" = "2"
       }
       finalizers = ["resources-finalizer.argocd.argoproj.io"]
     }
@@ -114,7 +114,7 @@ resource "kubernetes_manifest" "kube_prometheus_stack" {
       name      = "kube-prometheus-stack"
       namespace = var.argocd_namespace
       annotations = {
-        "argocd.argoproj.io/sync-wave"       = "2"
+        "argocd.argoproj.io/sync-wave"       = "1"
         "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
       }
       finalizers = ["resources-finalizer.argocd.argoproj.io"]
@@ -679,24 +679,6 @@ resource "kubernetes_manifest" "kiali" {
         syncOptions = ["CreateNamespace=false", "ServerSideApply=true", "ServerSideDiff=true"]
       }
     }
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<-CMD
-      # 1. Strip ArgoCD finalizer from the Application so ArgoCD cascade-deletes immediately
-      kubectl patch application ${self.manifest.metadata.name} \
-        -n ${self.manifest.metadata.namespace} \
-        --type=merge -p '{"metadata":{"finalizers":[]}}' || true
-
-      # 2. Strip kiali.io/finalizer from all Kiali CRs in the destination namespace.
-      kubectl get kialis.kiali.io \
-        -n ${self.manifest.spec.destination.namespace} \
-        -o name 2>/dev/null | \
-        xargs -I {} kubectl patch {} \
-          -n ${self.manifest.spec.destination.namespace} \
-          --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-    CMD
   }
 
   depends_on = [kubernetes_namespace.tracing]
