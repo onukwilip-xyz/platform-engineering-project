@@ -1,0 +1,47 @@
+apiVersion: sloth.slok.dev/v1
+kind: PrometheusServiceLevel
+metadata:
+  name: postgres-cluster
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: postgres-cluster
+    team: platform
+spec:
+  service: "postgres-cluster"
+  labels:
+    team: platform
+    tier: database
+
+  slos:
+
+    - name: cluster-availability
+      objective: 99.9
+      description: >
+        99.9% of the time, the CNPG postgres-cluster must have at least one ready
+        instance. Measured as instantaneous cluster health over a 30-day window.
+      sli:
+        raw:
+          errorRatioQuery: >-
+            clamp_max(
+              1 - clamp_min(
+                sum(cnpg_cluster_ready_instances{cluster="postgres-cluster"}),
+              1),
+            1)
+      alerting:
+        name: PostgresClusterUnavailable
+        labels:
+          tier: database
+          service: postgres-cluster
+        annotations:
+          summary: "CNPG postgres-cluster has no ready instances — database is unavailable"
+          description: >-
+            The CloudNativePG cluster has 0 ready instances and is burning through
+            its error budget. Check CNPG operator and pod status in the postgres namespace.
+        pageAlert:
+          labels:
+            channel: critical
+            severity: critical
+        ticketAlert:
+          labels:
+            channel: error
+            severity: error

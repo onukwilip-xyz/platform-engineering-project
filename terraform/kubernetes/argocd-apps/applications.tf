@@ -51,7 +51,7 @@ resource "kubernetes_manifest" "postgres_cluster" {
       name      = "postgres-cluster"
       namespace = var.argocd_namespace
       annotations = {
-        "argocd.argoproj.io/sync-wave" = "1"
+        "argocd.argoproj.io/sync-wave" = "2"
       }
       finalizers = ["resources-finalizer.argocd.argoproj.io"]
     }
@@ -114,7 +114,7 @@ resource "kubernetes_manifest" "kube_prometheus_stack" {
       name      = "kube-prometheus-stack"
       namespace = var.argocd_namespace
       annotations = {
-        "argocd.argoproj.io/sync-wave"       = "2"
+        "argocd.argoproj.io/sync-wave"       = "1"
         "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
       }
       finalizers = ["resources-finalizer.argocd.argoproj.io"]
@@ -329,6 +329,54 @@ resource "kubernetes_manifest" "grafana" {
     kubernetes_config_map.grafana_alerting_policies,
     kubernetes_config_map.grafana_alerting_rules,
   ]
+}
+
+resource "kubernetes_manifest" "sloth" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "sloth"
+      namespace = var.argocd_namespace
+      annotations = {
+        "argocd.argoproj.io/sync-wave"       = "4"
+        "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
+      }
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = "https://slok.github.io/sloth"
+        chart          = "sloth"
+        targetRevision = var.sloth_chart_version
+        helm = {
+          values = yamlencode({
+            serviceMonitor = {
+              enabled = true
+            }
+            resources = {
+              requests = { cpu = "50m", memory = "64Mi" }
+              limits   = { cpu = "200m", memory = "128Mi" }
+            }
+          })
+        }
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = kubernetes_namespace.monitoring.metadata[0].name
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = ["CreateNamespace=false", "ServerSideApply=true", "ServerSideDiff=true"]
+      }
+    }
+  }
+
+  depends_on = [kubernetes_manifest.kube_prometheus_stack]
 }
 
 # Loki
@@ -679,24 +727,6 @@ resource "kubernetes_manifest" "kiali" {
         syncOptions = ["CreateNamespace=false", "ServerSideApply=true", "ServerSideDiff=true"]
       }
     }
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<-CMD
-      # 1. Strip ArgoCD finalizer from the Application so ArgoCD cascade-deletes immediately
-      kubectl patch application ${self.manifest.metadata.name} \
-        -n ${self.manifest.metadata.namespace} \
-        --type=merge -p '{"metadata":{"finalizers":[]}}' || true
-
-      # 2. Strip kiali.io/finalizer from all Kiali CRs in the destination namespace.
-      kubectl get kialis.kiali.io \
-        -n ${self.manifest.spec.destination.namespace} \
-        -o name 2>/dev/null | \
-        xargs -I {} kubectl patch {} \
-          -n ${self.manifest.spec.destination.namespace} \
-          --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-    CMD
   }
 
   depends_on = [kubernetes_namespace.tracing]
@@ -1134,25 +1164,26 @@ resource "kubernetes_manifest" "users_microservice" {
             })
           }
         },
-        # {
-        #   repoURL        = var.repo_url
-        #   targetRevision = var.target_revision
-        #   path           = "terraform/kubernetes/manifests/users"
-        #   helm = {
-        #     values = yamlencode({
-        #       service = {
-        #         name         = "users-microservice-service"
-        #         externalHost = "users.internal.pe.onukwilip.xyz"
-        #       }
-        #       gateways = ["mesh", "istio-ingress-internal/private"]
-        #       destinationRule = {
-        #         connectionPool = {
-        #           enabled = false
-        #         }
-        #       }
-        #     })
-        #   }
-        # },
+        {
+          repoURL        = var.repo_url
+          targetRevision = var.target_revision
+          path           = "terraform/kubernetes/manifests/users"
+          helm = {
+            values = yamlencode({
+              service = {
+                name         = "users-microservice-service"
+                externalHost = "users.internal.pe.onukwilip.xyz"
+              }
+              gateways = ["mesh", "istio-ingress-internal/private"]
+              destinationRule = {
+                connectionPool = {
+                  enabled = false
+                }
+              }
+              slo = { enabled = true }
+            })
+          }
+        },
       ]
       destination = {
         server    = "https://kubernetes.default.svc"
@@ -1190,32 +1221,44 @@ resource "kubernetes_manifest" "store_ui" {
     }
     spec = {
       project = "default"
-      source = {
-        repoURL        = var.repo_url
-        targetRevision = var.target_revision
-        path           = "helm/custom-charts/microservice"
-        helm = {
-          values = yamlencode({
-            useDeployment = true
-            replicas      = 1
+      sources = [
+        {
+          repoURL        = var.repo_url
+          targetRevision = var.target_revision
+          path           = "helm/custom-charts/microservice"
+          helm = {
+            values = yamlencode({
+              useDeployment = true
+              replicas      = 1
 
-            containers = [
-              {
-                name            = "store-ui"
-                image           = local.store_ui_image
-                imagePullPolicy = "IfNotPresent"
-              },
-            ]
+              containers = [
+                {
+                  name            = "store-ui"
+                  image           = local.store_ui_image
+                  imagePullPolicy = "IfNotPresent"
+                },
+              ]
 
-            service = {
-              enabled    = true
-              type       = "ClusterIP"
-              port       = 80
-              targetPort = 80
-            }
-          })
-        }
-      }
+              service = {
+                enabled    = true
+                type       = "ClusterIP"
+                port       = 80
+                targetPort = 80
+              }
+            })
+          }
+        },
+        {
+          repoURL        = var.repo_url
+          targetRevision = var.target_revision
+          path           = "terraform/kubernetes/manifests/store-ui"
+          helm = {
+            values = yamlencode({
+              slo = { enabled = true }
+            })
+          }
+        },
+      ]
       destination = {
         server    = "https://kubernetes.default.svc"
         namespace = kubernetes_namespace.store_ui.metadata[0].name

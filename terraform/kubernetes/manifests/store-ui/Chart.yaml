@@ -1,0 +1,4 @@
+apiVersion: v2
+name: store-ui-manifests
+version: 0.1.0
+description: Kubernetes manifests for the store-ui service — SLOs and future Istio policies.

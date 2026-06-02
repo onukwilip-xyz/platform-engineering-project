@@ -13,5 +13,7 @@ locals {
     "kube-events-exporter.json"       = "Kubernetes Events"
     "detailed-cpu-usage-metrics.json" = "Kubernetes"
     "cloud-native-pg.json"            = "Database"
+    "sloth-slo-overview.json"         = "SLOs"
+    "sloth-slo-detail.json"           = "SLOs"
   }
 }

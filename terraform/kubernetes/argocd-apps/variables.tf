@@ -248,3 +248,11 @@ variable "slack_webhook_default" {
   sensitive   = true
   description = "Slack incoming webhook URL for the default contact point."
 }
+
+# ── Sloth SLO ─────────────────────────────────────────────────────────────────
+
+variable "sloth_chart_version" {
+  type        = string
+  description = "Pinned version of the slok/sloth Helm chart. Bump via PR to roll the SLO operator forward."
+  default     = "0.11.0"
+}
