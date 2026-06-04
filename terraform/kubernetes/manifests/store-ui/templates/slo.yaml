@@ -27,13 +27,13 @@ spec:
         events:
           errorQuery: >-
             sum(rate(istio_requests_total{
-              reporter="destination",
+              reporter="source",
               destination_service_name="{{ .Values.service.name }}",
               destination_service_namespace="{{ .Release.Namespace }}"
             }[{{`{{.window}}`}}]))
             -
             sum(rate(istio_requests_total{
-              reporter="destination",
+              reporter="source",
               destination_service_name="{{ .Values.service.name }}",
               destination_service_namespace="{{ .Release.Namespace }}",
               response_code=~"[1234]..",
@@ -41,7 +41,7 @@ spec:
             }[{{`{{.window}}`}}]))
           totalQuery: >-
             sum(rate(istio_requests_total{
-              reporter="destination",
+              reporter="source",
               destination_service_name="{{ .Values.service.name }}",
               destination_service_namespace="{{ .Release.Namespace }}"
             }[{{`{{.window}}`}}]))
@@ -71,20 +71,20 @@ spec:
           # Slow requests = total − requests within threshold bucket
           errorQuery: >-
             sum(rate(istio_requests_total{
-              reporter="destination",
+              reporter="source",
               destination_service_name="{{ .Values.service.name }}",
               destination_service_namespace="{{ .Release.Namespace }}"
             }[{{`{{.window}}`}}]))
             -
             sum(rate(istio_request_duration_milliseconds_bucket{
-              reporter="destination",
+              reporter="source",
               destination_service_name="{{ .Values.service.name }}",
               destination_service_namespace="{{ .Release.Namespace }}",
               le="{{ .Values.slo.latency.thresholdMs }}"
             }[{{`{{.window}}`}}]))
           totalQuery: >-
             sum(rate(istio_requests_total{
-              reporter="destination",
+              reporter="source",
               destination_service_name="{{ .Values.service.name }}",
               destination_service_namespace="{{ .Release.Namespace }}"
             }[{{`{{.window}}`}}]))
