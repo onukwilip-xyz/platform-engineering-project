@@ -5,8 +5,8 @@ slo:
   enabled: true
 
   availability:
-    objective: 99.0   # 99% of requests must be non-5xx
+    objective: 99.0
 
   latency:
-    objective: 99.0   # 99% of requests must complete within thresholdMs
-    thresholdMs: 1000 # Istio default buckets (ms): 1,5,10,25,50,100,250,500,1000,2500,5000,10000
+    objective: 99.0
+    thresholdMs: 1000
