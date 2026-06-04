@@ -1215,13 +1215,13 @@
       {
         "current": {
           "selected": false,
-          "text": "prometheus",
-          "value": "prometheus"
+          "text": "Prometheus",
+          "value": "prometheus-main"
         },
         "hide": 0,
         "includeAll": false,
         "multi": false,
-        "name": "Datasource",
+        "name": "DS_PROMETHEUS",
         "options": [],
         "query": "prometheus",
         "queryValue": "",

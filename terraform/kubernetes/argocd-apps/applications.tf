@@ -331,6 +331,7 @@ resource "kubernetes_manifest" "grafana" {
   ]
 }
 
+# Sloth
 resource "kubernetes_manifest" "sloth" {
   manifest = {
     apiVersion = "argoproj.io/v1alpha1"
@@ -991,18 +992,13 @@ resource "kubernetes_manifest" "kubernetes_event_exporter" {
                       count        = "{{ .Count }}"
                       cluster_name = "{{ .ClusterName }}"
 
-                      # InvolvedObject (old-style) & Regarding (new-style)
                       namespace = "{{ .InvolvedObject.Namespace }}"
                       kind      = "{{ .InvolvedObject.Kind }}"
                       name      = "{{ .InvolvedObject.Name }}"
 
-                      # Source component: old-style uses Source.Component, new-style uses
-                      # ReportingComponent directly on the event
                       component           = "{{ .Source.Component }}"
                       host                = "{{ .Source.Host }}"
 
-                      # Timestamps: old-style uses FirstTimestamp/LastTimestamp,
-                      # new-style uses EventTime
                       first_time = "{{ .FirstTimestamp }}"
                       last_time  = "{{ .LastTimestamp }}"
                       event_time = "{{ .EventTime }}"
@@ -1194,12 +1190,24 @@ resource "kubernetes_manifest" "users_microservice" {
           prune    = true
           selfHeal = true
         }
-        syncOptions = ["CreateNamespace=false"]
+        syncOptions = [
+          "CreateNamespace=false",
+          "SkipDryRunOnMissingResource=true",
+        ]
+        retry = {
+          limit = 5
+          backoff = {
+            duration    = "10s"
+            factor      = 2
+            maxDuration = "3m"
+          }
+        }
       }
     }
   }
 
   depends_on = [
+    kubernetes_manifest.sloth,
     kubernetes_manifest.postgres_cluster,
     kubernetes_config_map.users_microservice,
     kubernetes_secret.users_microservice_db,
@@ -1268,12 +1276,26 @@ resource "kubernetes_manifest" "store_ui" {
           prune    = true
           selfHeal = true
         }
-        syncOptions = ["CreateNamespace=false"]
+        syncOptions = [
+          "CreateNamespace=false",
+          "SkipDryRunOnMissingResource=true",
+        ]
+        retry = {
+          limit = 5
+          backoff = {
+            duration    = "10s"
+            factor      = 2
+            maxDuration = "3m"
+          }
+        }
       }
     }
   }
 
-  depends_on = [kubernetes_namespace.store_ui]
+  depends_on = [
+    kubernetes_manifest.sloth,
+    kubernetes_namespace.store_ui,
+  ]
 }
 
 # * LOAD TESTING STACK
