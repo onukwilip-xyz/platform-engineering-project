@@ -928,12 +928,16 @@ groups:
                     type: gt
   
   # ── SLO Burn Rate Alerts ─────────────────────────────────────────────────────
-  
+ 
   - orgId: 1
     name: slo-alerts
     folder: Platform Alerts
     interval: 1m
     rules:
+
+    # ── users-microservice / requests-availability (99.5% SLO, budget=0.005) ────
+    # Page:   (5m>0.072 AND 1h>0.072) OR (30m>0.030 AND 6h>0.030)
+    # Ticket: (2h>0.015 AND 1d>0.015) OR (6h>0.005 AND 3d>0.005)
 
     - uid: slo-users-availability-page
       title: 'SLO: Users Service Availability Fast Burn'
@@ -957,7 +961,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate1h{sloth_service="users-microservice",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1h{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -966,7 +970,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate5m{sloth_service="users-microservice",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate5m{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -975,7 +979,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate6h{sloth_service="users-microservice",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -984,7 +988,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate30m{sloth_service="users-microservice",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate30m{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -995,7 +999,7 @@ groups:
           model:
             type: math
             refId: E
-            expression: '($A > 0.0720 && $B > 0.0720) || ($C > 0.0300 && $D > 0.0300)'
+            expression: '($A > 0.0720 && $B > 0.0720) + ($C > 0.0300 && $D > 0.0300)'
         - refId: F
           datasourceUid: __expr__
           relativeTimeRange: { from: 300, to: 0 }
@@ -1028,7 +1032,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate1d{sloth_service="users-microservice",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1d{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1037,7 +1041,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate2h{sloth_service="users-microservice",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate2h{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1046,7 +1050,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate3d{sloth_service="users-microservice",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate3d{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1055,7 +1059,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate6h{sloth_service="users-microservice",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1066,7 +1070,7 @@ groups:
           model:
             type: math
             refId: E
-            expression: '($A > 0.0150 && $B > 0.0150) || ($C > 0.0050 && $D > 0.0050)'
+            expression: '($A > 0.0150 && $B > 0.0150) + ($C > 0.0050 && $D > 0.0050)'
         - refId: F
           datasourceUid: __expr__
           relativeTimeRange: { from: 300, to: 0 }
@@ -1076,6 +1080,10 @@ groups:
             expression: E
             conditions:
               - evaluator: { params: [0], type: gt }
+
+    # ── users-microservice / requests-latency (99.0% SLO, budget=0.01) ──────────
+    # Page:   (5m>0.144 AND 1h>0.144) OR (30m>0.060 AND 6h>0.060)
+    # Ticket: (2h>0.030 AND 1d>0.030) OR (6h>0.010 AND 3d>0.010)
 
     - uid: slo-users-latency-page
       title: 'SLO: Users Service Latency Fast Burn'
@@ -1098,7 +1106,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate1h{sloth_service="users-microservice",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1h{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1107,7 +1115,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate5m{sloth_service="users-microservice",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate5m{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1116,7 +1124,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate6h{sloth_service="users-microservice",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1125,7 +1133,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate30m{sloth_service="users-microservice",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate30m{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1136,7 +1144,7 @@ groups:
           model:
             type: math
             refId: E
-            expression: '($A > 0.1440 && $B > 0.1440) || ($C > 0.0600 && $D > 0.0600)'
+            expression: '($A > 0.1440 && $B > 0.1440) + ($C > 0.0600 && $D > 0.0600)'
         - refId: F
           datasourceUid: __expr__
           relativeTimeRange: { from: 300, to: 0 }
@@ -1168,7 +1176,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate1d{sloth_service="users-microservice",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1d{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1177,7 +1185,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate2h{sloth_service="users-microservice",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate2h{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1186,7 +1194,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate3d{sloth_service="users-microservice",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate3d{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1195,7 +1203,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate6h{sloth_service="users-microservice",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1206,7 +1214,7 @@ groups:
           model:
             type: math
             refId: E
-            expression: '($A > 0.0300 && $B > 0.0300) || ($C > 0.0100 && $D > 0.0100)'
+            expression: '($A > 0.0300 && $B > 0.0300) + ($C > 0.0100 && $D > 0.0100)'
         - refId: F
           datasourceUid: __expr__
           relativeTimeRange: { from: 300, to: 0 }
@@ -1216,6 +1224,10 @@ groups:
             expression: E
             conditions:
               - evaluator: { params: [0], type: gt }
+
+    # ── store-ui / requests-availability (99.0% SLO, budget=0.01) ───────────────
+    # Page:   (5m>0.144 AND 1h>0.144) OR (30m>0.060 AND 6h>0.060)
+    # Ticket: (2h>0.030 AND 1d>0.030) OR (6h>0.010 AND 3d>0.010)
 
     - uid: slo-store-ui-availability-page
       title: 'SLO: Store UI Availability Fast Burn'
@@ -1238,7 +1250,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate1h{sloth_service="store-ui",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1h{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1247,7 +1259,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate5m{sloth_service="store-ui",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate5m{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1256,7 +1268,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate6h{sloth_service="store-ui",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1265,7 +1277,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate30m{sloth_service="store-ui",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate30m{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1276,7 +1288,7 @@ groups:
           model:
             type: math
             refId: E
-            expression: '($A > 0.1440 && $B > 0.1440) || ($C > 0.0600 && $D > 0.0600)'
+            expression: '($A > 0.1440 && $B > 0.1440) + ($C > 0.0600 && $D > 0.0600)'
         - refId: F
           datasourceUid: __expr__
           relativeTimeRange: { from: 300, to: 0 }
@@ -1308,7 +1320,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate1d{sloth_service="store-ui",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1d{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1317,7 +1329,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate2h{sloth_service="store-ui",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate2h{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1326,7 +1338,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate3d{sloth_service="store-ui",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate3d{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1335,7 +1347,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate6h{sloth_service="store-ui",sloth_slo="requests-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1346,7 +1358,7 @@ groups:
           model:
             type: math
             refId: E
-            expression: '($A > 0.0300 && $B > 0.0300) || ($C > 0.0100 && $D > 0.0100)'
+            expression: '($A > 0.0300 && $B > 0.0300) + ($C > 0.0100 && $D > 0.0100)'
         - refId: F
           datasourceUid: __expr__
           relativeTimeRange: { from: 300, to: 0 }
@@ -1356,6 +1368,10 @@ groups:
             expression: E
             conditions:
               - evaluator: { params: [0], type: gt }
+
+    # ── store-ui / requests-latency (99.0% SLO, budget=0.01) ────────────────────
+    # Page:   (5m>0.144 AND 1h>0.144) OR (30m>0.060 AND 6h>0.060)
+    # Ticket: (2h>0.030 AND 1d>0.030) OR (6h>0.010 AND 3d>0.010)
 
     - uid: slo-store-ui-latency-page
       title: 'SLO: Store UI Latency Fast Burn'
@@ -1378,7 +1394,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate1h{sloth_service="store-ui",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1h{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1387,7 +1403,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate5m{sloth_service="store-ui",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate5m{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1396,7 +1412,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate6h{sloth_service="store-ui",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1405,7 +1421,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate30m{sloth_service="store-ui",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate30m{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1416,7 +1432,7 @@ groups:
           model:
             type: math
             refId: E
-            expression: '($A > 0.1440 && $B > 0.1440) || ($C > 0.0600 && $D > 0.0600)'
+            expression: '($A > 0.1440 && $B > 0.1440) + ($C > 0.0600 && $D > 0.0600)'
         - refId: F
           datasourceUid: __expr__
           relativeTimeRange: { from: 300, to: 0 }
@@ -1448,7 +1464,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate1d{sloth_service="store-ui",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1d{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1457,7 +1473,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate2h{sloth_service="store-ui",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate2h{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1466,7 +1482,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate3d{sloth_service="store-ui",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate3d{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1475,7 +1491,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate6h{sloth_service="store-ui",sloth_slo="requests-latency"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1486,7 +1502,7 @@ groups:
           model:
             type: math
             refId: E
-            expression: '($A > 0.0300 && $B > 0.0300) || ($C > 0.0100 && $D > 0.0100)'
+            expression: '($A > 0.0300 && $B > 0.0300) + ($C > 0.0100 && $D > 0.0100)'
         - refId: F
           datasourceUid: __expr__
           relativeTimeRange: { from: 300, to: 0 }
@@ -1496,6 +1512,10 @@ groups:
             expression: E
             conditions:
               - evaluator: { params: [0], type: gt }
+
+    # ── postgres-cluster / cluster-availability (99.9% SLO, budget=0.001) ───────
+    # Page:   (5m>0.01440 AND 1h>0.01440) OR (30m>0.00600 AND 6h>0.00600)
+    # Ticket: (2h>0.00300 AND 1d>0.00300) OR (6h>0.00100 AND 3d>0.00100)
 
     - uid: slo-postgres-availability-page
       title: 'SLO: Postgres Cluster Availability Fast Burn'
@@ -1519,7 +1539,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate1h{sloth_service="postgres-cluster",sloth_slo="cluster-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1h{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1528,7 +1548,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate5m{sloth_service="postgres-cluster",sloth_slo="cluster-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate5m{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1537,7 +1557,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate6h{sloth_service="postgres-cluster",sloth_slo="cluster-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1546,7 +1566,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate30m{sloth_service="postgres-cluster",sloth_slo="cluster-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate30m{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1557,7 +1577,7 @@ groups:
           model:
             type: math
             refId: E
-            expression: '($A > 0.01440 && $B > 0.01440) || ($C > 0.00600 && $D > 0.00600)'
+            expression: '($A > 0.01440 && $B > 0.01440) + ($C > 0.00600 && $D > 0.00600)'
         - refId: F
           datasourceUid: __expr__
           relativeTimeRange: { from: 300, to: 0 }
@@ -1589,7 +1609,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate1d{sloth_service="postgres-cluster",sloth_slo="cluster-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1d{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1598,7 +1618,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate2h{sloth_service="postgres-cluster",sloth_slo="cluster-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate2h{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1607,7 +1627,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate3d{sloth_service="postgres-cluster",sloth_slo="cluster-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate3d{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1616,7 +1636,7 @@ groups:
           datasourceUid: prometheus-main
           relativeTimeRange: { from: 300, to: 0 }
           model:
-            expr: '(slo:sli_error:ratio_rate6h{sloth_service="postgres-cluster",sloth_slo="cluster-availability"} >= 0) or vector(0)'
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
             instant: true
             intervalMs: 1000
             maxDataPoints: 43200
@@ -1627,7 +1647,7 @@ groups:
           model:
             type: math
             refId: E
-            expression: '($A > 0.00300 && $B > 0.00300) || ($C > 0.00100 && $D > 0.00100)'
+            expression: '($A > 0.00300 && $B > 0.00300) + ($C > 0.00100 && $D > 0.00100)'
         - refId: F
           datasourceUid: __expr__
           relativeTimeRange: { from: 300, to: 0 }
