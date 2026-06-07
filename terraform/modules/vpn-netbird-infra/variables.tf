@@ -58,6 +58,16 @@ variable "netbird_routing_peer_setup_key_secret_id" {
   type        = string
 }
 
+variable "netbird_cicd_setup_key_name" {
+  description = "The name of the Netbird setup key to create for the CI/CD pipeline peer"
+  type        = string
+}
+
+variable "netbird_cicd_setup_key_secret_id" {
+  description = "The ID for the Secret Manager secret that will store the CI/CD pipeline Netbird setup key"
+  type        = string
+}
+
 variable "netbird_route_cidrs" {
   description = "List of CIDR ranges to route through the Netbird routing peer (e.g. VPC subnet, GKE master range)"
   type = list(object({

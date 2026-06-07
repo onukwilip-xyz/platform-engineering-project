@@ -1100,7 +1100,6 @@ resource "kubernetes_manifest" "users_microservice" {
           helm = {
             values = yamlencode({
               useDeployment = true
-              replicas      = 2
 
               containers = [
                 {
@@ -1115,8 +1114,10 @@ resource "kubernetes_manifest" "users_microservice" {
                       memory = "256Mi"
                     }
                     limits = {
-                      cpu    = "1000m"
-                      memory = "3Gi"
+                      # cpu    = "1000m"
+                      cpu    = "500m"
+                      # memory = "3Gi"
+                      memory = "500Mi"
                     }
                   }
                   otherSpecs = {
@@ -1154,7 +1155,7 @@ resource "kubernetes_manifest" "users_microservice" {
               hpa = {
                 enabled                        = true
                 minReplicas                    = 1
-                maxReplicas                    = 3
+                maxReplicas                    = 1
                 targetCPUUtilizationPercentage = 75
               }
             })
@@ -1237,13 +1238,22 @@ resource "kubernetes_manifest" "store_ui" {
           helm = {
             values = yamlencode({
               useDeployment = true
-              replicas      = 1
 
               containers = [
                 {
                   name            = "store-ui"
                   image           = local.store_ui_image
                   imagePullPolicy = "IfNotPresent"
+                  resources = {
+                    requests = {
+                      cpu    = "5m"
+                      memory = "2Mi"
+                    }
+                    limits = {
+                      cpu    = "5m"
+                      memory = "2Mi"
+                    }
+                  }
                 },
               ]
 
@@ -1257,7 +1267,7 @@ resource "kubernetes_manifest" "store_ui" {
               hpa = {
                 enabled                        = true
                 minReplicas                    = 1
-                maxReplicas                    = 3
+                maxReplicas                    = 1
                 targetCPUUtilizationPercentage = 75
               }
             })
