@@ -18,6 +18,32 @@ resource "google_compute_firewall" "allow_master_to_istio_webhook" {
   depends_on = [ google_service_account.node_sa ]
 }
 
+resource "google_compute_firewall" "gke_alb_and_healthcheck_istio" {
+  name    = "gke-allow-alb-and-healthcheck-istio"
+  network = var.network_self_link
+  project = var.host_project_id
+
+  allow {
+    protocol = "tcp"
+    ports    = ["15021", "80"]
+  }
+
+  source_ranges = [
+    "130.211.0.0/22",
+    "35.191.0.0/16",
+    "209.85.152.0/22",
+    "209.85.204.0/22"
+  ]
+
+  target_service_accounts = [google_service_account.node_sa.email]
+
+  description = "Allow GCP health checker to probe Istio gateway readiness on port 15021"
+
+  log_config {
+    metadata = "INCLUDE_ALL_METADATA"
+  }
+}
+
 # resource "google_compute_firewall" "allow_iap_to_jump" {
 #   provider = google.net
 

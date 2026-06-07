@@ -19,10 +19,11 @@ class AttackerIpUser(HttpUser):
     @task
     def write_user(self):
         unique_email = f"u-{uuid.uuid4()}@test.local"
-        self.client.get(
-            "/",
+        self.client.post(
+            "/users",
+            json={"email": unique_email, "name": f"Test {unique_email}", "mobile": "+2349077788867"},
             headers={"Host": "${target_public_host}"},
-            name="GET /",
+            name="POST /users",
             # Cloud LBs serve a cert for the FQDN, not the IP — disable
             # cert-name verification only on this profile.
             verify=False,

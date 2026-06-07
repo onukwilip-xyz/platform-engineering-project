@@ -8,7 +8,8 @@ locals {
   private_dns_zone_name = data.terraform_remote_state.shared.outputs.private_dns_zone.name
   private_domain        = trimsuffix(data.terraform_remote_state.shared.outputs.private_dns_zone.dns_name, ".")
 
-  target_public_ip = data.terraform_remote_state.gateway.outputs.public_gateway_global_ip
+  # target_public_ip = data.terraform_remote_state.gateway.outputs.public_gateway_global_ip
+  target_public_ip = var.target_public_host
 
   # --- MIGs
   mig_configs = {

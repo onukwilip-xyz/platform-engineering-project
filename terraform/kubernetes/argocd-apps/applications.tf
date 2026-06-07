@@ -1153,8 +1153,8 @@ resource "kubernetes_manifest" "users_microservice" {
 
               hpa = {
                 enabled                        = true
-                minReplicas                    = 2
-                maxReplicas                    = 12
+                minReplicas                    = 1
+                maxReplicas                    = 3
                 targetCPUUtilizationPercentage = 75
               }
             })
@@ -1252,6 +1252,13 @@ resource "kubernetes_manifest" "store_ui" {
                 type       = "ClusterIP"
                 port       = 80
                 targetPort = 80
+              }
+
+              hpa = {
+                enabled                        = true
+                minReplicas                    = 1
+                maxReplicas                    = 3
+                targetCPUUtilizationPercentage = 75
               }
             })
           }
