@@ -3,13 +3,16 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 locals {
-  state_bucket = get_env("TF_STATE_BUCKET", "pe-tf-state-bucket")
+  # state_bucket = get_env("TF_STATE_BUCKET", "pe-tf-state-bucket")
+  state_bucket = get_env("TF_STATE_BUCKET", "pe-tf-state-bucket-1")
   env    = "staging"
   region = "us-central1"
   zone   = "us-central1-a"
 
-  tf_network_sa_email  = "tf-network@pe-terraform-project.iam.gserviceaccount.com"
-  tf_platform_sa_email = "tf-platform@pe-terraform-project.iam.gserviceaccount.com"
+  # tf_network_sa_email  = "tf-network@pe-terraform-project.iam.gserviceaccount.com"
+  # tf_platform_sa_email = "tf-platform@pe-terraform-project.iam.gserviceaccount.com"
+  tf_network_sa_email  = get_env("TF_NETWORK_SA", "tf-network@pe-terraform-project-1.iam.gserviceaccount.com")
+  tf_platform_sa_email = get_env("TF_PLATFORM_SA", "tf-platform@pe-terraform-project-1.iam.gserviceaccount.com")
   shared_state_prefix  = "shared"
   gateway_state_prefix = "${local.env}/kubernetes/gateway/terraform.tfstate"
 }
@@ -58,8 +61,6 @@ terraform {
 
 inputs = {
   tf_platform_sa_email = local.tf_platform_sa_email
-
-  # Where to read live values from
   state_bucket         = local.state_bucket
   shared_state_prefix  = local.shared_state_prefix
   gateway_state_prefix = local.gateway_state_prefix

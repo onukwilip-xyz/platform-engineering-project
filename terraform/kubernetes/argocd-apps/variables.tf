@@ -154,6 +154,12 @@ variable "external_secrets_chart_version" {
   default     = "2.3.0"
 }
 
+variable "gatus_chart_version" {
+  type        = string
+  description = "Pinned version of the gatus Helm chart. Bump via PR to roll the app forward."
+  default     = "1.5.0"
+}
+
 # ── Microservices ─────────────────────────────────────────────────────────────
 
 variable "service_project_id" {
