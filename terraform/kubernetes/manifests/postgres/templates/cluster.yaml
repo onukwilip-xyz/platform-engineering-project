@@ -79,8 +79,22 @@ spec:
   monitoring:
     enablePodMonitor: true
 
-  {{- if .Values.databases }}
   managed:
+    services:
+      additional:
+        - selectorType: rw
+          serviceTemplate:
+            metadata:
+              name: {{ .Values.postgresClusterStatusServiceName | quote }}
+            spec:
+              type: ClusterIP
+              ports:
+                - name: status
+                  port: 8000
+                  protocol: TCP
+                  targetPort: 8000
+
+    {{- if .Values.databases }}
     roles:
       {{- range .Values.databases }}
       - name: {{ .owner | quote }}
@@ -89,4 +103,4 @@ spec:
         passwordSecret:
           name: {{ .passwordSecretName | quote }}
       {{- end }}
-  {{- end }}
+    {{- end }}
