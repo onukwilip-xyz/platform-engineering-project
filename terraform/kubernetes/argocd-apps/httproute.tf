@@ -40,6 +40,48 @@ resource "kubernetes_manifest" "grafana_httproute" {
   depends_on = [kubernetes_manifest.grafana]
 }
 
+# Gatus
+resource "kubernetes_manifest" "gatus_httproute" {
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "HTTPRoute"
+    metadata = {
+      name      = "gatus"
+      namespace = kubernetes_namespace.monitoring.metadata[0].name
+    }
+    spec = {
+      parentRefs = [
+        {
+          name        = var.private_gateway_name
+          namespace   = var.private_gateway_namespace
+          sectionName = "https"
+        }
+      ]
+      hostnames = ["gatus.${var.private_domain}"]
+      rules = [
+        {
+          matches = [
+            {
+              path = {
+                type  = "PathPrefix"
+                value = "/"
+              }
+            }
+          ]
+          backendRefs = [
+            {
+              name = "gatus"
+              port = 8080
+            }
+          ]
+        }
+      ]
+    }
+  }
+
+  depends_on = [kubernetes_manifest.gatus]
+}
+
 # Prometheus
 resource "kubernetes_manifest" "prometheus_httproute" {
   manifest = {
