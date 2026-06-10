@@ -3,6 +3,9 @@
 resource "kubernetes_namespace" "cnpg_system" {
   metadata {
     name = "cnpg-system"
+    labels = {
+      "trust.cert-manager.io/internal-ca" = "true"
+    }
     annotations = {
       "argocd.argoproj.io/sync-wave" = "-1"
     }
@@ -14,6 +17,7 @@ resource "kubernetes_namespace" "postgres" {
     name = "postgres"
     labels = {
       "istio-injection" = "disabled"
+      "trust.cert-manager.io/internal-ca" = "true"
     }
     annotations = {
       "argocd.argoproj.io/sync-wave" = "-1"
@@ -28,6 +32,7 @@ resource "kubernetes_namespace" "monitoring" {
     name = "monitoring"
     labels = {
       "istio.io/dataplane-mode" = "ambient"
+      "trust.cert-manager.io/internal-ca" = "true"
     }
     annotations = {
       "argocd.argoproj.io/sync-wave" = "-1"
@@ -40,6 +45,7 @@ resource "kubernetes_namespace" "grafana" {
     name = "grafana"
     labels = {
       "istio.io/dataplane-mode" = "ambient"
+      "trust.cert-manager.io/internal-ca" = "true"
     }
     annotations = {
       "argocd.argoproj.io/sync-wave" = "-1"
@@ -52,6 +58,7 @@ resource "kubernetes_namespace" "logging" {
     name = "logging"
     labels = {
       "istio.io/dataplane-mode" = "ambient"
+      "trust.cert-manager.io/internal-ca" = "true"
     }
     annotations = {
       "argocd.argoproj.io/sync-wave" = "-1"
@@ -64,6 +71,7 @@ resource "kubernetes_namespace" "tracing" {
     name = "tracing"
     labels = {
       "istio.io/dataplane-mode" = "ambient"
+      "trust.cert-manager.io/internal-ca" = "true"
     }
     annotations = {
       "argocd.argoproj.io/sync-wave" = "-1"
@@ -78,6 +86,7 @@ resource "kubernetes_namespace" "events" {
     name = "events"
     labels = {
       "istio.io/dataplane-mode" = "ambient"
+      "trust.cert-manager.io/internal-ca" = "true"
     }
     annotations = {
       "argocd.argoproj.io/sync-wave" = "-1"
@@ -106,6 +115,7 @@ resource "kubernetes_namespace" "users" {
     name = "users"
     labels = {
       "istio-injection" = "enabled"
+      "trust.cert-manager.io/internal-ca" = "true"
     }
     annotations = {
       "argocd.argoproj.io/sync-wave" = "-1"
@@ -118,6 +128,7 @@ resource "kubernetes_namespace" "store_ui" {
     name = "store-ui"
     labels = {
       "istio-injection" = "enabled"
+      "trust.cert-manager.io/internal-ca" = "true"
     }
     annotations = {
       "argocd.argoproj.io/sync-wave" = "-1"

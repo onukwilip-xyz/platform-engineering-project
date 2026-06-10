@@ -997,8 +997,8 @@ resource "kubernetes_manifest" "kubernetes_event_exporter" {
                       kind      = "{{ .InvolvedObject.Kind }}"
                       name      = "{{ .InvolvedObject.Name }}"
 
-                      component           = "{{ .Source.Component }}"
-                      host                = "{{ .Source.Host }}"
+                      component = "{{ .Source.Component }}"
+                      host      = "{{ .Source.Host }}"
 
                       first_time = "{{ .FirstTimestamp }}"
                       last_time  = "{{ .LastTimestamp }}"
@@ -1060,6 +1060,26 @@ resource "kubernetes_manifest" "gatus" {
               "istio.io/dataplane-mode" = "ambient"
             }
 
+            extraVolumes = [
+              {
+                name = "internal-ca"
+                secret = {
+                  secretName = "internal-ca-bundle"
+                  items = [
+                    { key = "ca.crt", path = "ca.crt" }
+                  ]
+                }
+              }
+            ]
+
+            extraVolumeMounts = [
+              {
+                name      = "internal-ca"
+                mountPath = "/certs/internal-ca"
+                readOnly  = true
+              }
+            ]
+
             resources = {
               requests = {
                 cpu    = "50m"
@@ -1094,7 +1114,7 @@ resource "kubernetes_manifest" "gatus" {
                 {
                   name     = "users-microservice"
                   group    = "internal-services"
-                  url      = "http://${local.users_microservice}.${kubernetes_namespace.users.metadata[0].name}.svc.cluster.local:80/health"
+                  url      = "http://${local.users_microservice}-service.${kubernetes_namespace.users.metadata[0].name}.svc.cluster.local:80/health"
                   interval = "30s"
                   conditions = [
                     "[STATUS] == 200"
@@ -1114,7 +1134,7 @@ resource "kubernetes_manifest" "gatus" {
                 {
                   name     = "public-istio-gateway"
                   group    = "infrastructure"
-                  url      = "http://${var.public_gateway_name}.${var.public_gateway_namespace}.svc.cluster.local:15021/healthz/ready"
+                  url      = "http://${var.public_gateway_name}-istio.${var.public_gateway_namespace}.svc.cluster.local:15021/healthz/ready"
                   interval = "30s"
                   conditions = [
                     "[STATUS] == 200"
@@ -1124,7 +1144,7 @@ resource "kubernetes_manifest" "gatus" {
                 {
                   name     = "private-istio-gateway"
                   group    = "infrastructure"
-                  url      = "http://${var.private_gateway_name}.${var.private_gateway_namespace}.svc.cluster.local:15021/healthz/ready"
+                  url      = "http://${var.private_gateway_name}-istio.${var.private_gateway_namespace}.svc.cluster.local:15021/healthz/ready"
                   interval = "30s"
                   conditions = [
                     "[STATUS] == 200"
@@ -1134,11 +1154,17 @@ resource "kubernetes_manifest" "gatus" {
                 {
                   name     = "postgres-cnpg"
                   group    = "databases"
-                  url      = "http://${local.postgres_cluster_status_service_name}.${kubernetes_namespace.postgres.metadata[0].name}.svc.cluster.local:8000/healthz"
+                  url      = "https://${local.postgres_cluster_status_service_name}.${kubernetes_namespace.postgres.metadata[0].name}.svc.cluster.local:8000/healthz"
                   interval = "30s"
                   conditions = [
                     "[STATUS] == 200"
-                  ]
+                  ],
+                  client = {
+                    tls = {
+                      ca       = "/certs/internal-ca/ca.crt"
+                      insecure = false
+                    }
+                  }
                 },
 
                 {
@@ -1261,7 +1287,7 @@ resource "kubernetes_manifest" "users_microservice" {
                     }
                     limits = {
                       # cpu    = "1000m"
-                      cpu    = "500m"
+                      cpu = "500m"
                       # memory = "3Gi"
                       memory = "500Mi"
                     }
@@ -1392,12 +1418,12 @@ resource "kubernetes_manifest" "store_ui" {
                   imagePullPolicy = "IfNotPresent"
                   resources = {
                     requests = {
-                      cpu    = "5m"
-                      memory = "2Mi"
+                      cpu    = "20m"
+                      memory = "50Mi"
                     }
                     limits = {
-                      cpu    = "5m"
-                      memory = "2Mi"
+                      cpu    = "20m"
+                      memory = "50Mi"
                     }
                   }
                 },

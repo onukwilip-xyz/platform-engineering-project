@@ -22,6 +22,8 @@ spec:
     - postgres-cluster-ro.postgres.svc.cluster.local
     - postgres-cluster-r
     - postgres-cluster-r.postgres.svc.cluster.local
+    - postgres-cluster-status
+    - postgres-cluster-status.postgres.svc.cluster.local
   issuerRef:
     name: {{ .Values.certificates.clusterIssuer }}
     kind: ClusterIssuer
