@@ -1,10 +1,10 @@
-resource "kubernetes_manifest" "gateway_public" {
+resource "kubernetes_manifest" "gateway_gke" {
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1"
     kind       = "Gateway"
     metadata = {
-      name      = "public"
-      namespace = kubernetes_namespace.istio_ingress.metadata[0].name
+      name      = "gke"
+      namespace = kubernetes_namespace.gke_ingress.metadata[0].name
       annotations = {
         "cert-manager.io/cluster-issuer" = var.public_cluster_issuer_name
       }
@@ -43,7 +43,39 @@ resource "kubernetes_manifest" "gateway_public" {
     }
   }
 
-  depends_on = [google_compute_global_address.public_gateway]
+  depends_on = [
+    google_compute_global_address.public_gateway,
+    kubernetes_namespace.gke_ingress,
+  ]
+}
+
+resource "kubernetes_manifest" "gateway_public" {
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "Gateway"
+    metadata = {
+      name      = "public"
+      namespace = kubernetes_namespace.istio_ingress.metadata[0].name
+      annotations = {
+        "networking.istio.io/service-type" = "ClusterIP"
+      }
+    }
+    spec = {
+      gatewayClassName = var.gateway_class_name
+      listeners = [
+        {
+          name     = "http"
+          port     = 80
+          protocol = "HTTP"
+          allowedRoutes = {
+            namespaces = { from = "All" }
+          }
+        }
+      ]
+    }
+  }
+
+  depends_on = [kubernetes_namespace.istio_ingress]
 }
 
 resource "kubernetes_manifest" "gateway_internal" {

@@ -126,7 +126,6 @@ resource "kubernetes_manifest" "kiali_httproute" {
 
 # * MICROSERVICES STACK
 
-# Store UI
 resource "kubernetes_manifest" "store_ui_httproute" {
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1"
@@ -138,9 +137,8 @@ resource "kubernetes_manifest" "store_ui_httproute" {
     spec = {
       parentRefs = [
         {
-          name        = var.public_gateway_name
-          namespace   = var.public_gateway_namespace
-          sectionName = "https"
+          name      = var.public_gateway_name
+          namespace = var.public_gateway_namespace
         }
       ]
       hostnames = ["store.${var.public_domain}"]
@@ -186,50 +184,6 @@ resource "kubernetes_manifest" "users_microservice_httproute" {
         }
       ]
       hostnames = ["users.${var.private_domain}"]
-      rules = [
-        {
-          matches = [
-            {
-              path = {
-                type  = "PathPrefix"
-                value = "/"
-              }
-            }
-          ]
-          backendRefs = [
-            {
-              name = "users-microservice-service"
-              port = 80
-            }
-          ]
-        }
-      ]
-    }
-  }
-
-  depends_on = [kubernetes_manifest.users_microservice]
-}
-
-# * TEMP: public Users HTTPRoute for the DDoS simulation. Comment out once
-# the simulation is concluded; the users service should not stay publicly
-# exposed in steady state.
-resource "kubernetes_manifest" "users_microservice_public_httproute" {
-  manifest = {
-    apiVersion = "gateway.networking.k8s.io/v1"
-    kind       = "HTTPRoute"
-    metadata = {
-      name      = "users-microservice-public"
-      namespace = kubernetes_namespace.users.metadata[0].name
-    }
-    spec = {
-      parentRefs = [
-        {
-          name        = var.public_gateway_name
-          namespace   = var.public_gateway_namespace
-          sectionName = "https"
-        }
-      ]
-      hostnames = ["users.${var.public_domain}"]
       rules = [
         {
           matches = [

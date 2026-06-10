@@ -73,6 +73,7 @@ resource "kubernetes_manifest" "postgres_cluster" {
             certificates = {
               clusterIssuer = var.cluster_issuer_name
             }
+            postgresClusterStatusServiceName = local.postgres_cluster_status_service_name
             databases = [
               {
                 name               = local.users_db_name
@@ -1030,6 +1031,151 @@ resource "kubernetes_manifest" "kubernetes_event_exporter" {
   ]
 }
 
+# Gatus
+resource "kubernetes_manifest" "gatus" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "gatus"
+      namespace = var.argocd_namespace
+      annotations = {
+        "argocd.argoproj.io/sync-wave"       = "5"
+        "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
+      }
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = "https://twin.github.io/helm-charts"
+        chart          = "gatus"
+        targetRevision = var.gatus_chart_version
+        helm = {
+          values = yamlencode({
+
+            replicaCount = 1
+
+            podAnnotations = {
+              "istio.io/dataplane-mode" = "ambient"
+            }
+
+            resources = {
+              requests = {
+                cpu    = "50m"
+                memory = "64Mi"
+              }
+              limits = {
+                cpu    = "200m"
+                memory = "128Mi"
+              }
+            }
+
+            serviceMonitor = {
+              enabled   = true
+              namespace = "monitoring"
+              interval  = "60s"
+              labels = {
+                # Must match your Prometheus operator's serviceMonitorSelector label
+                release = "kube-prometheus-stack"
+              }
+            }
+
+            service = {
+              port = 8080
+            }
+
+            ingress = {
+              enabled = false
+            }
+
+            config = {
+              endpoints = [
+                {
+                  name     = "users-microservice"
+                  group    = "internal-services"
+                  url      = "http://${local.users_microservice}.${kubernetes_namespace.users.metadata[0].name}.svc.cluster.local:80/health"
+                  interval = "30s"
+                  conditions = [
+                    "[STATUS] == 200"
+                  ]
+                },
+
+                {
+                  name     = "store-ui-public"
+                  group    = "public"
+                  url      = "https://store.pe.onukwilip.me"
+                  interval = "1m"
+                  conditions = [
+                    "[STATUS] == 200"
+                  ]
+                },
+
+                {
+                  name     = "public-istio-gateway"
+                  group    = "infrastructure"
+                  url      = "http://${var.public_gateway_name}.${var.public_gateway_namespace}.svc.cluster.local:15021/healthz/ready"
+                  interval = "30s"
+                  conditions = [
+                    "[STATUS] == 200"
+                  ]
+                },
+
+                {
+                  name     = "private-istio-gateway"
+                  group    = "infrastructure"
+                  url      = "http://${var.private_gateway_name}.${var.private_gateway_namespace}.svc.cluster.local:15021/healthz/ready"
+                  interval = "30s"
+                  conditions = [
+                    "[STATUS] == 200"
+                  ]
+                },
+
+                {
+                  name     = "postgres-cnpg"
+                  group    = "databases"
+                  url      = "http://${local.postgres_cluster_status_service_name}.${kubernetes_namespace.postgres.metadata[0].name}.svc.cluster.local:8000/healthz"
+                  interval = "30s"
+                  conditions = [
+                    "[STATUS] == 200"
+                  ]
+                },
+
+                {
+                  name     = "pgbouncer"
+                  group    = "databases"
+                  url      = "tcp://postgres-pooler-rw.${kubernetes_namespace.postgres.metadata[0].name}.svc.cluster.local:5432"
+                  interval = "30s"
+                  conditions = [
+                    "[CONNECTED] == true"
+                  ]
+                }
+
+              ]
+            }
+
+          })
+        }
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = "monitoring"
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = [
+          "CreateNamespace=false",
+          "ServerSideApply=true",
+          "ServerSideDiff=true"
+        ]
+      }
+    }
+  }
+}
+
 # * SECRETS STACK
 
 # External Secrets Operator
@@ -1083,7 +1229,7 @@ resource "kubernetes_manifest" "users_microservice" {
     apiVersion = "argoproj.io/v1alpha1"
     kind       = "Application"
     metadata = {
-      name      = "users-microservice"
+      name      = local.users_microservice
       namespace = var.argocd_namespace
       annotations = {
         "argocd.argoproj.io/sync-wave" = "5"
@@ -1100,7 +1246,6 @@ resource "kubernetes_manifest" "users_microservice" {
           helm = {
             values = yamlencode({
               useDeployment = true
-              replicas      = 2
 
               containers = [
                 {
@@ -1115,8 +1260,10 @@ resource "kubernetes_manifest" "users_microservice" {
                       memory = "256Mi"
                     }
                     limits = {
-                      cpu    = "1000m"
-                      memory = "3Gi"
+                      # cpu    = "1000m"
+                      cpu    = "500m"
+                      # memory = "3Gi"
+                      memory = "500Mi"
                     }
                   }
                   otherSpecs = {
@@ -1153,8 +1300,8 @@ resource "kubernetes_manifest" "users_microservice" {
 
               hpa = {
                 enabled                        = true
-                minReplicas                    = 2
-                maxReplicas                    = 12
+                minReplicas                    = 1
+                maxReplicas                    = 1
                 targetCPUUtilizationPercentage = 75
               }
             })
@@ -1167,7 +1314,7 @@ resource "kubernetes_manifest" "users_microservice" {
           helm = {
             values = yamlencode({
               service = {
-                name         = "users-microservice-service"
+                name         = "${local.users_microservice}-service"
                 externalHost = "users.internal.pe.onukwilip.xyz"
               }
               gateways = ["mesh", "istio-ingress-internal/private"]
@@ -1237,13 +1384,22 @@ resource "kubernetes_manifest" "store_ui" {
           helm = {
             values = yamlencode({
               useDeployment = true
-              replicas      = 1
 
               containers = [
                 {
                   name            = "store-ui"
                   image           = local.store_ui_image
                   imagePullPolicy = "IfNotPresent"
+                  resources = {
+                    requests = {
+                      cpu    = "5m"
+                      memory = "2Mi"
+                    }
+                    limits = {
+                      cpu    = "5m"
+                      memory = "2Mi"
+                    }
+                  }
                 },
               ]
 
@@ -1252,6 +1408,13 @@ resource "kubernetes_manifest" "store_ui" {
                 type       = "ClusterIP"
                 port       = 80
                 targetPort = 80
+              }
+
+              hpa = {
+                enabled                        = true
+                minReplicas                    = 1
+                maxReplicas                    = 1
+                targetCPUUtilizationPercentage = 75
               }
             })
           }

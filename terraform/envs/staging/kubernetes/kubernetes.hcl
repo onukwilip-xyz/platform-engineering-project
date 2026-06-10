@@ -35,6 +35,8 @@ locals {
     public_gateway_namespace   = "istio-ingress"
     internal_gateway_name      = "private"
     internal_gateway_namespace = "istio-ingress-internal"
+    gke_gateway_name           = "gke"
+    gke_gateway_namespace      = "gke-ingress"
     public_gateway_ip          = "1.2.3.4"
     public_gateway_global_ip   = "1.2.3.4"
     private_gateway_ip         = "10.0.0.5"
