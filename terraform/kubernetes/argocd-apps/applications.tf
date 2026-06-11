@@ -21,10 +21,15 @@ resource "kubernetes_manifest" "cnpg_operator" {
         chart          = "cloudnative-pg"
         targetRevision = var.cnpg_operator_chart_version
         helm = {
-          values = <<-EOT
-            config:
-              clusterWide: true
-          EOT
+          values = yamlencode({
+            config = {
+              clusterWide = true
+            }
+            resources = {
+              requests = { cpu = "100m", memory = "100Mi" }
+              limits   = { cpu = "200m", memory = "200Mi" }
+            }
+          })
         }
       }
       destination = {
@@ -133,6 +138,13 @@ resource "kubernetes_manifest" "kube_prometheus_stack" {
               enabled = false
             }
 
+            prometheusOperator = {
+              resources = {
+                requests = { cpu = "50m", memory = "64Mi" }
+                limits   = { cpu = "200m", memory = "256Mi" }
+              }
+            }
+
             prometheus = {
               prometheusSpec = {
                 # `Nil…SelectorNilUsesHelmValues = false` lets Prometheus discover
@@ -144,6 +156,11 @@ resource "kubernetes_manifest" "kube_prometheus_stack" {
                 probeSelectorNilUsesHelmValues          = false
                 enableRemoteWriteReceiver               = true
                 retention                               = "7d"
+
+                resources = {
+                  requests = { cpu = "200m", memory = "512Mi" }
+                  limits   = { cpu = "1000m", memory = "2Gi" }
+                }
 
                 storageSpec = {
                   volumeClaimTemplate = {
@@ -161,11 +178,31 @@ resource "kubernetes_manifest" "kube_prometheus_stack" {
               }
             }
 
+            "kube-state-metrics" = {
+              resources = {
+                requests = { cpu = "20m", memory = "64Mi" }
+                limits   = { cpu = "100m", memory = "128Mi" }
+              }
+            }
+
+            alertmanager = {
+              alertmanagerSpec = {
+                resources = {
+                  requests = { cpu = "50m", memory = "128Mi" }
+                  limits   = { cpu = "200m", memory = "256Mi" }
+                }
+              }
+            }
+
             # node-exporter runs with hostNetwork=true; ambient CNI can't redirect
             # hostNetwork pods, so opt the DaemonSet out of the mesh.
             "prometheus-node-exporter" = {
               podLabels = {
                 "istio.io/dataplane-mode" = "none"
+              }
+              resources = {
+                requests = { cpu = "10m", memory = "32Mi" }
+                limits   = { cpu = "100m", memory = "64Mi" }
               }
             }
           })
@@ -305,6 +342,11 @@ resource "kubernetes_manifest" "grafana" {
               # Mounts every key from the alerting secrets as an env var so
               # provisioning files can reference them as $__env{KEY_NAME}.
               envFromSecret = kubernetes_secret.grafana_alerting_secrets.metadata[0].name
+
+              resources = {
+                requests = { cpu = "100m", memory = "128Mi" }
+                limits   = { cpu = "300m", memory = "256Mi" }
+              }
             }
           })
         }
@@ -452,6 +494,22 @@ resource "kubernetes_manifest" "loki" {
                 size         = "2Gi"
                 storageClass = "standard"
               }
+              resources = {
+                requests = { cpu = "250m", memory = "512Mi" }
+                limits   = { cpu = "500m", memory = "1Gi" }
+              }
+            }
+
+            gateway = {
+              enabled  = true
+              replicas = 1
+              basicAuth = {
+                enabled = false
+              }
+              resources = {
+                requests = { cpu = "50m", memory = "64Mi" }
+                limits   = { cpu = "100m", memory = "128Mi" }
+              }
             }
 
             read    = { replicas = 0 }
@@ -460,14 +518,6 @@ resource "kubernetes_manifest" "loki" {
 
             chunksCache  = { enabled = false }
             resultsCache = { enabled = false }
-
-            gateway = {
-              enabled  = true
-              replicas = 1
-              basicAuth = {
-                enabled = false
-              }
-            }
 
             serviceAccount = {
               create = true
@@ -627,6 +677,11 @@ resource "kubernetes_manifest" "tempo" {
               serviceGraph = {
                 enabled = true
               }
+
+              resources = {
+                requests = { cpu = "500m", memory = "1Gi" }
+                limits   = { cpu = "1000m", memory = "2Gi" }
+              }
             }
 
             persistence = {
@@ -685,6 +740,11 @@ resource "kubernetes_manifest" "kiali" {
         helm = {
           values = yamlencode(
             {
+              resources = {
+                requests = { cpu = "10m", memory = "64Mi" }
+                limits   = { cpu = "100m", memory = "256Mi" }
+              }
+
               cr = {
                 create    = true
                 namespace = kubernetes_namespace.tracing.metadata[0].name
@@ -695,6 +755,10 @@ resource "kubernetes_manifest" "kiali" {
                   deployment = {
                     accessible_namespaces = ["**"]
                     cluster_wide_access   = true
+                    resources = {
+                      requests = { cpu = "100m", memory = "128Mi" }
+                      limits   = { cpu = "200m", memory = "256Mi" }
+                    }
                   }
                   external_services = {
                     prometheus = {
@@ -1227,6 +1291,22 @@ resource "kubernetes_manifest" "external_secrets" {
         helm = {
           values = yamlencode({
             installCRDs = true
+            resources = {
+              requests = { cpu = "10m", memory = "64Mi" }
+              limits   = { cpu = "100m", memory = "128Mi" }
+            }
+            webhook = {
+              resources = {
+                requests = { cpu = "10m", memory = "32Mi" }
+                limits   = { cpu = "50m", memory = "64Mi" }
+              }
+            }
+            certController = {
+              resources = {
+                requests = { cpu = "10m", memory = "32Mi" }
+                limits   = { cpu = "50m", memory = "64Mi" }
+              }
+            }
           })
         }
       }

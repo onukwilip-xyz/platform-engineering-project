@@ -31,6 +31,11 @@ resource "helm_release" "istiod" {
     yamlencode({
       profile = "ambient" # For Ambient mode
 
+      resources = {
+        requests = { cpu = "200m", memory = "512Mi" }
+        limits   = { cpu = "500m", memory = "2048Mi" }
+      }
+
       env = {
         ENABLE_NATIVE_SIDECARS = "true"
       }
