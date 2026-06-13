@@ -31,6 +31,15 @@ resource "helm_release" "istiod" {
     yamlencode({
       profile = "ambient" # For Ambient mode
 
+      pilot = {
+        priorityClassName = "medium-priority"
+      }
+
+      resources = {
+        requests = { cpu = "200m", memory = "512Mi" }
+        limits   = { cpu = "500m", memory = "2048Mi" }
+      }
+
       env = {
         ENABLE_NATIVE_SIDECARS = "true"
       }
@@ -114,6 +123,18 @@ resource "helm_release" "ztunnel" {
 
   values = [
     yamlencode({
+      _internal_defaults_do_not_set = {
+        resources = {
+          requests = {
+            cpu = "200m"
+            memory = "512Mi"
+          }
+          limits = {
+            cpu = "400m"
+            memory = "768Mi"
+          }
+        }
+      }
     })
   ]
 

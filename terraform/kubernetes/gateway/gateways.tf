@@ -49,6 +49,26 @@ resource "kubernetes_manifest" "gateway_gke" {
   ]
 }
 
+resource "kubernetes_manifest" "gateway_params_public" {
+  manifest = {
+    apiVersion = "gateway.istio.io/v1alpha1"
+    kind       = "GatewayParameters"
+    metadata = {
+      name      = "public-gateway-params"
+      namespace = kubernetes_namespace.istio_ingress.metadata[0].name
+    }
+    spec = {
+      kube = {
+        podSpec = {
+          priorityClassName = "high-priority"
+        }
+      }
+    }
+  }
+
+  depends_on = [kubernetes_namespace.istio_ingress]
+}
+
 resource "kubernetes_manifest" "gateway_public" {
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1"
@@ -62,6 +82,13 @@ resource "kubernetes_manifest" "gateway_public" {
     }
     spec = {
       gatewayClassName = var.gateway_class_name
+      infrastructure = {
+        parametersRef = {
+          group = "gateway.istio.io"
+          kind  = "GatewayParameters"
+          name  = kubernetes_manifest.gateway_params_public.manifest.metadata.name
+        }
+      }
       listeners = [
         {
           name     = "http"
@@ -75,7 +102,30 @@ resource "kubernetes_manifest" "gateway_public" {
     }
   }
 
-  depends_on = [kubernetes_namespace.istio_ingress]
+  depends_on = [
+    kubernetes_namespace.istio_ingress,
+    kubernetes_manifest.gateway_params_public,
+  ]
+}
+
+resource "kubernetes_manifest" "gateway_params_internal" {
+  manifest = {
+    apiVersion = "gateway.istio.io/v1alpha1"
+    kind       = "GatewayParameters"
+    metadata = {
+      name      = "internal-gateway-params"
+      namespace = kubernetes_namespace.istio_ingress_internal.metadata[0].name
+    }
+    spec = {
+      kube = {
+        podSpec = {
+          priorityClassName = "high-priority"
+        }
+      }
+    }
+  }
+
+  depends_on = [kubernetes_namespace.istio_ingress_internal]
 }
 
 resource "kubernetes_manifest" "gateway_internal" {
@@ -99,6 +149,11 @@ resource "kubernetes_manifest" "gateway_internal" {
       infrastructure = {
         annotations = {
           "networking.gke.io/load-balancer-type" = "Internal"
+        }
+        parametersRef = {
+          group = "gateway.istio.io"
+          kind  = "GatewayParameters"
+          name  = kubernetes_manifest.gateway_params_internal.manifest.metadata.name
         }
       }
       gatewayClassName = var.gateway_class_name
@@ -128,5 +183,8 @@ resource "kubernetes_manifest" "gateway_internal" {
     }
   }
 
-  depends_on = [google_compute_address.private_gateway]
+  depends_on = [
+    google_compute_address.private_gateway,
+    kubernetes_manifest.gateway_params_internal,
+  ]
 }
