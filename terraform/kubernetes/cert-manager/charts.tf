@@ -51,7 +51,23 @@ resource "helm_release" "cert_manager" {
           "iam.gke.io/gcp-service-account" = google_service_account.cert_manager_dns.email
         }
       },
-      extraArgs = ["--enable-gateway-api"]
+      extraArgs = ["--enable-gateway-api"],
+      resources = {
+        requests = { cpu = "10m", memory = "64Mi" }
+        limits   = { cpu = "100m", memory = "128Mi" }
+      },
+      cainjector = {
+        resources = {
+          requests = { cpu = "10m", memory = "32Mi" }
+          limits   = { cpu = "50m", memory = "64Mi" }
+        }
+      },
+      webhook = {
+        resources = {
+          requests = { cpu = "10m", memory = "32Mi" }
+          limits   = { cpu = "50m", memory = "64Mi" }
+        }
+      }
     })
   ]
 
@@ -84,6 +100,10 @@ resource "helm_release" "trust_manager" {
       secretTargets = {
         enabled           = true
         authorizedSecrets = ["internal-ca-bundle"]
+      },
+      resources = {
+        requests = { cpu = "50m", memory = "64Mi" }
+        limits   = { cpu = "100m", memory = "128Mi" }
       }
     })
   ]

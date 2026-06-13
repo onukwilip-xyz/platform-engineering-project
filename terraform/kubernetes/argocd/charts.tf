@@ -63,6 +63,10 @@ resource "helm_release" "argocd" {
 
       controller = {
         replicas = 1
+        resources = {
+          requests = { cpu = "250m", memory = "256Mi" }
+          limits   = { cpu = "500m", memory = "512Mi" }
+        }
       }
 
       server = {
@@ -73,12 +77,20 @@ resource "helm_release" "argocd" {
         ingress = {
           enabled = false
         }
+        resources = {
+          requests = { cpu = "50m", memory = "64Mi" }
+          limits   = { cpu = "100m", memory = "128Mi" }
+        }
       }
 
       repoServer = {
         replicas = 2
         autoscaling = {
           enabled = false
+        }
+        resources = {
+          requests = { cpu = "10m", memory = "64Mi" }
+          limits   = { cpu = "50m", memory = "128Mi" }
         }
       }
 
@@ -90,6 +102,24 @@ resource "helm_release" "argocd" {
         ingress = {
           enabled = false
         }
+        resources = {
+          requests = { cpu = "100m", memory = "128Mi" }
+          limits   = { cpu = "100m", memory = "128Mi" }
+        }
+      }
+
+      notifications = {
+        resources = {
+          requests = { cpu = "100m", memory = "128Mi" }
+          limits   = { cpu = "100m", memory = "128Mi" }
+        }
+      }
+
+      dex = {
+        resources = {
+          requests = { cpu = "10m", memory = "32Mi" }
+          limits   = { cpu = "50m", memory = "64Mi" }
+        }
       }
 
       "redis-ha" = {
@@ -98,10 +128,18 @@ resource "helm_release" "argocd" {
           podAnnotations = {
             "istio.io/dataplane-mode" = "none"
           }
+          resources = {
+            requests = { cpu = "100m", memory = "200Mi" }
+            limits   = { memory = "700Mi" }
+          }
         }
         haproxy = {
           podAnnotations = {
             "istio.io/dataplane-mode" = "none"
+          }
+          resources = {
+            requests = { cpu = "100m", memory = "128Mi" }
+            limits   = { cpu = "200m", memory = "256Mi" }
           }
         }
       }
