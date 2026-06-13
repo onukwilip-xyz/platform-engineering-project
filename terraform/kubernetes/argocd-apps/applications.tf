@@ -22,6 +22,7 @@ resource "kubernetes_manifest" "cnpg_operator" {
         targetRevision = var.cnpg_operator_chart_version
         helm = {
           values = yamlencode({
+            priorityClassName = "medium-priority"
             config = {
               clusterWide = true
             }
@@ -139,6 +140,7 @@ resource "kubernetes_manifest" "kube_prometheus_stack" {
             }
 
             prometheusOperator = {
+              priorityClassName = "medium-priority"
               resources = {
                 requests = { cpu = "50m", memory = "64Mi" }
                 limits   = { cpu = "200m", memory = "256Mi" }
@@ -147,6 +149,7 @@ resource "kubernetes_manifest" "kube_prometheus_stack" {
 
             prometheus = {
               prometheusSpec = {
+                priorityClassName = "medium-priority"
                 # `Nil…SelectorNilUsesHelmValues = false` lets Prometheus discover
                 # ServiceMonitors / PodMonitors / PrometheusRules / Probes created
                 # in other namespaces (grafana, logging, tracing, microservices…).
@@ -269,6 +272,7 @@ resource "kubernetes_manifest" "grafana" {
             grafana = {
               enabled                  = true
               defaultDashboardsEnabled = true
+              priorityClassName        = "medium-priority"
 
               admin = {
                 existingSecret = kubernetes_secret.grafana_admin.metadata[0].name
