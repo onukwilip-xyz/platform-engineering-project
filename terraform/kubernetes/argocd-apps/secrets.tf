@@ -19,6 +19,19 @@ resource "kubernetes_secret" "grafana_admin" {
   }
 }
 
+resource "kubernetes_secret" "grafana_pagerduty" {
+  metadata {
+    name      = "grafana-pagerduty"
+    namespace = kubernetes_namespace.grafana.metadata[0].name
+  }
+
+  data = {
+    PAGERDUTY_ROUTING_KEY = var.pagerduty_routing_key
+  }
+
+  type = "Opaque"
+}
+
 # * USERS MICROSERVICE DB CREDENTIALS
 
 resource "random_password" "users_db" {

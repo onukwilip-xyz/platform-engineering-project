@@ -10,6 +10,20 @@ policies:
     group_interval: 5m
     repeat_interval: 4h
     routes:
+      - receiver: pagerduty-high-priority
+        matchers:
+          - incident-response = "true"
+          - alertname != DatasourceError
+          - alertname != DatasourceNoData
+        group_by:
+          - alertname
+          - sloth_service
+          - sloth_slo
+        group_wait: 0s
+        group_interval: 5m
+        repeat_interval: 1h
+        continue: true
+
       - receiver: datasource-errors
         matchers:
           - alertname = DatasourceError

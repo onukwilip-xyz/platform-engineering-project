@@ -65,7 +65,7 @@ resource "helm_release" "argocd" {
         replicas = 1
         resources = {
           requests = { cpu = "250m", memory = "256Mi" }
-          limits   = { cpu = "500m", memory = "512Mi" }
+          limits   = { cpu = "500m", memory = "1Gi" }
         }
       }
 
@@ -78,8 +78,8 @@ resource "helm_release" "argocd" {
           enabled = false
         }
         resources = {
-          requests = { cpu = "50m", memory = "64Mi" }
-          limits   = { cpu = "100m", memory = "128Mi" }
+          requests = { cpu = "100m", memory = "100Mi" }
+          limits   = { cpu = "200m", memory = "150Mi" }
         }
       }
 
@@ -89,8 +89,8 @@ resource "helm_release" "argocd" {
           enabled = false
         }
         resources = {
-          requests = { cpu = "10m", memory = "64Mi" }
-          limits   = { cpu = "50m", memory = "128Mi" }
+          requests = { cpu = "100m", memory = "200Mi" }
+          limits   = { cpu = "200m", memory = "300Mi" }
         }
       }
 
@@ -103,15 +103,15 @@ resource "helm_release" "argocd" {
           enabled = false
         }
         resources = {
-          requests = { cpu = "100m", memory = "128Mi" }
-          limits   = { cpu = "100m", memory = "128Mi" }
+          requests = { cpu = "20m", memory = "50Mi" }
+          limits   = { cpu = "70m", memory = "128Mi" }
         }
       }
 
       notifications = {
         resources = {
-          requests = { cpu = "100m", memory = "128Mi" }
-          limits   = { cpu = "100m", memory = "128Mi" }
+          requests = { cpu = "10m", memory = "60Mi" }
+          limits   = { cpu = "50m", memory = "100Mi" }
         }
       }
 
@@ -129,17 +129,18 @@ resource "helm_release" "argocd" {
             "istio.io/dataplane-mode" = "none"
           }
           resources = {
-            requests = { cpu = "100m", memory = "200Mi" }
+            requests = { cpu = "50m", memory = "100Mi" }
             limits   = { memory = "700Mi" }
           }
         }
         haproxy = {
+          replicas = 1
           podAnnotations = {
             "istio.io/dataplane-mode" = "none"
           }
           resources = {
-            requests = { cpu = "100m", memory = "128Mi" }
-            limits   = { cpu = "200m", memory = "256Mi" }
+            requests = { cpu = "20m", memory = "100Mi" }
+            limits   = { cpu = "70m", memory = "256Mi" }
           }
         }
       }
