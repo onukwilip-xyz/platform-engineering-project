@@ -948,6 +948,7 @@ groups:
       labels:
         channel: critical
         severity: critical
+        incident-response: "true"
       annotations:
         summary: 'Users service burning availability error budget too fast'
         description: >
@@ -1094,6 +1095,7 @@ groups:
       labels:
         channel: error
         severity: error
+        incident-response: "true"
       annotations:
         summary: 'Users service burning latency error budget too fast'
         description: >
@@ -1238,6 +1240,7 @@ groups:
       labels:
         channel: error
         severity: error
+        incident-response: "true"
       annotations:
         summary: 'Store UI burning availability error budget too fast'
         description: >
@@ -1382,6 +1385,7 @@ groups:
       labels:
         channel: error
         severity: error
+        incident-response: "true"
       annotations:
         summary: 'Store UI burning latency error budget too fast'
         description: >
@@ -1526,6 +1530,7 @@ groups:
       labels:
         channel: critical
         severity: critical
+        incident-response: "true"
       annotations:
         summary: 'CNPG cluster burning availability error budget too fast'
         description: >
@@ -1657,3 +1662,197 @@ groups:
             expression: E
             conditions:
               - evaluator: { params: [0], type: gt }
+
+  # ── Health checks ─────────────────────────────────────────────────────
+
+  - orgId: 1
+    name: gatus-uptime-alerts
+    folder: Platform Alerts
+    interval: 1m
+    rules:
+
+      - uid: gatus-users-microservice-down
+        title: "Uptime: users-microservice down"
+        condition: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: "users-microservice health check failing"
+          description: >
+            Gatus: users-microservice /health failing for 2+ minutes.
+            kubectl get pods -n users
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: 'increase(gatus_results_total{name="users-microservice",success="false"}[5m])'
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: B
+              expression: A
+              conditions:
+                - evaluator: { params: [2], type: gt }
+
+      - uid: gatus-store-ui-public-down
+        title: "Uptime: store-ui public down"
+        condition: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: "store-ui public endpoint unreachable"
+          description: >
+            Gatus: store.pe.onukwilip.me failing for 2+ minutes.
+            Check Cloudflare, GKE Gateway, Istio gateway, store-ui pods.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: 'increase(gatus_results_total{name="store-ui-public",success="false"}[5m])'
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: B
+              expression: A
+              conditions:
+                - evaluator: { params: [2], type: gt }
+
+      - uid: gatus-public-gateway-down
+        title: "Uptime: public Istio gateway down"
+        condition: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: "Public Istio gateway /healthz/ready failing"
+          description: >
+            Gatus: public-istio :15021/healthz/ready failing for 2+ minutes.
+            kubectl get pods -n istio-ingress
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: 'increase(gatus_results_total{name="public-istio-gateway",success="false"}[5m])'
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: B
+              expression: A
+              conditions:
+                - evaluator: { params: [2], type: gt }
+
+      - uid: gatus-private-gateway-down
+        title: "Uptime: private Istio gateway down"
+        condition: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: "Private Istio gateway /healthz/ready failing"
+          description: >
+            Gatus: private-istio :15021/healthz/ready failing for 2+ minutes.
+            kubectl get pods -n istio-ingress-internal
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: 'increase(gatus_results_total{name="private-istio-gateway",success="false"}[5m])'
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: B
+              expression: A
+              conditions:
+                - evaluator: { params: [2], type: gt }
+
+      - uid: gatus-pgbouncer-down
+        title: "Uptime: PGBouncer down"
+        condition: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: "PGBouncer :5432 TCP check failing"
+          description: >
+            Gatus: PGBouncer port 5432 unreachable for 2+ minutes.
+            kubectl get pods -n postgres
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: 'increase(gatus_results_total{name="pgbouncer",success="false"}[5m])'
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: B
+              expression: A
+              conditions:
+                - evaluator: { params: [2], type: gt }
+
+      - uid: gatus-postgres-cnpg-down
+        title: "Uptime: CNPG PostgreSQL down"
+        condition: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: "CNPG PostgreSQL :8000/healthz failing"
+          description: >
+            Gatus: CNPG postgres management healthz failing for 2+ minutes.
+            kubectl get clusters -n postgres && kubectl get pods -n postgres
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: 'increase(gatus_results_total{name="postgres-cnpg",success="false"}[5m])'
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: B
+              expression: A
+              conditions:
+                - evaluator: { params: [2], type: gt }

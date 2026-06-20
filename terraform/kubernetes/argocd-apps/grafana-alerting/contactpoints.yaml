@@ -83,3 +83,26 @@ contactPoints:
           icon_emoji: ":rotating_light:"
           username: "Grafana | Datasource Errors"
         disableResolveMessage: true
+
+  - orgId: 1
+    name: pagerduty-high-priority
+    receivers:
+      - uid: cp-pagerduty-high-priority
+        type: pagerduty
+        settings:
+          integrationKey: $__env{PAGERDUTY_ROUTING_KEY}
+          severity: critical
+          class: slo-fast-burn
+          component: "{{ .CommonLabels.sloth_service }}"
+          group: "{{ .CommonLabels.sloth_slo }}"
+          summary: >-
+            [SLO Fast Burn] {{ .CommonLabels.alertname }} —
+            {{ .CommonAnnotations.summary }}
+          details:
+            alert_name: "{{ .CommonLabels.alertname }}"
+            service: "{{ .CommonLabels.sloth_service }}"
+            slo: "{{ .CommonLabels.sloth_slo }}"
+            slo_severity: "{{ .CommonLabels.severity }}"
+            description: "{{ .CommonAnnotations.description }}"
+            grafana_url: "{{ .ExternalURL }}"
+        disableResolveMessage: true
