@@ -34,9 +34,9 @@ spec:
       - name: DURATION
         value: "75m"
       - name: WRITE_RATE
-        value: "50"
+        value: "70"
       - name: READ_RATE
-        value: "35"
+        value: "45"
       - name: WRITE_VUS
         value: "50"
       - name: READ_VUS
@@ -64,10 +64,10 @@ spec:
         readOnly: true
     resources:
       requests:
-        cpu: "250m"
+        cpu: "100m"
         memory: "256Mi"
       limits:
-        cpu: "1000m"
+        cpu: "500m"
         memory: "3Gi"
     # Spread the 10 runner pods across different nodes so they actually
     # use different source IPs (not just different pod IPs on same node).

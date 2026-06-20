@@ -255,6 +255,12 @@ variable "slack_webhook_default" {
   description = "Slack incoming webhook URL for the default contact point."
 }
 
+variable "pagerduty_routing_key" {
+  description = "PagerDuty Events API V2 routing key for High Priority Services"
+  type        = string
+  sensitive   = true
+}
+
 # ── Sloth SLO ─────────────────────────────────────────────────────────────────
 
 variable "sloth_chart_version" {

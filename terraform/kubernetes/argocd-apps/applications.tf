@@ -345,7 +345,18 @@ resource "kubernetes_manifest" "grafana" {
 
               # Mounts every key from the alerting secrets as an env var so
               # provisioning files can reference them as $__env{KEY_NAME}.
-              envFromSecret = kubernetes_secret.grafana_alerting_secrets.metadata[0].name
+
+              envFromSecrets = [
+                {
+                  name     = kubernetes_secret.grafana_alerting_secrets.metadata[0].name
+                  optional = false
+                },
+                {
+                  name     = kubernetes_secret.grafana_pagerduty.metadata[0].name
+                  optional = false
+                }
+              ]
+
 
               resources = {
                 requests = { cpu = "100m", memory = "128Mi" }
@@ -1121,30 +1132,18 @@ resource "kubernetes_manifest" "gatus" {
         targetRevision = var.gatus_chart_version
         helm = {
           values = yamlencode({
-
             replicaCount = 1
 
             podAnnotations = {
               "istio.io/dataplane-mode" = "ambient"
             }
 
-            extraVolumes = [
-              {
-                name = "internal-ca"
-                secret = {
-                  secretName = "internal-ca-bundle"
-                  items = [
-                    { key = "ca.crt", path = "ca.crt" }
-                  ]
-                }
-              }
-            ]
-
             extraVolumeMounts = [
               {
-                name      = "internal-ca"
-                mountPath = "/certs/internal-ca"
-                readOnly  = true
+                name           = "internal-ca"
+                mountPath      = "/certs/internal-ca"
+                readOnly       = true
+                existingSecret = "internal-ca-bundle"
               }
             ]
 
@@ -1178,6 +1177,8 @@ resource "kubernetes_manifest" "gatus" {
             }
 
             config = {
+              metrics = true
+
               endpoints = [
                 {
                   name     = "users-microservice"
@@ -1248,6 +1249,9 @@ resource "kubernetes_manifest" "gatus" {
               ]
             }
 
+            env = {
+              SSL_CERT_FILE = "/certs/internal-ca/ca.crt"
+            }
           })
         }
       }
