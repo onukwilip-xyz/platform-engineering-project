@@ -193,7 +193,8 @@ module "vpn_netbird_infra" {
   netbird_routing_peer_service_account_name        = var.netbird_routing_peer_service_account_name
   netbird_routing_peer_service_account_description = var.netbird_routing_peer_service_account_description
   impersonate_sa_email                             = var.tf_network_sa_email
-
+  netbird_cicd_setup_key_name = var.netbird_cicd_setup_key_name
+  netbird_cicd_setup_key_secret_id = var.netbird_cicd_setup_key_secret_id
   # Google Workspace Identity Provider
   enable_google_idp                     = var.enable_google_idp
   google_oauth_client_id                = var.google_oauth_client_id
