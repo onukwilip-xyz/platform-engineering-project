@@ -286,3 +286,16 @@ variable "netbird_users" {
   description = "List of users to create in Netbird and send invitations to."
   default     = []
 }
+
+# ──────────────────────────────────────────────
+# VPN Netbird CI/CD Setup Key
+# ──────────────────────────────────────────────
+variable "netbird_cicd_setup_key_name" {
+  description = "The name of the Netbird setup key to create for the CI/CD pipeline peer"
+  type        = string
+}
+
+variable "netbird_cicd_setup_key_secret_id" {
+  description = "The ID for the Secret Manager secret that will store the CI/CD pipeline Netbird setup key"
+  type        = string
+}
