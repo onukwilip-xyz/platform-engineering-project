@@ -49,25 +49,25 @@ resource "kubernetes_manifest" "gateway_gke" {
   ]
 }
 
-resource "kubernetes_manifest" "gateway_params_public" {
-  manifest = {
-    apiVersion = "gateway.istio.io/v1alpha1"
-    kind       = "GatewayParameters"
-    metadata = {
-      name      = "public-gateway-params"
-      namespace = kubernetes_namespace.istio_ingress.metadata[0].name
-    }
-    spec = {
-      kube = {
-        podSpec = {
-          priorityClassName = "high-priority"
-        }
-      }
-    }
-  }
+# resource "kubernetes_manifest" "gateway_params_public" {
+#   manifest = {
+#     apiVersion = "gateway.istio.io/v1alpha1"
+#     kind       = "GatewayParameters"
+#     metadata = {
+#       name      = "public-gateway-params"
+#       namespace = kubernetes_namespace.istio_ingress.metadata[0].name
+#     }
+#     spec = {
+#       kube = {
+#         podSpec = {
+#           priorityClassName = "high-priority"
+#         }
+#       }
+#     }
+#   }
 
-  depends_on = [kubernetes_namespace.istio_ingress]
-}
+#   depends_on = [kubernetes_namespace.istio_ingress]
+# }
 
 resource "kubernetes_manifest" "gateway_public" {
   manifest = {
@@ -84,9 +84,9 @@ resource "kubernetes_manifest" "gateway_public" {
       gatewayClassName = var.gateway_class_name
       infrastructure = {
         parametersRef = {
-          group = "gateway.istio.io"
-          kind  = "GatewayParameters"
-          name  = kubernetes_manifest.gateway_params_public.manifest.metadata.name
+          group = ""
+          kind  = "ConfigMap"
+          name  = kubernetes_config_map.gateway_params_public.metadata[0].name
         }
       }
       listeners = [
@@ -104,29 +104,29 @@ resource "kubernetes_manifest" "gateway_public" {
 
   depends_on = [
     kubernetes_namespace.istio_ingress,
-    kubernetes_manifest.gateway_params_public,
+    kubernetes_config_map.gateway_params_public
   ]
 }
 
-resource "kubernetes_manifest" "gateway_params_internal" {
-  manifest = {
-    apiVersion = "gateway.istio.io/v1alpha1"
-    kind       = "GatewayParameters"
-    metadata = {
-      name      = "internal-gateway-params"
-      namespace = kubernetes_namespace.istio_ingress_internal.metadata[0].name
-    }
-    spec = {
-      kube = {
-        podSpec = {
-          priorityClassName = "high-priority"
-        }
-      }
-    }
-  }
+# resource "kubernetes_manifest" "gateway_params_internal" {
+#   manifest = {
+#     apiVersion = "gateway.istio.io/v1alpha1"
+#     kind       = "GatewayParameters"
+#     metadata = {
+#       name      = "internal-gateway-params"
+#       namespace = kubernetes_namespace.istio_ingress_internal.metadata[0].name
+#     }
+#     spec = {
+#       kube = {
+#         podSpec = {
+#           priorityClassName = "high-priority"
+#         }
+#       }
+#     }
+#   }
 
-  depends_on = [kubernetes_namespace.istio_ingress_internal]
-}
+#   depends_on = [kubernetes_namespace.istio_ingress_internal]
+# }
 
 resource "kubernetes_manifest" "gateway_internal" {
   manifest = {
@@ -151,9 +151,9 @@ resource "kubernetes_manifest" "gateway_internal" {
           "networking.gke.io/load-balancer-type" = "Internal"
         }
         parametersRef = {
-          group = "gateway.istio.io"
-          kind  = "GatewayParameters"
-          name  = kubernetes_manifest.gateway_params_internal.manifest.metadata.name
+          group = ""
+          kind  = "ConfigMap"
+          name  = kubernetes_config_map.gateway_params_internal.metadata[0].name
         }
       }
       gatewayClassName = var.gateway_class_name
@@ -185,6 +185,6 @@ resource "kubernetes_manifest" "gateway_internal" {
 
   depends_on = [
     google_compute_address.private_gateway,
-    kubernetes_manifest.gateway_params_internal,
+    kubernetes_config_map.gateway_params_internal,
   ]
 }
