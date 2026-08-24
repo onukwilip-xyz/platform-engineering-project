@@ -21,10 +21,16 @@ resource "kubernetes_manifest" "cnpg_operator" {
         chart          = "cloudnative-pg"
         targetRevision = var.cnpg_operator_chart_version
         helm = {
-          values = <<-EOT
-            config:
-              clusterWide: true
-          EOT
+          values = yamlencode({
+            priorityClassName = "medium-priority"
+            config = {
+              clusterWide = true
+            }
+            resources = {
+              requests = { cpu = "100m", memory = "100Mi" }
+              limits   = { cpu = "200m", memory = "200Mi" }
+            }
+          })
         }
       }
       destination = {
@@ -51,7 +57,7 @@ resource "kubernetes_manifest" "postgres_cluster" {
       name      = "postgres-cluster"
       namespace = var.argocd_namespace
       annotations = {
-        "argocd.argoproj.io/sync-wave" = "1"
+        "argocd.argoproj.io/sync-wave" = "2"
       }
       finalizers = ["resources-finalizer.argocd.argoproj.io"]
     }
@@ -73,6 +79,7 @@ resource "kubernetes_manifest" "postgres_cluster" {
             certificates = {
               clusterIssuer = var.cluster_issuer_name
             }
+            postgresClusterStatusServiceName = local.postgres_cluster_status_service_name
             databases = [
               {
                 name               = local.users_db_name
@@ -114,7 +121,7 @@ resource "kubernetes_manifest" "kube_prometheus_stack" {
       name      = "kube-prometheus-stack"
       namespace = var.argocd_namespace
       annotations = {
-        "argocd.argoproj.io/sync-wave"       = "2"
+        "argocd.argoproj.io/sync-wave"       = "1"
         "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
       }
       finalizers = ["resources-finalizer.argocd.argoproj.io"]
@@ -132,8 +139,17 @@ resource "kubernetes_manifest" "kube_prometheus_stack" {
               enabled = false
             }
 
+            prometheusOperator = {
+              priorityClassName = "medium-priority"
+              resources = {
+                requests = { cpu = "50m", memory = "64Mi" }
+                limits   = { cpu = "200m", memory = "256Mi" }
+              }
+            }
+
             prometheus = {
               prometheusSpec = {
+                priorityClassName = "medium-priority"
                 # `Nil…SelectorNilUsesHelmValues = false` lets Prometheus discover
                 # ServiceMonitors / PodMonitors / PrometheusRules / Probes created
                 # in other namespaces (grafana, logging, tracing, microservices…).
@@ -143,6 +159,11 @@ resource "kubernetes_manifest" "kube_prometheus_stack" {
                 probeSelectorNilUsesHelmValues          = false
                 enableRemoteWriteReceiver               = true
                 retention                               = "7d"
+
+                resources = {
+                  requests = { cpu = "200m", memory = "512Mi" }
+                  limits   = { cpu = "1000m", memory = "2Gi" }
+                }
 
                 storageSpec = {
                   volumeClaimTemplate = {
@@ -160,11 +181,31 @@ resource "kubernetes_manifest" "kube_prometheus_stack" {
               }
             }
 
+            "kube-state-metrics" = {
+              resources = {
+                requests = { cpu = "20m", memory = "64Mi" }
+                limits   = { cpu = "100m", memory = "128Mi" }
+              }
+            }
+
+            alertmanager = {
+              alertmanagerSpec = {
+                resources = {
+                  requests = { cpu = "50m", memory = "128Mi" }
+                  limits   = { cpu = "200m", memory = "256Mi" }
+                }
+              }
+            }
+
             # node-exporter runs with hostNetwork=true; ambient CNI can't redirect
             # hostNetwork pods, so opt the DaemonSet out of the mesh.
             "prometheus-node-exporter" = {
               podLabels = {
                 "istio.io/dataplane-mode" = "none"
+              }
+              resources = {
+                requests = { cpu = "10m", memory = "32Mi" }
+                limits   = { cpu = "100m", memory = "64Mi" }
               }
             }
           })
@@ -231,6 +272,7 @@ resource "kubernetes_manifest" "grafana" {
             grafana = {
               enabled                  = true
               defaultDashboardsEnabled = true
+              priorityClassName        = "medium-priority"
 
               admin = {
                 existingSecret = kubernetes_secret.grafana_admin.metadata[0].name
@@ -249,9 +291,20 @@ resource "kubernetes_manifest" "grafana" {
               # HTTPRoute through the private Gateway is added separately.
               ingress = { enabled = false }
 
-              # The chart's default auto-datasource targets this release's own
-              # (disabled) Prometheus. Point at the monitoring release instead.
               sidecar = {
+                alerts = {
+                  enabled         = true
+                  label           = "grafana_alert"
+                  labelValue      = "1"
+                  searchNamespace = "ALL"
+                }
+                dashboards = {
+                  enabled          = true
+                  label            = "grafana_dashboard"
+                  labelValue       = "1"
+                  searchNamespace  = "ALL"
+                  folderAnnotation = "grafana_folder"
+                }
                 datasources = {
                   defaultDatasourceEnabled = false
                 }
@@ -261,6 +314,7 @@ resource "kubernetes_manifest" "grafana" {
                 {
                   name      = "Prometheus"
                   type      = "prometheus"
+                  uid       = "prometheus-main"
                   url       = "http://prometheus-operated.monitoring.svc:9090"
                   access    = "proxy"
                   isDefault = true
@@ -268,12 +322,14 @@ resource "kubernetes_manifest" "grafana" {
                 {
                   name   = "Loki"
                   type   = "loki"
+                  uid    = "loki-main"
                   url    = "http://loki-gateway.logging.svc"
                   access = "proxy"
                 },
                 {
                   name   = "Tempo"
                   type   = "tempo"
+                  uid    = "tempo-main"
                   url    = "http://tempo.tracing.svc:3200"
                   access = "proxy"
                 },
@@ -285,6 +341,26 @@ resource "kubernetes_manifest" "grafana" {
                 server = {
                   root_url = "https://grafana.${var.private_domain}"
                 }
+              }
+
+              # Mounts every key from the alerting secrets as an env var so
+              # provisioning files can reference them as $__env{KEY_NAME}.
+
+              envFromSecrets = [
+                {
+                  name     = kubernetes_secret.grafana_alerting_secrets.metadata[0].name
+                  optional = false
+                },
+                {
+                  name     = kubernetes_secret.grafana_pagerduty.metadata[0].name
+                  optional = false
+                }
+              ]
+
+
+              resources = {
+                requests = { cpu = "100m", memory = "128Mi" }
+                limits   = { cpu = "300m", memory = "256Mi" }
               }
             }
           })
@@ -304,7 +380,62 @@ resource "kubernetes_manifest" "grafana" {
     }
   }
 
-  depends_on = [kubernetes_secret.grafana_admin]
+  depends_on = [
+    kubernetes_secret.grafana_admin,
+    kubernetes_secret.grafana_alerting_secrets,
+    kubernetes_config_map.grafana_alerting_contactpoints,
+    kubernetes_config_map.grafana_alerting_policies,
+    kubernetes_config_map.grafana_alerting_rules,
+  ]
+}
+
+# Sloth
+resource "kubernetes_manifest" "sloth" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "sloth"
+      namespace = var.argocd_namespace
+      annotations = {
+        "argocd.argoproj.io/sync-wave"       = "4"
+        "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
+      }
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = "https://slok.github.io/sloth"
+        chart          = "sloth"
+        targetRevision = var.sloth_chart_version
+        helm = {
+          values = yamlencode({
+            serviceMonitor = {
+              enabled = true
+            }
+            resources = {
+              requests = { cpu = "50m", memory = "64Mi" }
+              limits   = { cpu = "200m", memory = "128Mi" }
+            }
+          })
+        }
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = kubernetes_namespace.monitoring.metadata[0].name
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = ["CreateNamespace=false", "ServerSideApply=true", "ServerSideDiff=true"]
+      }
+    }
+  }
+
+  depends_on = [kubernetes_manifest.kube_prometheus_stack]
 }
 
 # Loki
@@ -378,6 +509,22 @@ resource "kubernetes_manifest" "loki" {
                 size         = "2Gi"
                 storageClass = "standard"
               }
+              resources = {
+                requests = { cpu = "250m", memory = "512Mi" }
+                limits   = { cpu = "500m", memory = "1Gi" }
+              }
+            }
+
+            gateway = {
+              enabled  = true
+              replicas = 1
+              basicAuth = {
+                enabled = false
+              }
+              resources = {
+                requests = { cpu = "50m", memory = "64Mi" }
+                limits   = { cpu = "100m", memory = "128Mi" }
+              }
             }
 
             read    = { replicas = 0 }
@@ -386,14 +533,6 @@ resource "kubernetes_manifest" "loki" {
 
             chunksCache  = { enabled = false }
             resultsCache = { enabled = false }
-
-            gateway = {
-              enabled  = true
-              replicas = 1
-              basicAuth = {
-                enabled = false
-              }
-            }
 
             serviceAccount = {
               create = true
@@ -456,7 +595,8 @@ resource "kubernetes_manifest" "alloy" {
 
             alloy = {
               mounts = {
-                varlog = true
+                # varlog = true
+                varlog = false
               }
 
               # Expose the node name to the Alloy config — the discovery.kubernetes
@@ -474,7 +614,7 @@ resource "kubernetes_manifest" "alloy" {
               ]
 
               configMap = {
-                content = file("${path.module}/alloy-config.alloy")
+                content = file("${path.module}/config/alloy-config.alloy")
               }
             }
           })
@@ -552,6 +692,11 @@ resource "kubernetes_manifest" "tempo" {
               serviceGraph = {
                 enabled = true
               }
+
+              resources = {
+                requests = { cpu = "500m", memory = "1Gi" }
+                limits   = { cpu = "1000m", memory = "2Gi" }
+              }
             }
 
             persistence = {
@@ -610,6 +755,11 @@ resource "kubernetes_manifest" "kiali" {
         helm = {
           values = yamlencode(
             {
+              resources = {
+                requests = { cpu = "10m", memory = "64Mi" }
+                limits   = { cpu = "100m", memory = "256Mi" }
+              }
+
               cr = {
                 create    = true
                 namespace = kubernetes_namespace.tracing.metadata[0].name
@@ -620,6 +770,10 @@ resource "kubernetes_manifest" "kiali" {
                   deployment = {
                     accessible_namespaces = ["**"]
                     cluster_wide_access   = true
+                    resources = {
+                      requests = { cpu = "100m", memory = "128Mi" }
+                      limits   = { cpu = "200m", memory = "256Mi" }
+                    }
                   }
                   external_services = {
                     prometheus = {
@@ -911,6 +1065,24 @@ resource "kubernetes_manifest" "kubernetes_event_exporter" {
                       container = "kubernetes-event-exporter"
                       source    = "kubernetes-event-exporter"
                     }
+                    layout = {
+                      message      = "{{ .Message }}"
+                      reason       = "{{ .Reason }}"
+                      type         = "{{ .Type }}"
+                      count        = "{{ .Count }}"
+                      cluster_name = "{{ .ClusterName }}"
+
+                      namespace = "{{ .InvolvedObject.Namespace }}"
+                      kind      = "{{ .InvolvedObject.Kind }}"
+                      name      = "{{ .InvolvedObject.Name }}"
+
+                      component = "{{ .Source.Component }}"
+                      host      = "{{ .Source.Host }}"
+
+                      first_time = "{{ .FirstTimestamp }}"
+                      last_time  = "{{ .LastTimestamp }}"
+                      event_time = "{{ .EventTime }}"
+                    }
                   }
                 },
               ]
@@ -938,6 +1110,170 @@ resource "kubernetes_manifest" "kubernetes_event_exporter" {
   ]
 }
 
+# Gatus
+resource "kubernetes_manifest" "gatus" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "gatus"
+      namespace = var.argocd_namespace
+      annotations = {
+        "argocd.argoproj.io/sync-wave"       = "5"
+        "argocd.argoproj.io/compare-options" = "ServerSideDiff=true"
+      }
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = "https://twin.github.io/helm-charts"
+        chart          = "gatus"
+        targetRevision = var.gatus_chart_version
+        helm = {
+          values = yamlencode({
+            replicaCount = 1
+
+            podAnnotations = {
+              "istio.io/dataplane-mode" = "ambient"
+            }
+
+            extraVolumeMounts = [
+              {
+                name           = "internal-ca"
+                mountPath      = "/certs/internal-ca"
+                readOnly       = true
+                existingSecret = "internal-ca-bundle"
+              }
+            ]
+
+            resources = {
+              requests = {
+                cpu    = "50m"
+                memory = "64Mi"
+              }
+              limits = {
+                cpu    = "200m"
+                memory = "128Mi"
+              }
+            }
+
+            serviceMonitor = {
+              enabled   = true
+              namespace = "monitoring"
+              interval  = "60s"
+              labels = {
+                # Must match your Prometheus operator's serviceMonitorSelector label
+                release = "kube-prometheus-stack"
+              }
+            }
+
+            service = {
+              port = 8080
+            }
+
+            ingress = {
+              enabled = false
+            }
+
+            config = {
+              metrics = true
+
+              endpoints = [
+                {
+                  name     = "users-microservice"
+                  group    = "internal-services"
+                  url      = "http://${local.users_microservice}-service.${kubernetes_namespace.users.metadata[0].name}.svc.cluster.local:80/health"
+                  interval = "30s"
+                  conditions = [
+                    "[STATUS] == 200"
+                  ]
+                },
+
+                {
+                  name     = "store-ui-public"
+                  group    = "public"
+                  url      = "https://store.pe.onukwilip.me"
+                  interval = "1m"
+                  conditions = [
+                    "[STATUS] == 200"
+                  ]
+                },
+
+                {
+                  name     = "public-istio-gateway"
+                  group    = "infrastructure"
+                  url      = "http://${var.public_gateway_name}-istio.${var.public_gateway_namespace}.svc.cluster.local:15021/healthz/ready"
+                  interval = "30s"
+                  conditions = [
+                    "[STATUS] == 200"
+                  ]
+                },
+
+                {
+                  name     = "private-istio-gateway"
+                  group    = "infrastructure"
+                  url      = "http://${var.private_gateway_name}-istio.${var.private_gateway_namespace}.svc.cluster.local:15021/healthz/ready"
+                  interval = "30s"
+                  conditions = [
+                    "[STATUS] == 200"
+                  ]
+                },
+
+                {
+                  name     = "postgres-cnpg"
+                  group    = "databases"
+                  url      = "https://${local.postgres_cluster_status_service_name}.${kubernetes_namespace.postgres.metadata[0].name}.svc.cluster.local:8000/healthz"
+                  interval = "30s"
+                  conditions = [
+                    "[STATUS] == 200"
+                  ],
+                  client = {
+                    tls = {
+                      ca       = "/certs/internal-ca/ca.crt"
+                      insecure = false
+                    }
+                  }
+                },
+
+                {
+                  name     = "pgbouncer"
+                  group    = "databases"
+                  url      = "tcp://postgres-pooler-rw.${kubernetes_namespace.postgres.metadata[0].name}.svc.cluster.local:5432"
+                  interval = "30s"
+                  conditions = [
+                    "[CONNECTED] == true"
+                  ]
+                }
+
+              ]
+            }
+
+            env = {
+              SSL_CERT_FILE = "/certs/internal-ca/ca.crt"
+            }
+          })
+        }
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = "monitoring"
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = [
+          "CreateNamespace=false",
+          "ServerSideApply=true",
+          "ServerSideDiff=true"
+        ]
+      }
+    }
+  }
+}
+
 # * SECRETS STACK
 
 # External Secrets Operator
@@ -963,6 +1299,22 @@ resource "kubernetes_manifest" "external_secrets" {
         helm = {
           values = yamlencode({
             installCRDs = true
+            resources = {
+              requests = { cpu = "10m", memory = "64Mi" }
+              limits   = { cpu = "100m", memory = "128Mi" }
+            }
+            webhook = {
+              resources = {
+                requests = { cpu = "10m", memory = "32Mi" }
+                limits   = { cpu = "50m", memory = "64Mi" }
+              }
+            }
+            certController = {
+              resources = {
+                requests = { cpu = "10m", memory = "32Mi" }
+                limits   = { cpu = "50m", memory = "64Mi" }
+              }
+            }
           })
         }
       }
@@ -991,7 +1343,7 @@ resource "kubernetes_manifest" "users_microservice" {
     apiVersion = "argoproj.io/v1alpha1"
     kind       = "Application"
     metadata = {
-      name      = "users-microservice"
+      name      = local.users_microservice
       namespace = var.argocd_namespace
       annotations = {
         "argocd.argoproj.io/sync-wave" = "5"
@@ -1008,7 +1360,6 @@ resource "kubernetes_manifest" "users_microservice" {
           helm = {
             values = yamlencode({
               useDeployment = true
-              replicas      = 2
 
               containers = [
                 {
@@ -1023,8 +1374,10 @@ resource "kubernetes_manifest" "users_microservice" {
                       memory = "256Mi"
                     }
                     limits = {
-                      cpu    = "1000m"
-                      memory = "3Gi"
+                      # cpu    = "1000m"
+                      cpu = "500m"
+                      # memory = "3Gi"
+                      memory = "500Mi"
                     }
                   }
                   otherSpecs = {
@@ -1061,32 +1414,33 @@ resource "kubernetes_manifest" "users_microservice" {
 
               hpa = {
                 enabled                        = true
-                minReplicas                    = 2
-                maxReplicas                    = 12
+                minReplicas                    = 1
+                maxReplicas                    = 1
                 targetCPUUtilizationPercentage = 75
               }
             })
           }
         },
-        # {
-        #   repoURL        = var.repo_url
-        #   targetRevision = var.target_revision
-        #   path           = "terraform/kubernetes/manifests/users"
-        #   helm = {
-        #     values = yamlencode({
-        #       service = {
-        #         name         = "users-microservice-service"
-        #         externalHost = "users.internal.pe.onukwilip.xyz"
-        #       }
-        #       gateways = ["mesh", "istio-ingress-internal/private"]
-        #       destinationRule = {
-        #         connectionPool = {
-        #           enabled = false
-        #         }
-        #       }
-        #     })
-        #   }
-        # },
+        {
+          repoURL        = var.repo_url
+          targetRevision = var.target_revision
+          path           = "terraform/kubernetes/manifests/users"
+          helm = {
+            values = yamlencode({
+              service = {
+                name         = "${local.users_microservice}-service"
+                externalHost = "users.internal.pe.onukwilip.xyz"
+              }
+              gateways = ["mesh", "istio-ingress-internal/private"]
+              destinationRule = {
+                connectionPool = {
+                  enabled = false
+                }
+              }
+              slo = { enabled = true }
+            })
+          }
+        },
       ]
       destination = {
         server    = "https://kubernetes.default.svc"
@@ -1097,12 +1451,24 @@ resource "kubernetes_manifest" "users_microservice" {
           prune    = true
           selfHeal = true
         }
-        syncOptions = ["CreateNamespace=false"]
+        syncOptions = [
+          "CreateNamespace=false",
+          "SkipDryRunOnMissingResource=true",
+        ]
+        retry = {
+          limit = 5
+          backoff = {
+            duration    = "10s"
+            factor      = 2
+            maxDuration = "3m"
+          }
+        }
       }
     }
   }
 
   depends_on = [
+    kubernetes_manifest.sloth,
     kubernetes_manifest.postgres_cluster,
     kubernetes_config_map.users_microservice,
     kubernetes_secret.users_microservice_db,
@@ -1124,32 +1490,60 @@ resource "kubernetes_manifest" "store_ui" {
     }
     spec = {
       project = "default"
-      source = {
-        repoURL        = var.repo_url
-        targetRevision = var.target_revision
-        path           = "helm/custom-charts/microservice"
-        helm = {
-          values = yamlencode({
-            useDeployment = true
-            replicas      = 1
+      sources = [
+        {
+          repoURL        = var.repo_url
+          targetRevision = var.target_revision
+          path           = "helm/custom-charts/microservice"
+          helm = {
+            values = yamlencode({
+              useDeployment = true
 
-            containers = [
-              {
-                name            = "store-ui"
-                image           = local.store_ui_image
-                imagePullPolicy = "IfNotPresent"
-              },
-            ]
+              containers = [
+                {
+                  name            = "store-ui"
+                  image           = local.store_ui_image
+                  imagePullPolicy = "IfNotPresent"
+                  resources = {
+                    requests = {
+                      cpu    = "20m"
+                      memory = "50Mi"
+                    }
+                    limits = {
+                      cpu    = "20m"
+                      memory = "50Mi"
+                    }
+                  }
+                },
+              ]
 
-            service = {
-              enabled    = true
-              type       = "ClusterIP"
-              port       = 80
-              targetPort = 80
-            }
-          })
-        }
-      }
+              service = {
+                enabled    = true
+                type       = "ClusterIP"
+                port       = 80
+                targetPort = 80
+              }
+
+              hpa = {
+                enabled                        = true
+                minReplicas                    = 1
+                maxReplicas                    = 1
+                targetCPUUtilizationPercentage = 75
+              }
+            })
+          }
+        },
+        {
+          repoURL        = var.repo_url
+          targetRevision = var.target_revision
+          path           = "terraform/kubernetes/manifests/store-ui"
+          helm = {
+            values = yamlencode({
+              slo = { enabled = true }
+            })
+          }
+        },
+      ]
       destination = {
         server    = "https://kubernetes.default.svc"
         namespace = kubernetes_namespace.store_ui.metadata[0].name
@@ -1159,12 +1553,26 @@ resource "kubernetes_manifest" "store_ui" {
           prune    = true
           selfHeal = true
         }
-        syncOptions = ["CreateNamespace=false"]
+        syncOptions = [
+          "CreateNamespace=false",
+          "SkipDryRunOnMissingResource=true",
+        ]
+        retry = {
+          limit = 5
+          backoff = {
+            duration    = "10s"
+            factor      = 2
+            maxDuration = "3m"
+          }
+        }
       }
     }
   }
 
-  depends_on = [kubernetes_namespace.store_ui]
+  depends_on = [
+    kubernetes_manifest.sloth,
+    kubernetes_namespace.store_ui,
+  ]
 }
 
 # * LOAD TESTING STACK

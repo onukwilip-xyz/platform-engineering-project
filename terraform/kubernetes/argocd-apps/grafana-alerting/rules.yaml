@@ -1,0 +1,1858 @@
+apiVersion: 1
+groups:
+  # ── Workload Saturation ──────────────────────────────────────────────────────
+
+  - orgId: 1
+    name: workload-saturation
+    folder: Platform Alerts
+    interval: 1m
+    rules:
+
+      - uid: pod-cpu-limit-80
+        title: Pod CPU Usage > 80% of Limit
+        condition: C
+        for: 5m
+        labels:
+          channel: scale-workloads
+          severity: warning
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} CPU usage is above 80% of its limit'
+          description: 'CPU usage is {{ $values.B.Value | printf "%.1f" }}% of limit. Container: {{ $labels.container }}.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: >-
+                sum by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{container!="",container!="POD"}[5m]))
+                / sum by (namespace, pod, container) (kube_pod_container_resource_limits{resource="cpu",container!=""})
+                * 100
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [80]
+                    type: gt
+                  unloadEvaluator:
+                    params: [70]
+                    type: lt
+
+      - uid: pod-memory-limit-80
+        title: Pod Memory Usage > 80% of Limit
+        condition: C
+        for: 5m
+        labels:
+          channel: scale-workloads
+          severity: warning
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} memory usage is above 80% of its limit'
+          description: 'Memory usage is {{ $values.B.Value | printf "%.1f" }}% of limit. Container: {{ $labels.container }}.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: >-
+                sum by (namespace, pod, container) (container_memory_working_set_bytes{container!="",container!="POD"})
+                / sum by (namespace, pod, container) (kube_pod_container_resource_limits{resource="memory",container!=""})
+                * 100
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [80]
+                    type: gt
+                  unloadEvaluator:
+                    params: [70]
+                    type: lt
+
+      - uid: pod-cpu-throttle-rate-warning
+        title: Pod CPU Throttle Rate > 25%
+        condition: C
+        for: 10m
+        labels:
+          channel: scale-workloads
+          severity: warning
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} CPU is being throttled'
+          description: 'CPU throttle rate is {{ $values.B.Value | printf "%.1f" }}%. Container: {{ $labels.container }}.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: >-
+                sum by (namespace, pod, container) (increase(container_cpu_cfs_throttled_periods_total{container!=""}[5m]))
+                / sum by (namespace, pod, container) (increase(container_cpu_cfs_periods_total{container!=""}[5m]))
+                * 100
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [25]
+                    type: gt
+                  unloadEvaluator:
+                    params: [15]
+                    type: lt
+
+      - uid: pod-cpu-throttle-rate-error
+        title: Pod CPU Throttle Rate > 50%
+        condition: C
+        for: 5m
+        labels:
+          channel: error
+          severity: error
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} CPU is heavily throttled'
+          description: 'CPU throttle rate is {{ $values.B.Value | printf "%.1f" }}%. Container: {{ $labels.container }}.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: >-
+                sum by (namespace, pod, container) (increase(container_cpu_cfs_throttled_periods_total{container!=""}[5m]))
+                / sum by (namespace, pod, container) (increase(container_cpu_cfs_periods_total{container!=""}[5m]))
+                * 100
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [50]
+                    type: gt
+                  unloadEvaluator:
+                    params: [35]
+                    type: lt
+
+      - uid: pod-cpu-throttle-seconds-warning
+        title: Pod CPU Throttled Seconds > 10% of window
+        condition: C
+        for: 10m
+        labels:
+          channel: scale-workloads
+          severity: warning
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} is accumulating CPU throttle time'
+          description: 'CPU throttled rate is {{ $values.B.Value | printf "%.3f" }}s/s. Container: {{ $labels.container }}.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'sum by (namespace, pod, container) (rate(container_cpu_cfs_throttled_seconds_total{container!=""}[5m]))'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0.1]
+                    type: gt
+                  unloadEvaluator:
+                    params: [0.05]
+                    type: lt
+
+      - uid: pod-cpu-throttle-seconds-error
+        title: Pod CPU Throttled Seconds > 50% of window
+        condition: C
+        for: 5m
+        labels:
+          channel: error
+          severity: error
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} is heavily throttled by CPU time'
+          description: 'CPU throttled rate is {{ $values.B.Value | printf "%.3f" }}s/s. Container: {{ $labels.container }}.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'sum by (namespace, pod, container) (rate(container_cpu_cfs_throttled_seconds_total{container!=""}[5m]))'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0.5]
+                    type: gt
+                  unloadEvaluator:
+                    params: [0.3]
+                    type: lt
+
+      - uid: pvc-disk-85
+        title: PVC Disk Usage > 85%
+        condition: C
+        for: 5m
+        labels:
+          channel: scale-workloads
+          severity: warning
+        annotations:
+          summary: 'PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} disk usage above 85%'
+          description: 'Disk usage is {{ $values.B.Value | printf "%.1f" }}%.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: '(kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) * 100'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [85]
+                    type: gt
+                  unloadEvaluator:
+                    params: [75]
+                    type: lt
+
+      - uid: node-cpu-75
+        title: Node CPU Usage > 75%
+        condition: C
+        for: 10m
+        labels:
+          channel: scale-workloads
+          severity: warning
+        annotations:
+          summary: 'Node {{ $labels.node }} CPU usage is above 75%'
+          description: 'Node CPU usage is {{ $values.B.Value | printf "%.1f" }}%.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: '(1 - avg by (node) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) * 100'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [75]
+                    type: gt
+                  unloadEvaluator:
+                    params: [65]
+                    type: lt
+
+      - uid: node-memory-75
+        title: Node Memory Usage > 75%
+        condition: C
+        for: 10m
+        labels:
+          channel: scale-workloads
+          severity: warning
+        annotations:
+          summary: 'Node {{ $labels.node }} memory usage is above 75%'
+          description: 'Node memory usage is {{ $values.B.Value | printf "%.1f" }}%.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: '(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [75]
+                    type: gt
+                  unloadEvaluator:
+                    params: [65]
+                    type: lt
+
+  # ── Pod Health ───────────────────────────────────────────────────────────────
+
+  - orgId: 1
+    name: pod-health
+    folder: Platform Alerts
+    interval: 1m
+    rules:
+
+      - uid: pod-crashloop-error
+        title: Pod CrashLoopBackOff (non-critical namespaces)
+        condition: C
+        for: 5m
+        labels:
+          channel: error
+          severity: error
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} is in CrashLoopBackOff'
+          description: Pod has been crash-looping for more than 5 minutes.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff",namespace!~"${critical_namespaces}"}'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+      - uid: pod-crashloop-critical
+        title: Pod CrashLoopBackOff (critical namespaces)
+        condition: C
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: 'CRITICAL: Pod {{ $labels.namespace }}/{{ $labels.pod }} is in CrashLoopBackOff'
+          description: Critical namespace pod has been crash-looping for more than 2 minutes.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff",namespace=~"${critical_namespaces}"}'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+      - uid: pod-unschedulable
+        title: Pod Unschedulable
+        condition: C
+        for: 5m
+        labels:
+          channel: warning
+          severity: warning
+        annotations:
+          summary: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} cannot be scheduled'
+          description: 'Pod has been unschedulable for more than 5 minutes. Possible causes: insufficient resources or taints.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_pod_status_unschedulable > 0'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+      - uid: node-memory-pressure
+        title: Node Memory Pressure
+        condition: C
+        for: 5m
+        labels:
+          channel: warning
+          severity: warning
+        annotations:
+          summary: 'Node {{ $labels.node }} is under memory pressure'
+          description: 'Kubernetes has flagged node {{ $labels.node }} with MemoryPressure condition.'
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_node_status_condition{condition="MemoryPressure",status="true"} == 1'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+  # ── Deployment Health ────────────────────────────────────────────────────────
+
+  - orgId: 1
+    name: deployment-health
+    folder: Platform Alerts
+    interval: 1m
+    rules:
+
+      - uid: deployment-zero-replicas-error
+        title: Deployment Zero Replicas (non-critical namespaces)
+        condition: C
+        for: 5m
+        labels:
+          channel: error
+          severity: error
+        annotations:
+          summary: 'Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has 0 ready replicas'
+          description: Deployment has had 0 ready replicas for more than 5 minutes.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_deployment_status_replicas_ready{namespace!~"${critical_namespaces}"} == 0'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+      - uid: statefulset-zero-replicas-error
+        title: StatefulSet Zero Replicas (non-critical namespaces)
+        condition: C
+        for: 5m
+        labels:
+          channel: error
+          severity: error
+        annotations:
+          summary: 'StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} has 0 ready replicas'
+          description: StatefulSet has had 0 ready replicas for more than 5 minutes.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_statefulset_status_replicas_ready{namespace!~"${critical_namespaces}"} == 0'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+      - uid: deployment-zero-replicas-critical
+        title: Deployment Zero Replicas (critical namespaces)
+        condition: C
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: 'CRITICAL: Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has 0 ready replicas'
+          description: Critical namespace deployment has had 0 ready replicas for more than 2 minutes.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_deployment_status_replicas_ready{namespace=~"${critical_namespaces}"} == 0'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+      - uid: statefulset-zero-replicas-critical
+        title: StatefulSet Zero Replicas (critical namespaces)
+        condition: C
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: 'CRITICAL: StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} has 0 ready replicas'
+          description: Critical namespace StatefulSet has had 0 ready replicas for more than 2 minutes.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'kube_statefulset_status_replicas_ready{namespace=~"${critical_namespaces}"} == 0'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+
+      - uid: cnpg-cluster-down
+        title: CNPG Cluster Has No Ready Instances
+        condition: C
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: 'CRITICAL: CloudNativePG cluster {{ $labels.namespace }}/{{ $labels.cluster }} has no ready instances'
+          description: CNPG cluster has had 0 ready instances for more than 2 minutes. Database is unavailable.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: 'cnpg_cluster_ready_instances == 0'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+  
+  # ── SLO Burn Rate Alerts ─────────────────────────────────────────────────────
+ 
+  - orgId: 1
+    name: slo-alerts
+    folder: Platform Alerts
+    interval: 1m
+    rules:
+
+    # ── users-microservice / requests-availability (99.5% SLO, budget=0.005) ────
+    # Page:   (5m>0.072 AND 1h>0.072) OR (30m>0.030 AND 6h>0.030)
+    # Ticket: (2h>0.015 AND 1d>0.015) OR (6h>0.005 AND 3d>0.005)
+
+    - uid: slo-users-availability-page
+      title: 'SLO: Users Service Availability Fast Burn'
+      condition: F
+      noDataState: OK
+      execErrState: Error
+      for: 2m
+      labels:
+        channel: critical
+        severity: critical
+        incident-response: "true"
+      annotations:
+        summary: 'Users service burning availability error budget too fast'
+        description: >
+          Pair1 — 1h: {{ $values.A.Value | printf "%.4f" }},
+          5m: {{ $values.B.Value | printf "%.4f" }}.
+          Pair2 — 6h: {{ $values.C.Value | printf "%.4f" }},
+          30m: {{ $values.D.Value | printf "%.4f" }}.
+          At fast burn rate, 30-day budget exhausts in ~2 days.
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1h{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate5m{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+        - refId: D
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate30m{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: D
+        - refId: E
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: math
+            refId: E
+            expression: '($A > 0.0720 && $B > 0.0720) + ($C > 0.0300 && $D > 0.0300)'
+        - refId: F
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: threshold
+            refId: F
+            expression: E
+            conditions:
+              - evaluator: { params: [0], type: gt }
+
+    - uid: slo-users-availability-ticket
+      title: 'SLO: Users Service Availability Slow Burn'
+      condition: F
+      noDataState: OK
+      execErrState: Error
+      for: 15m
+      labels:
+        channel: error
+        severity: error
+      annotations:
+        summary: 'Users service slowly burning availability error budget'
+        description: >
+          Pair1 — 1d: {{ $values.A.Value | printf "%.4f" }},
+          2h: {{ $values.B.Value | printf "%.4f" }}.
+          Pair2 — 3d: {{ $values.C.Value | printf "%.4f" }},
+          6h: {{ $values.D.Value | printf "%.4f" }}.
+          At slow burn rate, budget exhausts within the 30-day window.
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1d{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate2h{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate3d{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+        - refId: D
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="users-microservice",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: D
+        - refId: E
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: math
+            refId: E
+            expression: '($A > 0.0150 && $B > 0.0150) + ($C > 0.0050 && $D > 0.0050)'
+        - refId: F
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: threshold
+            refId: F
+            expression: E
+            conditions:
+              - evaluator: { params: [0], type: gt }
+
+    # ── users-microservice / requests-latency (99.0% SLO, budget=0.01) ──────────
+    # Page:   (5m>0.144 AND 1h>0.144) OR (30m>0.060 AND 6h>0.060)
+    # Ticket: (2h>0.030 AND 1d>0.030) OR (6h>0.010 AND 3d>0.010)
+
+    - uid: slo-users-latency-page
+      title: 'SLO: Users Service Latency Fast Burn'
+      condition: F
+      noDataState: OK
+      execErrState: Error
+      for: 2m
+      labels:
+        channel: error
+        severity: error
+        incident-response: "true"
+      annotations:
+        summary: 'Users service burning latency error budget too fast'
+        description: >
+          Pair1 — 1h: {{ $values.A.Value | printf "%.4f" }},
+          5m: {{ $values.B.Value | printf "%.4f" }}.
+          Pair2 — 6h: {{ $values.C.Value | printf "%.4f" }},
+          30m: {{ $values.D.Value | printf "%.4f" }}.
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1h{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate5m{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+        - refId: D
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate30m{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: D
+        - refId: E
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: math
+            refId: E
+            expression: '($A > 0.1440 && $B > 0.1440) + ($C > 0.0600 && $D > 0.0600)'
+        - refId: F
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: threshold
+            refId: F
+            expression: E
+            conditions:
+              - evaluator: { params: [0], type: gt }
+
+    - uid: slo-users-latency-ticket
+      title: 'SLO: Users Service Latency Slow Burn'
+      condition: F
+      noDataState: OK
+      execErrState: Error
+      for: 15m
+      labels:
+        channel: scale-workloads
+        severity: warning
+      annotations:
+        summary: 'Users service slowly burning latency error budget'
+        description: >
+          Pair1 — 1d: {{ $values.A.Value | printf "%.4f" }},
+          2h: {{ $values.B.Value | printf "%.4f" }}.
+          Pair2 — 3d: {{ $values.C.Value | printf "%.4f" }},
+          6h: {{ $values.D.Value | printf "%.4f" }}.
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1d{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate2h{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate3d{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+        - refId: D
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="users-microservice",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: D
+        - refId: E
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: math
+            refId: E
+            expression: '($A > 0.0300 && $B > 0.0300) + ($C > 0.0100 && $D > 0.0100)'
+        - refId: F
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: threshold
+            refId: F
+            expression: E
+            conditions:
+              - evaluator: { params: [0], type: gt }
+
+    # ── store-ui / requests-availability (99.0% SLO, budget=0.01) ───────────────
+    # Page:   (5m>0.144 AND 1h>0.144) OR (30m>0.060 AND 6h>0.060)
+    # Ticket: (2h>0.030 AND 1d>0.030) OR (6h>0.010 AND 3d>0.010)
+
+    - uid: slo-store-ui-availability-page
+      title: 'SLO: Store UI Availability Fast Burn'
+      condition: F
+      noDataState: OK
+      execErrState: Error
+      for: 2m
+      labels:
+        channel: error
+        severity: error
+        incident-response: "true"
+      annotations:
+        summary: 'Store UI burning availability error budget too fast'
+        description: >
+          Pair1 — 1h: {{ $values.A.Value | printf "%.4f" }},
+          5m: {{ $values.B.Value | printf "%.4f" }}.
+          Pair2 — 6h: {{ $values.C.Value | printf "%.4f" }},
+          30m: {{ $values.D.Value | printf "%.4f" }}.
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1h{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate5m{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+        - refId: D
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate30m{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: D
+        - refId: E
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: math
+            refId: E
+            expression: '($A > 0.1440 && $B > 0.1440) + ($C > 0.0600 && $D > 0.0600)'
+        - refId: F
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: threshold
+            refId: F
+            expression: E
+            conditions:
+              - evaluator: { params: [0], type: gt }
+
+    - uid: slo-store-ui-availability-ticket
+      title: 'SLO: Store UI Availability Slow Burn'
+      condition: F
+      noDataState: OK
+      execErrState: Error
+      for: 15m
+      labels:
+        channel: warning
+        severity: warning
+      annotations:
+        summary: 'Store UI slowly burning availability error budget'
+        description: >
+          Pair1 — 1d: {{ $values.A.Value | printf "%.4f" }},
+          2h: {{ $values.B.Value | printf "%.4f" }}.
+          Pair2 — 3d: {{ $values.C.Value | printf "%.4f" }},
+          6h: {{ $values.D.Value | printf "%.4f" }}.
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1d{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate2h{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate3d{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+        - refId: D
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="store-ui",sloth_slo="requests-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: D
+        - refId: E
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: math
+            refId: E
+            expression: '($A > 0.0300 && $B > 0.0300) + ($C > 0.0100 && $D > 0.0100)'
+        - refId: F
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: threshold
+            refId: F
+            expression: E
+            conditions:
+              - evaluator: { params: [0], type: gt }
+
+    # ── store-ui / requests-latency (99.0% SLO, budget=0.01) ────────────────────
+    # Page:   (5m>0.144 AND 1h>0.144) OR (30m>0.060 AND 6h>0.060)
+    # Ticket: (2h>0.030 AND 1d>0.030) OR (6h>0.010 AND 3d>0.010)
+
+    - uid: slo-store-ui-latency-page
+      title: 'SLO: Store UI Latency Fast Burn'
+      condition: F
+      noDataState: OK
+      execErrState: Error
+      for: 2m
+      labels:
+        channel: error
+        severity: error
+        incident-response: "true"
+      annotations:
+        summary: 'Store UI burning latency error budget too fast'
+        description: >
+          Pair1 — 1h: {{ $values.A.Value | printf "%.4f" }},
+          5m: {{ $values.B.Value | printf "%.4f" }}.
+          Pair2 — 6h: {{ $values.C.Value | printf "%.4f" }},
+          30m: {{ $values.D.Value | printf "%.4f" }}.
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1h{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate5m{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+        - refId: D
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate30m{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: D
+        - refId: E
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: math
+            refId: E
+            expression: '($A > 0.1440 && $B > 0.1440) + ($C > 0.0600 && $D > 0.0600)'
+        - refId: F
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: threshold
+            refId: F
+            expression: E
+            conditions:
+              - evaluator: { params: [0], type: gt }
+
+    - uid: slo-store-ui-latency-ticket
+      title: 'SLO: Store UI Latency Slow Burn'
+      condition: F
+      noDataState: OK
+      execErrState: Error
+      for: 15m
+      labels:
+        channel: scale-workloads
+        severity: warning
+      annotations:
+        summary: 'Store UI slowly burning latency error budget'
+        description: >
+          Pair1 — 1d: {{ $values.A.Value | printf "%.4f" }},
+          2h: {{ $values.B.Value | printf "%.4f" }}.
+          Pair2 — 3d: {{ $values.C.Value | printf "%.4f" }},
+          6h: {{ $values.D.Value | printf "%.4f" }}.
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1d{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate2h{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate3d{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+        - refId: D
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="store-ui",sloth_slo="requests-latency"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: D
+        - refId: E
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: math
+            refId: E
+            expression: '($A > 0.0300 && $B > 0.0300) + ($C > 0.0100 && $D > 0.0100)'
+        - refId: F
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: threshold
+            refId: F
+            expression: E
+            conditions:
+              - evaluator: { params: [0], type: gt }
+
+    # ── postgres-cluster / cluster-availability (99.9% SLO, budget=0.001) ───────
+    # Page:   (5m>0.01440 AND 1h>0.01440) OR (30m>0.00600 AND 6h>0.00600)
+    # Ticket: (2h>0.00300 AND 1d>0.00300) OR (6h>0.00100 AND 3d>0.00100)
+
+    - uid: slo-postgres-availability-page
+      title: 'SLO: Postgres Cluster Availability Fast Burn'
+      condition: F
+      noDataState: OK
+      execErrState: Error
+      for: 2m
+      labels:
+        channel: critical
+        severity: critical
+        incident-response: "true"
+      annotations:
+        summary: 'CNPG cluster burning availability error budget too fast'
+        description: >
+          Pair1 — 1h: {{ $values.A.Value | printf "%.5f" }},
+          5m: {{ $values.B.Value | printf "%.5f" }}.
+          Pair2 — 6h: {{ $values.C.Value | printf "%.5f" }},
+          30m: {{ $values.D.Value | printf "%.5f" }}.
+          At fast burn rate, 30-day budget exhausts in ~2 days.
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1h{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate5m{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+        - refId: D
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate30m{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: D
+        - refId: E
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: math
+            refId: E
+            expression: '($A > 0.01440 && $B > 0.01440) + ($C > 0.00600 && $D > 0.00600)'
+        - refId: F
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: threshold
+            refId: F
+            expression: E
+            conditions:
+              - evaluator: { params: [0], type: gt }
+
+    - uid: slo-postgres-availability-ticket
+      title: 'SLO: Postgres Cluster Availability Slow Burn'
+      condition: F
+      noDataState: OK
+      execErrState: Error
+      for: 15m
+      labels:
+        channel: error
+        severity: error
+      annotations:
+        summary: 'CNPG cluster slowly burning availability error budget'
+        description: >
+          Pair1 — 1d: {{ $values.A.Value | printf "%.5f" }},
+          2h: {{ $values.B.Value | printf "%.5f" }}.
+          Pair2 — 3d: {{ $values.C.Value | printf "%.5f" }},
+          6h: {{ $values.D.Value | printf "%.5f" }}.
+      data:
+        - refId: A
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate1d{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: B
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate2h{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: B
+        - refId: C
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate3d{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+        - refId: D
+          datasourceUid: prometheus-main
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            expr: 'max without(sloth_window) (slo:sli_error:ratio_rate6h{sloth_service="postgres-cluster",sloth_slo="cluster-availability"}) >= 0'
+            instant: true
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: D
+        - refId: E
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: math
+            refId: E
+            expression: '($A > 0.00300 && $B > 0.00300) + ($C > 0.00100 && $D > 0.00100)'
+        - refId: F
+          datasourceUid: __expr__
+          relativeTimeRange: { from: 300, to: 0 }
+          model:
+            type: threshold
+            refId: F
+            expression: E
+            conditions:
+              - evaluator: { params: [0], type: gt }
+
+  # ── Health checks ─────────────────────────────────────────────────────
+
+  - orgId: 1
+    name: gatus-uptime-alerts
+    folder: Platform Alerts
+    interval: 1m
+    rules:
+
+      - uid: gatus-users-microservice-down
+        title: "Uptime: users-microservice down"
+        condition: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: "users-microservice health check failing"
+          description: >
+            Gatus: users-microservice /health failing for 2+ minutes.
+            kubectl get pods -n users
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: 'increase(gatus_results_total{name="users-microservice",success="false"}[5m])'
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: B
+              expression: A
+              conditions:
+                - evaluator: { params: [2], type: gt }
+
+      - uid: gatus-store-ui-public-down
+        title: "Uptime: store-ui public down"
+        condition: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: "store-ui public endpoint unreachable"
+          description: >
+            Gatus: store.pe.onukwilip.me failing for 2+ minutes.
+            Check Cloudflare, GKE Gateway, Istio gateway, store-ui pods.
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: 'increase(gatus_results_total{name="store-ui-public",success="false"}[5m])'
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: B
+              expression: A
+              conditions:
+                - evaluator: { params: [2], type: gt }
+
+      - uid: gatus-public-gateway-down
+        title: "Uptime: public Istio gateway down"
+        condition: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: "Public Istio gateway /healthz/ready failing"
+          description: >
+            Gatus: public-istio :15021/healthz/ready failing for 2+ minutes.
+            kubectl get pods -n istio-ingress
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: 'increase(gatus_results_total{name="public-istio-gateway",success="false"}[5m])'
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: B
+              expression: A
+              conditions:
+                - evaluator: { params: [2], type: gt }
+
+      - uid: gatus-private-gateway-down
+        title: "Uptime: private Istio gateway down"
+        condition: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: "Private Istio gateway /healthz/ready failing"
+          description: >
+            Gatus: private-istio :15021/healthz/ready failing for 2+ minutes.
+            kubectl get pods -n istio-ingress-internal
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: 'increase(gatus_results_total{name="private-istio-gateway",success="false"}[5m])'
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: B
+              expression: A
+              conditions:
+                - evaluator: { params: [2], type: gt }
+
+      - uid: gatus-pgbouncer-down
+        title: "Uptime: PGBouncer down"
+        condition: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: "PGBouncer :5432 TCP check failing"
+          description: >
+            Gatus: PGBouncer port 5432 unreachable for 2+ minutes.
+            kubectl get pods -n postgres
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: 'increase(gatus_results_total{name="pgbouncer",success="false"}[5m])'
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: B
+              expression: A
+              conditions:
+                - evaluator: { params: [2], type: gt }
+
+      - uid: gatus-postgres-cnpg-down
+        title: "Uptime: CNPG PostgreSQL down"
+        condition: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          channel: critical
+          severity: critical
+        annotations:
+          summary: "CNPG PostgreSQL :8000/healthz failing"
+          description: >
+            Gatus: CNPG postgres management healthz failing for 2+ minutes.
+            kubectl get clusters -n postgres && kubectl get pods -n postgres
+        data:
+          - refId: A
+            datasourceUid: prometheus-main
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: 'increase(gatus_results_total{name="postgres-cnpg",success="false"}[5m])'
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: B
+              expression: A
+              conditions:
+                - evaluator: { params: [2], type: gt }

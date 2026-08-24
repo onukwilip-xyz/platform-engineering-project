@@ -14,13 +14,13 @@ dependency "gke" {
   mock_outputs                            = local.k8s.gke_mock_outputs
 }
 
-# Pull the private gateway name and namespace from the istio-gateway unit
+# Pull the private gateway name and namespace from the gateway unit
 # so ArgoCD's HTTPRoute always references the exact gateway that was created.
-dependency "istio_gateway" {
-  config_path = "../istio-gateway"
+dependency "gateway" {
+  config_path = "../gateway"
 
   mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy", "state"]
-  mock_outputs                            = local.k8s.istio_gateway_mock_outputs
+  mock_outputs                            = local.k8s.gateway_mock_outputs
 }
 
 generate "providers" {
@@ -59,6 +59,6 @@ terraform {
 }
 
 inputs = {
-  private_gateway_name      = dependency.istio_gateway.outputs.internal_gateway_name
-  private_gateway_namespace = dependency.istio_gateway.outputs.internal_gateway_namespace
+  private_gateway_name      = dependency.gateway.outputs.internal_gateway_name
+  private_gateway_namespace = dependency.gateway.outputs.internal_gateway_namespace
 }

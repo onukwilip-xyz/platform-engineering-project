@@ -12,7 +12,7 @@ metadata:
   name: k6-full-write-gateway
   namespace: load-testing
 spec:
-  parallelism: 2
+  parallelism: 3
   script:
     configMap:
       name: k6-write-heavy
@@ -28,15 +28,15 @@ spec:
         effect: NoExecute
     env:
       - name: BASE_URL
-        value: "https://users.internal.pe.onukwilip.xyz"
+        value: "https://users.internal.pe.onukwilip.me"
       - name: SSL_CERT_FILE                         # k6/Go reads this env var
         value: "/etc/ssl/trust/ca.crt"
       - name: DURATION
-        value: "15m"
+        value: "75m"
       - name: WRITE_RATE
-        value: "45"
+        value: "70"
       - name: READ_RATE
-        value: "25"
+        value: "45"
       - name: WRITE_VUS
         value: "50"
       - name: READ_VUS
@@ -64,10 +64,10 @@ spec:
         readOnly: true
     resources:
       requests:
-        cpu: "250m"
+        cpu: "100m"
         memory: "256Mi"
       limits:
-        cpu: "1000m"
+        cpu: "500m"
         memory: "3Gi"
     # Spread the 10 runner pods across different nodes so they actually
     # use different source IPs (not just different pod IPs on same node).

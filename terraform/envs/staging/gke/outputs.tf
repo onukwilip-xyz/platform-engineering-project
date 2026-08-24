@@ -26,16 +26,16 @@ output "host_project_id" {
 }
 
 output "gke_subnet_self_link" {
-  description = "Self-link of the GKE subnet (from shared state). Re-exported for istio-gateway static IP allocation."
+  description = "Self-link of the GKE subnet (from shared state). Re-exported for gateway unit static IP allocation."
   value       = data.terraform_remote_state.shared.outputs.gke_subnet_self_link
 }
 
 output "private_dns_zone_name" {
-  description = "Name of the private Cloud DNS managed zone (from shared state). Re-exported for istio-gateway DNS record creation."
+  description = "Name of the private Cloud DNS managed zone (from shared state). Re-exported for gateway unit DNS record creation."
   value       = data.terraform_remote_state.shared.outputs.private_dns_zone.name
 }
 
 output "public_dns_zone_name" {
-  description = "Name of the public Cloud DNS managed zone (from shared state). Re-exported for istio-gateway public wildcard DNS record creation."
+  description = "Name of the public Cloud DNS managed zone (from shared state). Re-exported for gateway unit public wildcard DNS record creation."
   value       = data.terraform_remote_state.shared.outputs.public_dns_zone.name
 }

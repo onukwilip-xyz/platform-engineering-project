@@ -1,0 +1,72 @@
+apiVersion: 1
+policies:
+  - orgId: 1
+    receiver: default-catchall
+    group_by:
+      - alertname
+      - namespace
+      - channel
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+    routes:
+      - receiver: pagerduty-high-priority
+        matchers:
+          - incident-response = "true"
+          - alertname != DatasourceError
+          - alertname != DatasourceNoData
+        group_by:
+          - alertname
+          - sloth_service
+          - sloth_slo
+        group_wait: 0s
+        group_interval: 5m
+        repeat_interval: 1h
+        continue: true
+
+      - receiver: datasource-errors
+        matchers:
+          - alertname = DatasourceError
+        group_by:
+          - alertname
+        continue: false
+
+      - receiver: scale-workloads
+        matchers:
+          - channel = scale-workloads
+          - alertname != DatasourceError
+          - alertname != DatasourceNoData
+        group_by:
+          - alertname
+          - namespace
+        continue: false
+
+      - receiver: critical
+        matchers:
+          - channel = critical
+          - alertname != DatasourceError
+          - alertname != DatasourceNoData
+        group_by:
+          - alertname
+          - namespace
+        continue: false
+
+      - receiver: error
+        matchers:
+          - channel = error
+          - alertname != DatasourceError
+          - alertname != DatasourceNoData
+        group_by:
+          - alertname
+          - namespace
+        continue: false
+
+      - receiver: warning
+        matchers:
+          - channel = warning
+          - alertname != DatasourceError
+          - alertname != DatasourceNoData
+        group_by:
+          - alertname
+          - namespace
+        continue: false

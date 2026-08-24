@@ -1,0 +1,12 @@
+# Terragrunt cache directories — must be excluded so Terragrunt doesn't
+# copy nested cache dirs into new caches (causes "duplicate" *.tf files).
+.terragrunt-cache/
+
+# Terraform local state and plugin cache
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# macOS artifacts
+.DS_Store

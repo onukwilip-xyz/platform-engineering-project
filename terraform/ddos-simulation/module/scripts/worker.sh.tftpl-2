@@ -1,0 +1,132 @@
+#!/bin/bash
+# DDoS simulation — worker VM startup script.
+#
+# Idempotent. Workers idle (no load generated) until the operator clicks
+# "Start swarm" on the master's Locust web UI. Single-NIC: each worker has
+# its own ephemeral public IP on the attack VPC and connects out to the
+# master's nic0 internal IP for the worker↔master protocol.
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+
+LOG=/var/log/ddos-worker-setup.log
+exec > >(tee -a "$${LOG}") 2>&1
+
+echo "===================================================================="
+echo "[ddos-worker] $(date -u +%FT%TZ) startup begin"
+echo "===================================================================="
+
+# ── 1. Read instance metadata ──────────────────────────────────────────────
+META="http://metadata.google.internal/computeMetadata/v1/instance"
+fetch_meta() {
+  curl -sf -H "Metadata-Flavor: Google" "$${META}/$${1}" || true
+}
+
+PROJECT_ID=$(curl -sf -H "Metadata-Flavor: Google" \
+  http://metadata.google.internal/computeMetadata/v1/project/project-id || true)
+LOCUSTFILES_BUCKET=$(fetch_meta "attributes/locustfiles_bucket")
+LOCUSTFILE=$(fetch_meta "attributes/locustfile")
+MASTER_IP=$(fetch_meta "attributes/master_nic0_ip")
+MASTER_PORT=$(fetch_meta "attributes/master_port")
+
+echo "[ddos-worker] project_id=$${PROJECT_ID}"
+echo "[ddos-worker] locustfiles_bucket=$${LOCUSTFILES_BUCKET}"
+echo "[ddos-worker] locustfile=$${LOCUSTFILE}"
+echo "[ddos-worker] master=$${MASTER_IP}:$${MASTER_PORT}"
+
+if [ -z "$${MASTER_IP}" ] || [ -z "$${MASTER_PORT}" ] || [ -z "$${LOCUSTFILE}" ]; then
+  echo "[ddos-worker] FATAL: required metadata missing"
+  exit 1
+fi
+
+# ── 2. Install Python + Locust (idempotent) ────────────────────────────────
+if ! command -v locust &> /dev/null; then
+  echo "[ddos-worker] locust not found, installing..."
+  apt-get update -q
+  apt-get install -y python3 python3-pip ca-certificates curl
+  pip3 install --break-system-packages "locust>=2.0"
+  echo "[ddos-worker] locust installed: $(locust --version 2>&1 | head -1)"
+else
+  echo "[ddos-worker] locust already installed: $(locust --version 2>&1 | head -1)"
+fi
+
+LOCUST_BIN=$(command -v locust)
+echo "[ddos-worker] locust binary at: $${LOCUST_BIN}"
+
+# ── 3. Pull this worker's locustfile from GCS ──────────────────────────────
+mkdir -p /opt/locust
+chmod 755 /opt/locust
+
+echo "[ddos-worker] fetching gs://$${LOCUSTFILES_BUCKET}/$${LOCUSTFILE}"
+GSUTIL_EC=0
+GSUTIL_OUT=$(gsutil cp "gs://$${LOCUSTFILES_BUCKET}/$${LOCUSTFILE}" /opt/locust/locustfile.py 2>&1) || GSUTIL_EC=$?
+echo "[ddos-worker] gsutil exit=$${GSUTIL_EC} output: $${GSUTIL_OUT}"
+if [ "$${GSUTIL_EC}" -ne 0 ]; then
+  echo "[ddos-worker] FATAL: failed to fetch locustfile from GCS"
+  exit 1
+fi
+ls -la /opt/locust/
+
+# ── 4. Dedicated unprivileged user for Locust ──────────────────────────────
+if ! id -u locust &> /dev/null; then
+  useradd -r -s /bin/false -d /opt/locust locust
+  echo "[ddos-worker] created system user 'locust'"
+else
+  echo "[ddos-worker] user 'locust' already exists, skipping"
+fi
+
+mkdir -p /var/log/locust
+chown -R locust:locust /opt/locust /var/log/locust
+
+# ── 5. Wait for the master to be reachable on its Locust port ──────────────
+# When the worker MIG is applied immediately after the master, the master VM
+# may still be running its own startup (apt-get + pip3 install). Retry briefly
+# to avoid the worker logging spurious errors before the master is ready.
+echo "[ddos-worker] probing $${MASTER_IP}:$${MASTER_PORT}..."
+for i in $(seq 1 30); do
+  if (echo > "/dev/tcp/$${MASTER_IP}/$${MASTER_PORT}") 2>/dev/null; then
+    echo "[ddos-worker] master port reachable after $${i}s"
+    break
+  fi
+  if [ "$${i}" -eq 30 ]; then
+    echo "[ddos-worker] WARNING: master port still unreachable after 30s — starting worker anyway, systemd will keep restarting until it connects"
+  fi
+  sleep 1
+done
+
+# ── 6. Write the worker systemd unit ───────────────────────────────────────
+cat > /etc/systemd/system/locust-worker.service <<EOF
+[Unit]
+Description=Locust worker (target master $${MASTER_IP}:$${MASTER_PORT})
+After=network.target
+
+[Service]
+Type=simple
+User=locust
+WorkingDirectory=/opt/locust
+ExecStart=$${LOCUST_BIN} \\
+  --worker \\
+  --master-host=$${MASTER_IP} \\
+  --master-port=$${MASTER_PORT} \\
+  -f /opt/locust/locustfile.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/locust/worker.log
+StandardError=append:/var/log/locust/worker.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+echo "[ddos-worker] wrote /etc/systemd/system/locust-worker.service"
+
+systemctl daemon-reload
+ENABLE_EC=0
+systemctl enable --now locust-worker || ENABLE_EC=$?
+echo "[ddos-worker] systemctl enable --now locust-worker -> exit $${ENABLE_EC}"
+
+systemctl is-active --quiet locust-worker \
+  && echo "[ddos-worker] locust-worker is active" \
+  || echo "[ddos-worker] WARNING: locust-worker is NOT active — check journalctl -u locust-worker"
+
+echo "===================================================================="
+echo "[ddos-worker] $(date -u +%FT%TZ) startup complete — idle, awaiting 'Start swarm' on master UI"
+echo "===================================================================="

@@ -27,15 +27,24 @@ locals {
   cert_manager_config_mock_outputs = {
     public_cluster_issuer_name   = "letsencrypt-public"
     internal_cluster_issuer_name = "internal-ca"
+    internal_ca_cert_pem         = "-----BEGIN CERTIFICATE-----\nMOCK\n-----END CERTIFICATE-----\n"
   }
 
-  istio_gateway_mock_outputs = {
+  gateway_mock_outputs = {
     public_gateway_name        = "public"
     public_gateway_namespace   = "istio-ingress"
     internal_gateway_name      = "private"
     internal_gateway_namespace = "istio-ingress-internal"
+    gke_gateway_name           = "gke"
+    gke_gateway_namespace      = "gke-ingress"
     public_gateway_ip          = "1.2.3.4"
+    public_gateway_global_ip   = "1.2.3.4"
     private_gateway_ip         = "10.0.0.5"
+  }
+
+  cloud_armor_mock_outputs = {
+    security_policy_name = "mock-public-gateway-armor"
+    security_policy_id   = "projects/mock-service-project-id/global/securityPolicies/mock-public-gateway-armor"
   }
 
   argocd_mock_outputs = {

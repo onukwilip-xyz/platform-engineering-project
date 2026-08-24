@@ -1,0 +1,12 @@
+service:
+  name: store-ui-service
+
+slo:
+  enabled: true
+
+  availability:
+    objective: 99.0
+
+  latency:
+    objective: 99.0
+    thresholdMs: 1000

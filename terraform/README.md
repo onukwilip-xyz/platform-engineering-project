@@ -1,21 +1,33 @@
 # Terraform
 
 ```bash
-export TF_PROJECT="pe-terraform-project"
+export TF_PROJECT="pe-terraform-project-1"
 export TF_PROJECT_NAME="terraform-project"
-export ORG_ID="256391743797"
+# export ORG_ID="256391743797"
+export ORG_ID="1034410590770"
 
 export TF_NETWORK_SA="tf-network"
 export TF_PLATFORM_SA="tf-platform"
+export CICD_SA="cicd-sa"
 
 export TF_NETWORK_SA_EMAIL="$TF_NETWORK_SA@${TF_PROJECT}.iam.gserviceaccount.com"
 export TF_PLATFORM_SA_EMAIL="$TF_PLATFORM_SA@${TF_PROJECT}.iam.gserviceaccount.com"
+export CICD_SA_EMAIL="${CICD_SA}@${PROJECT_ID}.iam.gserviceaccount.com"
 
-export BILLING_ACCOUNT_ID="01E4F5-FFA2DF-D86AC5"
-export USER="onukwilip@onukwilip.xyz"
+# export BILLING_ACCOUNT_ID="01E4F5-FFA2DF-D86AC5"
+# export USER="onukwilip@onukwilip.xyz"
 
-export TF_STATE_BUCKET="pe-tf-state-bucket"
+export BILLING_ACCOUNT_ID="011B25-F5FCD8-43553E"
+export USER="prince@onukwilip.me"
+
+# export TF_STATE_BUCKET="pe-tf-state-bucket"
+export TF_STATE_BUCKET="pe-tf-state-bucket-1"
 export LOCATION=us
+
+export POOL_ID="github-actions-pool"
+export PROVIDER_ID="github-oidc"
+export GITHUB_ORG="onukwilip-xyz"
+export GITHUB_REPO="${GITHUB_ORG}/platform-engineering-project"
 ```
 
 Create Terraform project
@@ -35,6 +47,11 @@ export TF_PLATFORM_SA="tf-platform"
 
 gcloud iam service-accounts create $TF_NETWORK_SA --project=$TF_PROJECT
 gcloud iam service-accounts create $TF_PLATFORM_SA --project=$TF_PROJECT
+```
+
+Create CI/CD SA
+```bash
+gcloud iam service-accounts create "$CICD_SA_NAME" --project "$PROJECT_ID" --display-name "CI/CD Service Account"
 ```
 
 Grant organizational policies (for Shared VPC, creating projects, etc...) to the `tf-network` SA
@@ -61,7 +78,8 @@ gcloud organizations add-iam-policy-binding "$ORG_ID" \
 
 Enable Billing on the created project
 ```bash
-export BILLING_ACCOUNT_ID="01E4F5-FFA2DF-D86AC5"
+# export BILLING_ACCOUNT_ID="01E4F5-FFA2DF-D86AC5"
+export BILLING_ACCOUNT_ID="011B25-F5FCD8-43553E"
 
 gcloud billing projects link "$TF_PROJECT" --billing-account="$BILLING_ACCOUNT_ID"
 ```
@@ -75,7 +93,8 @@ gcloud beta billing accounts add-iam-policy-binding "$BILLING_ACCOUNT_ID" \
 
 For manual run, allow the gcloud authenticated user impersonate the created TF Network and Platform SAs
 ```bash
-export USER="onukwilip@onukwilip.xyz"
+# export USER="onukwilip@onukwilip.xyz"
+export USER="prince@onukwilip.me"
 
 gcloud iam service-accounts add-iam-policy-binding "$TF_NETWORK_SA_EMAIL" \
   --project "$TF_PROJECT" \
@@ -88,9 +107,59 @@ gcloud iam service-accounts add-iam-policy-binding "$TF_PLATFORM_SA_EMAIL" \
   --role="roles/iam.serviceAccountTokenCreator"
 ```
 
+For CI/CD, grant CI/CD SA impersonation rights over the TF SAs
+```bash
+gcloud iam service-accounts add-iam-policy-binding "$TF_NETWORK_SA_EMAIL" \
+  --project "$PROJECT_ID" \
+  --member="serviceAccount:${CICD_SA_EMAIL}" \
+  --role="roles/iam.serviceAccountTokenCreator"
+
+gcloud iam service-accounts add-iam-policy-binding "$TF_PLATFORM_SA_EMAIL" \
+  --project "$PROJECT_ID" \
+  --member="serviceAccount:${CICD_SA_EMAIL}" \
+  --role="roles/iam.serviceAccountTokenCreator"
+```
+
+Create the Workload Identity Pool
+```bash
+gcloud iam workload-identity-pools create "$POOL_ID" \
+  --project "$PROJECT_ID" \
+  --location "global" \
+  --display-name "GitHub Actions Pool"
+```
+
+Create the GitHub OIDC Provider
+```bash
+gcloud iam workload-identity-pools providers create-oidc "$PROVIDER_ID" \
+  --project "$PROJECT_ID" \
+  --location "global" \
+  --workload-identity-pool "$POOL_ID" \
+  --display-name "GitHub OIDC" \
+  --issuer-uri "https://token.actions.githubusercontent.com" \
+  --attribute-mapping "google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" \
+  --attribute-condition "assertion.repository_owner == '${GITHUB_ORG}'"
+```
+
+Allow the WIF pool to impersonate the CI/CD SA
+```bash
+gcloud iam service-accounts add-iam-policy-binding "$CICD_SA_EMAIL" \
+  --project "$PROJECT_ID" \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/attribute.repository/${GITHUB_REPO}" \
+  --role="roles/iam.workloadIdentityUser"
+```
+
+Retrieve the values to store as org variables
+```bash
+# WIF_PROVIDER
+echo "projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/providers/${PROVIDER_ID}"
+# CICD_SA_EMAIL
+echo "$CICD_SA_EMAIL"
+```
+
 Create the Storage Bucket which will be used as the Terraform backend
 ```bash
-export TF_STATE_BUCKET="pe-tf-state-bucket"
+# export TF_STATE_BUCKET="pe-tf-state-bucket"
+export TF_STATE_BUCKET="pe-tf-state-bucket-1"
 export LOCATION=us
 
 gcloud storage buckets create "gs://$TF_STATE_BUCKET" \
@@ -110,6 +179,7 @@ gcloud auth login
 Initialize Terraform
 ```bash
 TF_LOG=DEBUG
+cd terraform/shared 
 terraform init -backend-config="bucket=$TF_STATE_BUCKET"
 ```
 

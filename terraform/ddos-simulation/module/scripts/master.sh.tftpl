@@ -1,0 +1,236 @@
+#!/bin/bash
+# DDoS simulation — master VM startup script.
+#
+# Idempotent. Safe to re-run; existing services / files / users are detected
+# and skipped. Mirrors the style of vpn-server-infra/scripts/netbird-server-startup.sh:
+# everything is logged with exit codes captured separately so a partial
+# failure leaves enough breadcrumbs for `journalctl -u google-startup-scripts`
+# (or /var/log/ddos-master-setup.log) to be useful.
+set -euo pipefail
+echo "I'm here"
+export DEBIAN_FRONTEND=noninteractive
+
+echo "After declaration"
+
+LOG=/var/log/ddos-master-setup.log
+exec > >(tee -a "$${LOG}") 2>&1
+
+echo "After exec"
+
+echo "===================================================================="
+echo "[ddos-master] $(date -u +%FT%TZ) startup begin"
+echo "===================================================================="
+
+# ── 1. Wait for both NICs to come up ────────────────────────────────────────
+echo "[ddos-master] waiting for both NICs to have RFC1918 IPs..."
+for i in $(seq 1 60); do
+  COUNT=$(ip -4 -o addr show | awk '/inet (10|172|192)\./ {print $2}' | sort -u | wc -l)
+  if [ "$${COUNT}" -ge 2 ]; then
+    echo "[ddos-master] both NICs up after $${i}s"
+    break
+  fi
+  if [ "$${i}" -eq 60 ]; then
+    echo "[ddos-master] WARNING: still waiting for second NIC after 60s — continuing anyway"
+  fi
+  sleep 1
+done
+ip -4 -o addr show
+
+# ── 2. Read instance metadata ──────────────────────────────────────────────
+META="http://metadata.google.internal/computeMetadata/v1/instance"
+fetch_meta() {
+  curl -sf -H "Metadata-Flavor: Google" "$${META}/$${1}" || true
+}
+
+PROJECT_ID=$(curl -sf -H "Metadata-Flavor: Google" \
+  http://metadata.google.internal/computeMetadata/v1/project/project-id || true)
+LOCUSTFILES_BUCKET=$(fetch_meta "attributes/locustfiles_bucket")
+
+LOCUST_USERS_AH=$(fetch_meta "attributes/locust_users_attacker_hostname")
+LOCUST_USERS_AIP=$(fetch_meta "attributes/locust_users_attacker_ip")
+LOCUST_USERS_BL=$(fetch_meta "attributes/locust_users_baseline")
+LOCUST_RATE_AH=$(fetch_meta "attributes/locust_spawn_rate_attacker_hostname")
+LOCUST_RATE_AIP=$(fetch_meta "attributes/locust_spawn_rate_attacker_ip")
+LOCUST_RATE_BL=$(fetch_meta "attributes/locust_spawn_rate_baseline")
+LOCUST_RUN_TIME=$(fetch_meta "attributes/locust_run_time")
+
+echo "[ddos-master] project_id=$${PROJECT_ID}"
+echo "[ddos-master] locustfiles_bucket=$${LOCUSTFILES_BUCKET}"
+echo "[ddos-master] users (ah/aip/bl) = $${LOCUST_USERS_AH} / $${LOCUST_USERS_AIP} / $${LOCUST_USERS_BL}"
+echo "[ddos-master] spawn (ah/aip/bl) = $${LOCUST_RATE_AH} / $${LOCUST_RATE_AIP} / $${LOCUST_RATE_BL}"
+echo "[ddos-master] run_time          = $${LOCUST_RUN_TIME}"
+
+# ── 3. Source-based policy routing for nic1 ────────────────────────────────
+# A multi-NIC VM defaults to egressing all replies via nic0. NetBird traffic
+# arrives on nic1, so without a policy route the SYN-ACK egresses via nic0
+# (different source IP) and gets dropped by GCP's anti-spoofing checks.
+# Add a routing table that egresses anything sourced from nic1's IP back via
+# nic1's gateway.
+NIC1_IP=$(curl -sf -H "Metadata-Flavor: Google" \
+  http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/1/ip || true)
+NIC1_GW=$(curl -sf -H "Metadata-Flavor: Google" \
+  http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/1/gateway || true)
+NIC1_DEV=$(ip -o link show | awk -F': ' '$2 ~ /^(ens5|eth1|enp0s5)$/ {print $2; exit}')
+
+echo "[ddos-master] nic1 ip=$${NIC1_IP} gw=$${NIC1_GW} dev=$${NIC1_DEV}"
+
+if [ -n "$${NIC1_IP}" ] &&[ -n "$${NIC1_GW}" ] && [ -n "$${NIC1_DEV}" ]; then
+  if ! grep -q "^200 nic1-rt$" /etc/iproute2/rt_tables; then
+    echo "200 nic1-rt" >> /etc/iproute2/rt_tables
+    echo "[ddos-master] routing table 'nic1-rt' registered"
+  else
+    echo "[ddos-master] routing table 'nic1-rt' already present, skipping"
+  fi
+  ip route replace default via "$${NIC1_GW}" dev "$${NIC1_DEV}" table nic1-rt
+  if ! ip rule show | grep -q "from $${NIC1_IP} lookup nic1-rt"; then
+    ip rule add from "$${NIC1_IP}/32" table nic1-rt
+    echo "[ddos-master] ip rule added: from $${NIC1_IP}/32 -> nic1-rt"
+  else
+    echo "[ddos-master] ip rule already present, skipping"
+  fi
+
+  echo "[ddos-master] ip rule show:"
+  ip rule show
+  echo "[ddos-master] ip route show table nic1-rt:"
+  ip route show table nic1-rt
+else
+  echo "[ddos-master] WARNING: nic1 metadata incomplete — skipping policy routing"
+fi
+
+# ── 4. Install Docker + Pull Locust Image (idempotent) ─────────────────────
+if ! command -v docker &> /dev/null; then
+  echo "[ddos-master] docker not found, installing..."
+  apt-get update -q
+  apt-get install -y docker.io ca-certificates curl
+  echo "[ddos-master] docker installed: $(docker --version 2>&1 | head -1)"
+else
+  echo "[ddos-master] docker already installed: $(docker --version 2>&1 | head -1)"
+fi
+
+# Wait for Cloud NAT / Outbound internet to initialize
+echo "[ddos-master] waiting for outbound internet (Cloud NAT) to be ready..."
+for i in $(seq 1 60); do
+  # Ping docker hub headers with a 2 second timeout
+  if curl -sf --connect-timeout 2 -I https://registry-1.docker.io >/dev/null; then
+    echo "[ddos-master] outbound internet reachable after $${i}s"
+    break
+  fi
+  if [ "$${i}" -eq 60 ]; then
+    echo "[ddos-master] WARNING: internet still unreachable after 60s — continuing anyway"
+  fi
+  sleep 1
+done
+
+echo "[ddos-master] pulling locust image..."
+docker pull locustio/locust:latest
+
+# ── 5. Pull all 3 locustfiles from GCS ──────────────────────────────────────
+mkdir -p /opt/locust
+chmod 755 /opt/locust
+
+for FILE in locustfile_attacker_hostname.py locustfile_attacker_ip.py locustfile_baseline.py; do
+  echo "[ddos-master] fetching gs://$${LOCUSTFILES_BUCKET}/$${FILE}"
+  GSUTIL_EC=0
+  GSUTIL_OUT=$(gsutil cp "gs://$${LOCUSTFILES_BUCKET}/$${FILE}" "/opt/locust/$${FILE}" 2>&1) || GSUTIL_EC=$?
+  echo "[ddos-master] gsutil exit=$${GSUTIL_EC} output: $${GSUTIL_OUT}"
+  if [ "$${GSUTIL_EC}" -ne 0 ]; then
+    echo "[ddos-master] FATAL: failed to fetch $${FILE} from GCS"
+    exit 1
+  fi
+done
+ls -la /opt/locust/
+
+# ── 6. Dedicated unprivileged user for Locust ──────────────────────────────
+if ! id -u locust &> /dev/null; then
+  useradd -r -s /bin/false -d /opt/locust locust
+  echo "[ddos-master] created system user 'locust'"
+else
+  echo "[ddos-master] user 'locust' already exists, skipping"
+fi
+
+mkdir -p /var/log/locust
+chown -R locust:locust /opt/locust /var/log/locust
+
+# ── 7. Run the 3 Locust masters containers (one master per profile) ──────────────────
+
+# Attacker Hostname master
+
+sudo docker rm -f locust-master-attacker-hostname
+sudo docker run -d --name locust-master-attacker-hostname \
+  --network host \
+  --restart always \
+  -w /opt/locust \
+  -v /opt/locust:/opt/locust \
+  -v /var/log/locust:/var/log/locust \
+  -u $(id -u locust):$(id -g locust) \
+  locustio/locust \
+  --master \
+  --master-bind-host=0.0.0.0 \
+  --master-bind-port=5557 \
+  --web-host=0.0.0.0 \
+  --web-port=8089 \
+  -f '/opt/locust/locustfile_attacker_hostname.py' \
+  --users $${LOCUST_USERS_AH} \
+  --spawn-rate $${LOCUST_RATE_AH} \
+  --run-time $${LOCUST_RUN_TIME} \
+  --csv='/var/log/locust/attacker-hostname' \
+  --csv-full-history
+
+# Attacker IP master
+
+sudo docker rm -f locust-master-attacker-ip
+sudo docker run -d --name locust-master-attacker-ip \
+  --network host \
+  --restart always \
+  -w /opt/locust \
+  -v /opt/locust:/opt/locust \
+  -v /var/log/locust:/var/log/locust \
+  -u $(id -u locust):$(id -g locust) \
+  locustio/locust \
+  --master \
+  --master-bind-host=0.0.0.0 \
+  --master-bind-port=5558 \
+  --web-host=0.0.0.0 \
+  --web-port=8090 \
+  -f '/opt/locust/locustfile_attacker_ip.py' \
+  --users $${LOCUST_USERS_AIP} \
+  --spawn-rate $${LOCUST_RATE_AIP} \
+  --run-time $${LOCUST_RUN_TIME} \
+  --csv='/var/log/locust/attacker-ip' \
+  --csv-full-history
+
+# Baseline master
+
+sudo docker rm -f locust-master-baseline
+sudo docker run -d --name locust-master-baseline \
+  --network host \
+  --restart always \
+  -w /opt/locust \
+  -v /opt/locust:/opt/locust \
+  -v /var/log/locust:/var/log/locust \
+  -u $(id -u locust):$(id -g locust) \
+  locustio/locust \
+  --master \
+  --master-bind-host=0.0.0.0 \
+  --master-bind-port=5559 \
+  --web-host=0.0.0.0 \
+  --web-port=8091 \
+  -f '/opt/locust/locustfile_baseline.py' \
+  --users $${LOCUST_USERS_BL} \
+  --spawn-rate $${LOCUST_RATE_BL} \
+  --run-time $${LOCUST_RUN_TIME} \
+  --csv='/var/log/locust/baseline' \
+  --csv-full-history
+
+# ── 8. Local smoke check: master web UIs respond on nic1 IP ────────────────
+echo "[ddos-master] smoke check: web UI ports responding on $${NIC1_IP}"
+sleep 5
+for PORT in 8089 8090 8091; do
+  HTTP_CODE=$(curl -sf -o /dev/null -w "%%{http_code}" --max-time 5 \
+    "http://$${NIC1_IP}:$${PORT}/" || echo "000")
+  echo "[ddos-master]   :$${PORT} -> HTTP $${HTTP_CODE}"
+done
+
+echo "===================================================================="
+echo "[ddos-master] $(date -u +%FT%TZ) startup complete"
+echo "===================================================================="

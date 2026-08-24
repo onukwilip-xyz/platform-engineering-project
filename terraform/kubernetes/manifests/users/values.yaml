@@ -25,6 +25,16 @@ virtualService:
         perTryTimeout: 3s
         retryOn: "gateway-error,connect-failure,refused-stream,reset"
 
+slo:
+  enabled: true
+
+  availability:
+    objective: 99.5
+
+  latency:
+    objective: 99.0
+    thresholdMs: 500
+
 destinationRule:
   name: users-traffic-policy
   connectionPool:

@@ -19,6 +19,19 @@ resource "kubernetes_secret" "grafana_admin" {
   }
 }
 
+resource "kubernetes_secret" "grafana_pagerduty" {
+  metadata {
+    name      = "grafana-pagerduty"
+    namespace = kubernetes_namespace.grafana.metadata[0].name
+  }
+
+  data = {
+    PAGERDUTY_ROUTING_KEY = var.pagerduty_routing_key
+  }
+
+  type = "Opaque"
+}
+
 # * USERS MICROSERVICE DB CREDENTIALS
 
 resource "random_password" "users_db" {
@@ -50,6 +63,26 @@ resource "kubernetes_secret" "users_microservice_db" {
 
   data = {
     DATABASE_URL = "postgresql+asyncpg://${local.users_db_username}:${random_password.users_db.result}@postgres-pooler-rw.postgres.svc.cluster.local:5432/${local.users_db_name}"
+  }
+}
+
+# * GRAFANA ALERTING SECRETS
+
+resource "kubernetes_secret" "grafana_alerting_secrets" {
+  metadata {
+    name      = "grafana-alerting-secrets"
+    namespace = kubernetes_namespace.grafana.metadata[0].name
+  }
+
+  type = "Opaque"
+
+  data = {
+    SLACK_WEBHOOK_SCALE_WORKLOADS = var.slack_webhook_scale_workloads
+    SLACK_WEBHOOK_CRITICAL        = var.slack_webhook_critical
+    SLACK_WEBHOOK_ERROR           = var.slack_webhook_error
+    SLACK_WEBHOOK_WARNING         = var.slack_webhook_warning
+    SLACK_WEBHOOK_DATASOURCE_ERRORS = var.slack_webhook_datasource_errors
+    SLACK_WEBHOOK_DEFAULT = var.slack_webhook_default
   }
 }
 

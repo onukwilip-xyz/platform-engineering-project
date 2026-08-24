@@ -1,3 +1,37 @@
+resource "null_resource" "cert_manager_crds" {
+  triggers = {
+    chart_version = var.cert_manager_chart_version
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      helm repo add jetstack https://charts.jetstack.io --force-update
+      helm template cert-manager jetstack/cert-manager \
+        --version ${self.triggers.chart_version} \
+        --namespace cert-manager \
+        --set crds.enabled=true \
+        --no-hooks \
+      | python3 -c 'import sys; docs=sys.stdin.read().split("\n---"); crds=[d for d in docs if "kind: CustomResourceDefinition" in d]; print("\n---".join(crds))' \
+      | kubectl apply --server-side --force-conflicts -f -
+    EOT
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      helm template cert-manager jetstack/cert-manager \
+        --version ${self.triggers.chart_version} \
+        --namespace cert-manager \
+        --set crds.enabled=true \
+        --no-hooks \
+      | python3 -c 'import sys; docs=sys.stdin.read().split("\n---"); crds=[d for d in docs if "kind: CustomResourceDefinition" in d]; print("\n---".join(crds))' \
+      | kubectl delete --ignore-not-found=true -f -
+    EOT
+  }
+
+  depends_on = [kubernetes_namespace.cert_manager]
+}
+
 resource "helm_release" "cert_manager" {
   name             = "cert-manager"
   repository       = "https://charts.jetstack.io"
@@ -9,7 +43,7 @@ resource "helm_release" "cert_manager" {
   values = [
     yamlencode({
       crds = {
-        enabled = true
+        enabled = false
       },
       serviceAccount = {
         name = var.cert_manager_k8s_service_account_name
@@ -17,15 +51,32 @@ resource "helm_release" "cert_manager" {
           "iam.gke.io/gcp-service-account" = google_service_account.cert_manager_dns.email
         }
       },
-      extraArgs = ["--enable-gateway-api"]
+      extraArgs = ["--enable-gateway-api"],
+      resources = {
+        requests = { cpu = "10m", memory = "64Mi" }
+        limits   = { cpu = "100m", memory = "128Mi" }
+      },
+      cainjector = {
+        resources = {
+          requests = { cpu = "10m", memory = "32Mi" }
+          limits   = { cpu = "50m", memory = "64Mi" }
+        }
+      },
+      webhook = {
+        resources = {
+          requests = { cpu = "10m", memory = "32Mi" }
+          limits   = { cpu = "50m", memory = "64Mi" }
+        }
+      }
     })
   ]
 
   wait          = true
   wait_for_jobs = true
-  timeout       = 600
+  timeout       = 1200
 
   depends_on = [
+    null_resource.cert_manager_crds,
     kubernetes_namespace.cert_manager,
     google_service_account_iam_member.cert_manager_workload_identity,
   ]
@@ -49,6 +100,10 @@ resource "helm_release" "trust_manager" {
       secretTargets = {
         enabled           = true
         authorizedSecrets = ["internal-ca-bundle"]
+      },
+      resources = {
+        requests = { cpu = "50m", memory = "64Mi" }
+        limits   = { cpu = "100m", memory = "128Mi" }
       }
     })
   ]
