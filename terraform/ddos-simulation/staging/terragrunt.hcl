@@ -3,16 +3,13 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 locals {
-  # state_bucket = get_env("TF_STATE_BUCKET", "pe-tf-state-bucket")
-  state_bucket = get_env("TF_STATE_BUCKET", "pe-tf-state-bucket-1")
+  state_bucket = get_env("TF_STATE_BUCKET")
   env    = "staging"
   region = "us-central1"
   zone   = "us-central1-a"
 
-  # tf_network_sa_email  = "tf-network@pe-terraform-project.iam.gserviceaccount.com"
-  # tf_platform_sa_email = "tf-platform@pe-terraform-project.iam.gserviceaccount.com"
-  tf_network_sa_email  = get_env("TF_NETWORK_SA", "tf-network@pe-terraform-project-1.iam.gserviceaccount.com")
-  tf_platform_sa_email = get_env("TF_PLATFORM_SA", "tf-platform@pe-terraform-project-1.iam.gserviceaccount.com")
+  tf_network_sa_email  = get_env("TF_NETWORK_SA")
+  tf_platform_sa_email = get_env("TF_PLATFORM_SA")
   shared_state_prefix  = "shared"
   gateway_state_prefix = "${local.env}/kubernetes/gateway/terraform.tfstate"
 }

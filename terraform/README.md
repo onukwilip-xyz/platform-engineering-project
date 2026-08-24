@@ -1,64 +1,80 @@
 # Terraform
 
 ```bash
-export TF_PROJECT="pe-terraform-project-1"
+export DDOS_PROTECTION="cloudflare"
+export TF_PROJECT="pe-terraform-project-2"
 export TF_PROJECT_NAME="terraform-project"
-# export ORG_ID="256391743797"
-export ORG_ID="1034410590770"
+export ORG_ID="318156556060"
 
 export TF_NETWORK_SA="tf-network"
 export TF_PLATFORM_SA="tf-platform"
-export CICD_SA="cicd-sa"
 
 export TF_NETWORK_SA_EMAIL="$TF_NETWORK_SA@${TF_PROJECT}.iam.gserviceaccount.com"
 export TF_PLATFORM_SA_EMAIL="$TF_PLATFORM_SA@${TF_PROJECT}.iam.gserviceaccount.com"
-export CICD_SA_EMAIL="${CICD_SA}@${PROJECT_ID}.iam.gserviceaccount.com"
 
-# export BILLING_ACCOUNT_ID="01E4F5-FFA2DF-D86AC5"
-# export USER="onukwilip@onukwilip.xyz"
+export BILLING_ACCOUNT_ID="017973-4DC748-6CE712"
+export USER="prince@princeonuk.xyz"
 
-export BILLING_ACCOUNT_ID="011B25-F5FCD8-43553E"
-export USER="prince@onukwilip.me"
-
-# export TF_STATE_BUCKET="pe-tf-state-bucket"
-export TF_STATE_BUCKET="pe-tf-state-bucket-1"
+export TF_STATE_BUCKET="pe-tf-state-bucket-2"
 export LOCATION=us
 
 export POOL_ID="github-actions-pool"
 export PROVIDER_ID="github-oidc"
 export GITHUB_ORG="onukwilip-xyz"
 export GITHUB_REPO="${GITHUB_ORG}/platform-engineering-project"
+
+export CICD_SA_SHARED="cicd-sa-shared"
+export CICD_SA_STAGING="cicd-sa-staging"
+export CICD_SA_PRODUCTION="cicd-sa-production"
+export CICD_SA_GENERAL="cicd-sa-general"
+
+export CICD_SA_SHARED_EMAIL="${CICD_SA_SHARED}@${TF_PROJECT}.iam.gserviceaccount.com"
+export CICD_SA_STAGING_EMAIL="${CICD_SA_STAGING}@${TF_PROJECT}.iam.gserviceaccount.com"
+export CICD_SA_PRODUCTION_EMAIL="${CICD_SA_PRODUCTION}@${TF_PROJECT}.iam.gserviceaccount.com"
+export CICD_SA_GENERAL_EMAIL="${CICD_SA_GENERAL}@${TF_PROJECT}.iam.gserviceaccount.com"
+
+export SECRET_SHARED="cicd-tfvars-shared"
+export SECRET_STAGING="cicd-tfvars-staging"
+export SECRET_PRODUCTION="cicd-tfvars-production"
+export SECRET_DDOS="cicd-tfvars-ddos"
 ```
 
 Create Terraform project
+
 ```bash
 gcloud projects create $TF_PROJECT --name="$TF_PROJECT_NAME" --organization=$ORG_ID
 ```
 
-Enable APIs in Terraform project
+Export its Project Number
 ```bash
-gcloud services enable cloudbilling.googleapis.com cloudresourcemanager.googleapis.com serviceusage.googleapis.com iam.googleapis.com storage.googleapis.com iamcredentials.googleapis.com orgpolicy.googleapis.com --project=$TF_PROJECT
+export PROJECT_NUMBER=$(gcloud projects describe "$TF_PROJECT" --format="value(projectNumber)")
+```
+
+Enable APIs in Terraform project
+
+```bash
+gcloud services enable cloudbilling.googleapis.com cloudresourcemanager.googleapis.com serviceusage.googleapis.com iam.googleapis.com storage.googleapis.com iamcredentials.googleapis.com orgpolicy.googleapis.com secretmanager.googleapis.com --project=$TF_PROJECT
 ```
 
 Create Terraform Service Accounts
-```bash
-export TF_NETWORK_SA="tf-network"
-export TF_PLATFORM_SA="tf-platform"
 
+```bash
 gcloud iam service-accounts create $TF_NETWORK_SA --project=$TF_PROJECT
 gcloud iam service-accounts create $TF_PLATFORM_SA --project=$TF_PROJECT
 ```
 
-Create CI/CD SA
+Create the CI/CD SAs per environment
+
 ```bash
-gcloud iam service-accounts create "$CICD_SA_NAME" --project "$PROJECT_ID" --display-name "CI/CD Service Account"
+gcloud iam service-accounts create "$CICD_SA_SHARED" --project "$TF_PROJECT" --display-name "CI/CD Service Account (shared)"
+gcloud iam service-accounts create "$CICD_SA_STAGING" --project "$TF_PROJECT" --display-name "CI/CD Service Account (staging)"
+gcloud iam service-accounts create "$CICD_SA_PRODUCTION" --project "$TF_PROJECT" --display-name "CI/CD Service Account (production)"
+gcloud iam service-accounts create "$CICD_SA_GENERAL" --project "$TF_PROJECT" --display-name "CI/CD Service Account (general)"
 ```
 
-Grant organizational policies (for Shared VPC, creating projects, etc...) to the `tf-network` SA
-```bash
-export TF_NETWORK_SA_EMAIL="$TF_NETWORK_SA@${TF_PROJECT}.iam.gserviceaccount.com"
-export TF_PLATFORM_SA_EMAIL="$TF_PLATFORM_SA@${TF_PROJECT}.iam.gserviceaccount.com"
+Grant organizational policies to the `tf-network` SA
 
+```bash
 gcloud organizations add-iam-policy-binding "$ORG_ID" \
   --member="serviceAccount:${TF_NETWORK_SA_EMAIL}" \
   --role="roles/resourcemanager.projectCreator"
@@ -77,25 +93,22 @@ gcloud organizations add-iam-policy-binding "$ORG_ID" \
 ```
 
 Enable Billing on the created project
-```bash
-# export BILLING_ACCOUNT_ID="01E4F5-FFA2DF-D86AC5"
-export BILLING_ACCOUNT_ID="011B25-F5FCD8-43553E"
 
+```bash
 gcloud billing projects link "$TF_PROJECT" --billing-account="$BILLING_ACCOUNT_ID"
 ```
 
-Grant the TF Network SA the permission to link the Billing account to the host and service projects
+Grant the TF Network SA permission to link the Billing account to host and service projects
+
 ```bash
 gcloud beta billing accounts add-iam-policy-binding "$BILLING_ACCOUNT_ID" \
   --member="serviceAccount:$TF_NETWORK_SA_EMAIL" \
   --role="roles/billing.user"
 ```
 
-For manual run, allow the gcloud authenticated user impersonate the created TF Network and Platform SAs
-```bash
-# export USER="onukwilip@onukwilip.xyz"
-export USER="prince@onukwilip.me"
+Allow the gcloud authenticated user to impersonate the TF SAs
 
+```bash
 gcloud iam service-accounts add-iam-policy-binding "$TF_NETWORK_SA_EMAIL" \
   --project "$TF_PROJECT" \
   --member="user:$USER" \
@@ -107,61 +120,165 @@ gcloud iam service-accounts add-iam-policy-binding "$TF_PLATFORM_SA_EMAIL" \
   --role="roles/iam.serviceAccountTokenCreator"
 ```
 
-For CI/CD, grant CI/CD SA impersonation rights over the TF SAs
+Grant the CI/CD SAs impersonation rights over the TF SAs
+
 ```bash
 gcloud iam service-accounts add-iam-policy-binding "$TF_NETWORK_SA_EMAIL" \
-  --project "$PROJECT_ID" \
-  --member="serviceAccount:${CICD_SA_EMAIL}" \
+  --project "$TF_PROJECT" \
+  --member="serviceAccount:${CICD_SA_SHARED_EMAIL}" \
   --role="roles/iam.serviceAccountTokenCreator"
 
 gcloud iam service-accounts add-iam-policy-binding "$TF_PLATFORM_SA_EMAIL" \
-  --project "$PROJECT_ID" \
-  --member="serviceAccount:${CICD_SA_EMAIL}" \
+  --project "$TF_PROJECT" \
+  --member="serviceAccount:${CICD_SA_SHARED_EMAIL}" \
   --role="roles/iam.serviceAccountTokenCreator"
+
+gcloud iam service-accounts add-iam-policy-binding "$TF_NETWORK_SA_EMAIL" \
+  --project "$TF_PROJECT" \
+  --member="serviceAccount:${CICD_SA_STAGING_EMAIL}" \
+  --role="roles/iam.serviceAccountTokenCreator"
+
+gcloud iam service-accounts add-iam-policy-binding "$TF_PLATFORM_SA_EMAIL" \
+  --project "$TF_PROJECT" \
+  --member="serviceAccount:${CICD_SA_STAGING_EMAIL}" \
+  --role="roles/iam.serviceAccountTokenCreator"
+
+gcloud iam service-accounts add-iam-policy-binding "$TF_NETWORK_SA_EMAIL" \
+  --project "$TF_PROJECT" \
+  --member="serviceAccount:${CICD_SA_PRODUCTION_EMAIL}" \
+  --role="roles/iam.serviceAccountTokenCreator"
+
+gcloud iam service-accounts add-iam-policy-binding "$TF_PLATFORM_SA_EMAIL" \
+  --project "$TF_PROJECT" \
+  --member="serviceAccount:${CICD_SA_PRODUCTION_EMAIL}" \
+  --role="roles/iam.serviceAccountTokenCreator"
+
+gcloud iam service-accounts add-iam-policy-binding "$TF_NETWORK_SA_EMAIL" \
+  --project "$TF_PROJECT" \
+  --member="serviceAccount:${CICD_SA_GENERAL_EMAIL}" \
+  --role="roles/iam.serviceAccountTokenCreator"
+
+gcloud iam service-accounts add-iam-policy-binding "$TF_PLATFORM_SA_EMAIL" \
+  --project "$TF_PROJECT" \
+  --member="serviceAccount:${CICD_SA_GENERAL_EMAIL}" \
+  --role="roles/iam.serviceAccountTokenCreator"
+```
+
+Create the secrets for each environment TF vars
+
+```bash
+gcloud secrets create "$SECRET_SHARED" --project "$TF_PROJECT"
+gcloud secrets create "$SECRET_STAGING" --project "$TF_PROJECT"
+gcloud secrets create "$SECRET_PRODUCTION" --project "$TF_PROJECT"
+
+# Special case
+gcloud secrets create "$SECRET_DDOS" --project "$TF_PROJECT"
+```
+
+Grant the CI/CD SAs access to their respective secrets
+
+```bash
+gcloud secrets add-iam-policy-binding "$SECRET_SHARED" \
+  --project "$TF_PROJECT" \
+  --member="serviceAccount:${CICD_SA_SHARED_EMAIL}" \
+  --role="roles/secretmanager.secretAccessor"
+
+gcloud secrets add-iam-policy-binding "$SECRET_STAGING" \
+  --project "$TF_PROJECT" \
+  --member="serviceAccount:${CICD_SA_STAGING_EMAIL}" \
+  --role="roles/secretmanager.secretAccessor"
+
+gcloud secrets add-iam-policy-binding "$SECRET_PRODUCTION" \
+  --project "$TF_PROJECT" \
+  --member="serviceAccount:${CICD_SA_PRODUCTION_EMAIL}" \
+  --role="roles/secretmanager.secretAccessor"
+
+gcloud secrets add-iam-policy-binding "$SECRET_GENERAL" \
+  --project "$TF_PROJECT" \
+  --member="serviceAccount:${CICD_SA_GENERAL_EMAIL}" \
+  --role="roles/secretmanager.secretAccessor"
+
+# Special cases
+gcloud secrets add-iam-policy-binding "$SECRET_DDOS" \
+  --project "$TF_PROJECT" \
+  --member="serviceAccount:${CICD_SA_GENERAL_EMAIL}" \
+  --role="roles/secretmanager.secretAccessor"
 ```
 
 Create the Workload Identity Pool
+
 ```bash
 gcloud iam workload-identity-pools create "$POOL_ID" \
-  --project "$PROJECT_ID" \
+  --project "$TF_PROJECT" \
   --location "global" \
   --display-name "GitHub Actions Pool"
 ```
 
 Create the GitHub OIDC Provider
+
 ```bash
 gcloud iam workload-identity-pools providers create-oidc "$PROVIDER_ID" \
-  --project "$PROJECT_ID" \
+  --project "$TF_PROJECT" \
   --location "global" \
   --workload-identity-pool "$POOL_ID" \
   --display-name "GitHub OIDC" \
   --issuer-uri "https://token.actions.githubusercontent.com" \
-  --attribute-mapping "google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" \
+  --attribute-mapping "google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner,attribute.environment=assertion.environment" \
   --attribute-condition "assertion.repository_owner == '${GITHUB_ORG}'"
 ```
 
-Allow the WIF pool to impersonate the CI/CD SA
+Allow the WIF pool to impersonate the CI/CD SAs (scoped per GitHub environment)
+
 ```bash
-gcloud iam service-accounts add-iam-policy-binding "$CICD_SA_EMAIL" \
-  --project "$PROJECT_ID" \
-  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/attribute.repository/${GITHUB_REPO}" \
+gcloud iam service-accounts add-iam-policy-binding "$CICD_SA_SHARED_EMAIL" \
+  --project "$TF_PROJECT" \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/attribute.environment/shared" \
+  --role="roles/iam.workloadIdentityUser"
+
+gcloud iam service-accounts add-iam-policy-binding "$CICD_SA_STAGING_EMAIL" \
+  --project "$TF_PROJECT" \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/attribute.environment/staging" \
+  --role="roles/iam.workloadIdentityUser"
+
+gcloud iam service-accounts add-iam-policy-binding "$CICD_SA_PRODUCTION_EMAIL" \
+  --project "$TF_PROJECT" \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/attribute.environment/production" \
+  --role="roles/iam.workloadIdentityUser"
+
+gcloud iam service-accounts add-iam-policy-binding "$CICD_SA_GENERAL_EMAIL" \
+  --project "$TF_PROJECT" \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/attribute.environment/general" \
   --role="roles/iam.workloadIdentityUser"
 ```
 
-Retrieve the values to store as org variables
+Retrieve values to configure as GitHub environment-level variables
+
 ```bash
-# WIF_PROVIDER
-echo "projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/providers/${PROVIDER_ID}"
-# CICD_SA_EMAIL
-echo "$CICD_SA_EMAIL"
+echo "Org-level variable:"
+echo "  WIF_PROVIDER = projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/providers/${PROVIDER_ID}"
+echo "  TF_PROJECT   = $TF_PROJECT"
+echo "  NETBIRD_MANAGEMENT_URL = <your-netbird-url>"
+echo ""
+echo "shared environment:"
+echo "  CICD_SA_EMAIL  = $CICD_SA_SHARED_EMAIL"
+echo "  TF_VARS_SECRET = $SECRET_SHARED"
+echo ""
+echo "staging environment:"
+echo "  CICD_SA_EMAIL  = $CICD_SA_STAGING_EMAIL"
+echo "  TF_VARS_SECRET = $SECRET_STAGING"
+echo ""
+echo "production environment:"
+echo "  CICD_SA_EMAIL  = $CICD_SA_PRODUCTION_EMAIL"
+echo "  TF_VARS_SECRET = $SECRET_PRODUCTION"
+echo ""
+echo "general environment:"
+echo "  CICD_SA_EMAIL  = $CICD_SA_GENERAL_EMAIL"
+echo "  TF_VARS_SECRET = $SECRET_GENERAL"
 ```
 
-Create the Storage Bucket which will be used as the Terraform backend
-```bash
-# export TF_STATE_BUCKET="pe-tf-state-bucket"
-export TF_STATE_BUCKET="pe-tf-state-bucket-1"
-export LOCATION=us
+Create the Storage Bucket for Terraform backend
 
+```bash
 gcloud storage buckets create "gs://$TF_STATE_BUCKET" \
   --project "$TF_PROJECT" \
   --location=$LOCATION \
@@ -171,33 +288,27 @@ gcloud storage buckets update "gs://$TF_STATE_BUCKET" --versioning
 ```
 
 Authenticate Terraform to Google Cloud
+
 ```bash
 gcloud auth application-default login
 gcloud auth login
 ```
 
 Initialize Terraform
+
 ```bash
-TF_LOG=DEBUG
-cd terraform/shared 
+cd terraform/shared
 terraform init -backend-config="bucket=$TF_STATE_BUCKET"
 ```
 
-Refresh Terraform
-```bash
-terraform refresh -var-file=".tfvars"
-```
-
 Plan Terraform
+
 ```bash
 terraform plan -var-file=".tfvars"
 ```
 
 Apply Terraform
+
 ```bash
 terraform apply -var-file=".tfvars"
-# OR
-terraform apply --auto-approve -var-file=".tfvars"
-# OR
-terragrunt run --all apply
 ```

@@ -1,0 +1,98 @@
+name: "Terraform Reusable Pipeline"
+
+on:
+  workflow_call:
+    inputs:
+      github-environment:
+        type: string
+        required: true
+      connect-vpn:
+        type: boolean
+        required: false
+        default: false
+      action:
+        type: string
+        required: false
+        default: "apply"
+      iac-tool:
+        type: string
+        required: false
+        default: "terragrunt"
+      working-directory:
+        type: string
+        required: true
+      gcp-project-id:
+        type: string
+        required: true
+      netbird-management-url:
+        type: string
+        required: false
+      tfvars-secret-override:
+        description: "Override the GSM secret name for tfvars. Falls back to vars.TF_VARS_SECRET if omitted."
+        type: string
+        required: false
+        default: ""
+
+jobs:
+  terraform:
+    name: "${{ inputs.action }} (${{ inputs.github-environment }})"
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.github-environment }}
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP via WIF
+        uses: google-github-actions/auth@v2
+        with:
+          service_account: ${{ vars.CICD_SA_EMAIL }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Install Terragrunt
+        if: inputs.iac-tool == 'terragrunt'
+        shell: bash
+        run: |
+          curl -fsSL \
+            "https://github.com/gruntwork-io/terragrunt/releases/latest/download/terragrunt_linux_amd64" \
+            -o /usr/local/bin/terragrunt
+          chmod +x /usr/local/bin/terragrunt
+
+      - name: Write tfvars from Secret Manager
+        shell: bash
+        env:
+          SECRET_NAME: ${{ (inputs.tfvars-secret-override != '' && inputs.tfvars-secret-override) || vars.TF_VARS_SECRET }}
+          PROJECT_ID: ${{ inputs.gcp-project-id }}
+        run: |
+          gcloud secrets versions access latest \
+            --secret="$SECRET_NAME" \
+            --project="$PROJECT_ID" > terraform.tfvars
+
+      - name: Connect to NetBird VPN
+        if: inputs.connect-vpn == true
+        uses: ./.github/actions/netbird-connect
+        with:
+          management-url: ${{ inputs.netbird-management-url }}
+          setup-key-secret: ${{ vars.NETBIRD_CICD_KEY_SECRET }}
+          gcp-project-id: ${{ inputs.gcp-project-id }}
+
+      - name: Terraform init
+        if: inputs.iac-tool == 'terraform'
+        run: terraform init
+
+      - name: Run Terraform
+        if: inputs.iac-tool == 'terraform'
+        run: terraform ${{ inputs.action }} -var-file=terraform.tfvars -auto-approve
+
+      - name: Run Terragrunt
+        if: inputs.iac-tool == 'terragrunt'
+        run: terragrunt run --all ${{ inputs.action }} --terragrunt-non-interactive

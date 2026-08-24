@@ -1,0 +1,71 @@
+name: "Staging Infrastructure"
+
+on:
+  push:
+    branches:
+      - staging
+    paths:
+      - "terraform/envs/staging/**"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Action to perform"
+        type: choice
+        options:
+          - apply
+          - destroy
+        default: apply
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      run-infra: ${{ steps.filter.outputs.infra }}
+      run-kubernetes: ${{ steps.filter.outputs.kubernetes }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            infra:
+              - "terraform/envs/staging/**"
+              - "!terraform/envs/staging/kubernetes/**"
+            kubernetes:
+              - "terraform/envs/staging/kubernetes/**"
+
+  infra:
+    needs: detect
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      needs.detect.outputs.run-infra == 'true'
+    uses: ./.github/workflows/terraform-pipeline.yml
+    secrets: inherit
+    with:
+      github-environment: "staging"
+      connect-vpn: true
+      action: ${{ inputs.action || 'apply' }}
+      iac-tool: "terragrunt"
+      working-directory: "terraform/envs/staging"
+      netbird-management-url: ${{ vars.NETBIRD_MANAGEMENT_URL }}
+      gcp-project-id: ${{ vars.TF_PROJECT }}
+
+  kubernetes:
+    needs: detect
+    if: |
+      needs.detect.outputs.run-kubernetes == 'true' &&
+      needs.detect.outputs.run-infra != 'true' &&
+      github.event_name != 'workflow_dispatch'
+    uses: ./.github/workflows/terraform-pipeline.yml
+    secrets: inherit
+    with:
+      github-environment: "staging"
+      connect-vpn: true
+      action: ${{ inputs.action || 'apply' }}
+      iac-tool: "terragrunt"
+      working-directory: "terraform/envs/staging/kubernetes"
+      netbird-management-url: ${{ vars.NETBIRD_MANAGEMENT_URL }}
+      gcp-project-id: ${{ vars.TF_PROJECT }}

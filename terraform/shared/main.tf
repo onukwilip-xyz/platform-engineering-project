@@ -76,7 +76,6 @@ module "host_apis" {
     "cloudresourcemanager.googleapis.com",
     "dns.googleapis.com",
     # Required for VPN infrastructure
-    "secretmanager.googleapis.com",
     "parametermanager.googleapis.com",
     "logging.googleapis.com",
     "monitoring.googleapis.com",
