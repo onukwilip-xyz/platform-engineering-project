@@ -66,6 +66,7 @@ inputs = {
   gateway_state_prefix = local.gateway_state_prefix
   subnet_region     = local.region
   subnet_key        = local.subnet_key
+  environment       = local.env
   attack_region     = local.region
   attack_zone       = local.zone
 }

@@ -5,8 +5,9 @@ locals {
   subnet_name                = data.terraform_remote_state.shared.outputs.subnet_names[var.subnet_key]
   subnet_self_link           = data.terraform_remote_state.shared.outputs.subnet_self_links[var.subnet_key]
 
-  private_dns_zone_name = data.terraform_remote_state.shared.outputs.private_dns_zone.name
-  private_domain        = trimsuffix(data.terraform_remote_state.shared.outputs.private_dns_zone.dns_name, ".")
+  private_dns_zone_name     = data.terraform_remote_state.shared.outputs.private_dns_zone.name
+  private_dns_zone_dns_name = data.terraform_remote_state.shared.outputs.private_dns_zone.dns_name
+  env_record_prefix         = var.environment == "production" ? "" : "${var.environment}."
 
   # target_public_ip = data.terraform_remote_state.gateway.outputs.public_gateway_global_ip
   target_public_ip = var.target_public_host

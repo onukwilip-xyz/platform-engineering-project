@@ -47,6 +47,11 @@ variable "gateway_state_prefix" {
   description = "Prefix of the gateway unit's state (provides public_gateway_global_ip)."
 }
 
+variable "environment" {
+  type        = string
+  description = "Environment name (e.g. 'staging', 'production'). Prefixed onto DNS record names for every environment except 'production', which stays unprefixed."
+}
+
 variable "subnet_region" {
   type        = string
   description = "Region of the target subnet. Required for the subnet IAM bindings and for allocating the master nic1 static internal IP. Must match the staging/production env's region."
