@@ -48,34 +48,22 @@ variable "vpc_name" {
   description = "Name of the VPC in the host project."
 }
 
-variable "subnet_name" {
-  type        = string
-  description = "Name of the subnet in the host project."
+variable "subnets" {
+  type = list(object({
+    subnet_name = string
+    subnet_cidr = string
+
+    pods_secondary_range_name     = optional(string)
+    pods_secondary_cidr           = optional(string)
+    services_secondary_range_name = optional(string)
+    services_secondary_cidr       = optional(string)
+  }))
+  description = "Subnets to create in the shared VPC. Secondary ranges are optional (omit both for non-GKE subnets). Must always include a 'gke-subnet' entry (staging's subnet, exposed via this layer's backward-compatible flat outputs)."
 }
 
-variable "subnet_cidr" {
+variable "infra_subnet_key" {
   type        = string
-  description = "Primary CIDR range for the subnet (e.g., 10.10.0.0/20)."
-}
-
-variable "pods_secondary_range_name" {
-  type        = string
-  description = "Secondary range name for Pods (VPC-native)."
-}
-
-variable "pods_secondary_cidr" {
-  type        = string
-  description = "Secondary CIDR range for Pods."
-}
-
-variable "services_secondary_range_name" {
-  type        = string
-  description = "Secondary range name for Services."
-}
-
-variable "services_secondary_cidr" {
-  type        = string
-  description = "Secondary CIDR range for Services."
+  description = "Key (subnet_name) in var.subnets that VPN/management infra (Netbird server, routing peer, internal DNS) attaches to."
 }
 
 variable "ssh_network_tag" {

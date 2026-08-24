@@ -13,34 +13,22 @@ variable "vpc_name" {
   description = "Name of the VPC in the host project."
 }
 
-variable "subnet_name" {
-  type        = string
-  description = "Name of the subnet in the host project."
-}
+variable "subnets" {
+  type = list(object({
+    subnet_name = string
+    subnet_cidr = string
 
-variable "subnet_cidr" {
-  type        = string
-  description = "Primary CIDR range for the subnet (e.g., 10.1.0.0/20)."
-}
+    pods_secondary_range_name     = optional(string)
+    pods_secondary_cidr           = optional(string)
+    services_secondary_range_name = optional(string)
+    services_secondary_cidr       = optional(string)
+  }))
+  description = "Subnets to create in the shared VPC. Secondary ranges are optional (omit both for non-GKE subnets)."
 
-variable "pods_secondary_range_name" {
-  type        = string
-  description = "Secondary range name for Pods (VPC-native)."
-}
-
-variable "pods_secondary_cidr" {
-  type        = string
-  description = "Secondary CIDR for Pods (e.g., 10.2.0.0/16)."
-}
-
-variable "services_secondary_range_name" {
-  type        = string
-  description = "Secondary range name for Services."
-}
-
-variable "services_secondary_cidr" {
-  type        = string
-  description = "Secondary CIDR for Services (e.g., 10.3.0.0/20)."
+  validation {
+    condition     = length(var.subnets) == length(toset([for s in var.subnets : s.subnet_name]))
+    error_message = "subnets: each subnet_name must be unique."
+  }
 }
 
 variable "enable_nat" {

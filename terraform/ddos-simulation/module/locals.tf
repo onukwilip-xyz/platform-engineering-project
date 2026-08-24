@@ -1,9 +1,9 @@
 locals {
-  # ── Shared VPC / GKE subnet (sourced from the host project's shared state) ──
+  # ── Shared VPC / target subnet (sourced from the host project's shared state) ──
   shared_vpc_host_project_id = data.terraform_remote_state.shared.outputs.host_project_id
   shared_vpc_self_link       = data.terraform_remote_state.shared.outputs.vpc_self_link
-  gke_subnet_name            = data.terraform_remote_state.shared.outputs.gke_subnet_name
-  gke_subnet_self_link       = data.terraform_remote_state.shared.outputs.gke_subnet_self_link
+  subnet_name                = data.terraform_remote_state.shared.outputs.subnet_names[var.subnet_key]
+  subnet_self_link           = data.terraform_remote_state.shared.outputs.subnet_self_links[var.subnet_key]
 
   private_dns_zone_name = data.terraform_remote_state.shared.outputs.private_dns_zone.name
   private_domain        = trimsuffix(data.terraform_remote_state.shared.outputs.private_dns_zone.dns_name, ".")

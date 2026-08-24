@@ -12,6 +12,9 @@ locals {
   tf_platform_sa_email = get_env("TF_PLATFORM_SA")
   shared_state_prefix  = "shared"
   gateway_state_prefix = "${local.env}/kubernetes/gateway/terraform.tfstate"
+
+  # Key into the shared layer's subnet maps identifying this environment's subnet.
+  subnet_key = "gke-subnet"
 }
 
 # Inline state backend — independent prefix so destroys don't touch envs/ state.
@@ -61,7 +64,8 @@ inputs = {
   state_bucket         = local.state_bucket
   shared_state_prefix  = local.shared_state_prefix
   gateway_state_prefix = local.gateway_state_prefix
-  gke_subnet_region = local.region
+  subnet_region     = local.region
+  subnet_key        = local.subnet_key
   attack_region     = local.region
   attack_zone       = local.zone
 }

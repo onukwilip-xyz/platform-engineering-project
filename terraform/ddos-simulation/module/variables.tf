@@ -7,7 +7,7 @@ variable "org_id" {
 
 variable "tf_platform_sa_email" {
   type        = string
-  description = "Email of the platform Terraform service account. Granted in-project admin roles on the new attacker project so it can manage compute, IAM, GCS, and instance templates. Also granted compute.networkUser on the host's GKE subnet so it can allocate the master's static internal IP from there."
+  description = "Email of the platform Terraform service account. Granted in-project admin roles on the new attacker project so it can manage compute, IAM, GCS, and instance templates. Also granted compute.networkUser on the host's target subnet so it can allocate the master's static internal IP from there."
 }
 
 variable "billing_account_id" {
@@ -39,7 +39,7 @@ variable "state_bucket" {
 
 variable "shared_state_prefix" {
   type        = string
-  description = "Prefix of the shared state in state_bucket (provides host_project_id, vpc_self_link, gke_subnet_*, private_dns_zone)."
+  description = "Prefix of the shared state in state_bucket (provides host_project_id, vpc_self_link, subnet_*, private_dns_zone)."
 }
 
 variable "gateway_state_prefix" {
@@ -47,9 +47,14 @@ variable "gateway_state_prefix" {
   description = "Prefix of the gateway unit's state (provides public_gateway_global_ip)."
 }
 
-variable "gke_subnet_region" {
+variable "subnet_region" {
   type        = string
-  description = "Region of the GKE subnet. Required for the subnet IAM bindings and for allocating the master nic1 static internal IP. Must match the staging/production env's region."
+  description = "Region of the target subnet. Required for the subnet IAM bindings and for allocating the master nic1 static internal IP. Must match the staging/production env's region."
+}
+
+variable "subnet_key" {
+  type        = string
+  description = "Key into the shared layer's subnet maps (subnet_names, subnet_self_links, ...) identifying the target environment's subnet."
 }
 
 # ── Target hostname (operator-chosen) ─────────────────────────────────────────
