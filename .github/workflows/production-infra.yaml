@@ -1,5 +1,9 @@
 name: "Production Infrastructure"
 
+permissions:
+  contents: read
+  id-token: write
+
 on:
   push:
     branches:
