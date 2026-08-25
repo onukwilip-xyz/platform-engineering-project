@@ -27,3 +27,8 @@ variable "shared_state_prefix" {
   type        = string
   description = "State prefix for the shared layer (e.g. 'shared')."
 }
+
+variable "subnet_key" {
+  type        = string
+  description = "Key into the shared layer's subnet maps (subnet_names, subnet_self_links, ...) identifying this environment's subnet."
+}

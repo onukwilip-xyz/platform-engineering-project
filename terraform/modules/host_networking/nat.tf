@@ -8,8 +8,12 @@ resource "google_compute_router_nat" "nat" {
   nat_ip_allocate_option             = "AUTO_ONLY"
   source_subnetwork_ip_ranges_to_nat = "LIST_OF_SUBNETWORKS"
 
-  subnetwork {
-    name                    = google_compute_subnetwork.gke_subnet.name
-    source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
+  dynamic "subnetwork" {
+    for_each = google_compute_subnetwork.subnet
+    iterator = subnet
+    content {
+      name                    = subnet.value.name
+      source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
+    }
   }
 }

@@ -1193,7 +1193,7 @@ resource "kubernetes_manifest" "gatus" {
                 {
                   name     = "store-ui-public"
                   group    = "public"
-                  url      = "https://store.pe.onukwilip.me"
+                  url      = "https://store.pe.princeonuk.xyz"
                   interval = "1m"
                   conditions = [
                     "[STATUS] == 200"

@@ -3,17 +3,23 @@ output "vpc" {
   value       = google_compute_network.vpc
 }
 
-output "gke_subnet" {
-  description = "The GKE subnet resource."
-  value       = google_compute_subnetwork.gke_subnet
+output "subnets" {
+  description = "Map of subnet_name => subnetwork resource."
+  value       = google_compute_subnetwork.subnet
 }
 
-output "pods_secondary_range_name" {
-  description = "The name of the pods secondary IP range."
-  value       = var.pods_secondary_range_name
+output "pods_secondary_range_names" {
+  description = "Map of subnet_name => pods secondary range name, for subnets that defined one."
+  value = {
+    for s in var.subnets : s.subnet_name => s.pods_secondary_range_name
+    if s.pods_secondary_range_name != null
+  }
 }
 
-output "services_secondary_range_name" {
-  description = "The name of the services secondary IP range."
-  value       = var.services_secondary_range_name
+output "services_secondary_range_names" {
+  description = "Map of subnet_name => services secondary range name, for subnets that defined one."
+  value = {
+    for s in var.subnets : s.subnet_name => s.services_secondary_range_name
+    if s.services_secondary_range_name != null
+  }
 }

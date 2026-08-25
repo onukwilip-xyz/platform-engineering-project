@@ -90,8 +90,8 @@ resource "google_compute_shared_vpc_service_project" "attacker" {
 resource "google_compute_subnetwork_iam_member" "attacker_compute_sa_network_user" {
   provider   = google.net
   project    = local.shared_vpc_host_project_id
-  region     = var.gke_subnet_region
-  subnetwork = local.gke_subnet_name
+  region     = var.subnet_region
+  subnetwork = local.subnet_name
   role       = "roles/compute.networkUser"
   member     = "serviceAccount:${module.attacker_project.project.number}-compute@developer.gserviceaccount.com"
 
@@ -101,8 +101,8 @@ resource "google_compute_subnetwork_iam_member" "attacker_compute_sa_network_use
 resource "google_compute_subnetwork_iam_member" "ddos_runner_network_user" {
   provider   = google.net
   project    = local.shared_vpc_host_project_id
-  region     = var.gke_subnet_region
-  subnetwork = local.gke_subnet_name
+  region     = var.subnet_region
+  subnetwork = local.subnet_name
   role       = "roles/compute.networkUser"
   member     = "serviceAccount:${google_service_account.ddos_runner.email}"
 

@@ -28,6 +28,11 @@ variable "shared_state_prefix" {
   description = "State prefix for the shared layer."
 }
 
+variable "subnet_key" {
+  type        = string
+  description = "Key into the shared layer's subnet maps (subnet_names, subnet_self_links, ...) identifying this environment's subnet."
+}
+
 variable "cluster_name" {
   type        = string
   description = "Name of the GKE cluster."

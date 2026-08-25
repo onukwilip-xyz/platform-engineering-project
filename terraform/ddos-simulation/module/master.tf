@@ -1,9 +1,9 @@
 resource "google_compute_address" "master_nic1" {
   project      = module.attacker_project.project.project_id
   name         = var.master_nic1_static_ip_name
-  region       = var.gke_subnet_region
+  region       = var.subnet_region
   address_type = "INTERNAL"
-  subnetwork   = local.gke_subnet_self_link
+  subnetwork   = local.subnet_self_link
 
   depends_on = [
     google_compute_shared_vpc_service_project.attacker,
@@ -32,10 +32,10 @@ resource "google_compute_instance" "master" {
     subnetwork = google_compute_subnetwork.attack.self_link
   }
 
-  # nic1: Shared VPC GKE subnet. Enables connections from the VPN
+  # nic1: Shared VPC target subnet. Enables connections from the VPN
   network_interface {
     network    = local.shared_vpc_self_link
-    subnetwork = local.gke_subnet_self_link
+    subnetwork = local.subnet_self_link
     network_ip = google_compute_address.master_nic1.address
   }
 

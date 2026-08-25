@@ -1,3 +1,7 @@
+locals {
+  env_record_prefix = var.environment == "production" ? "" : "${var.environment}."
+}
+
 data "google_dns_managed_zone" "private_zone" {
   provider = google.net
   name     = var.private_dns_zone_name
@@ -6,7 +10,7 @@ data "google_dns_managed_zone" "private_zone" {
 
 resource "google_dns_record_set" "postgres" {
   provider     = google.net
-  name         = "postgres.${data.google_dns_managed_zone.private_zone.dns_name}"
+  name         = "postgres.${local.env_record_prefix}${data.google_dns_managed_zone.private_zone.dns_name}"
   managed_zone = var.private_dns_zone_name
   type         = "A"
   ttl          = 300

@@ -26,13 +26,22 @@ module "gke" {
   monitoring_components = var.monitoring_components
 
   network_self_link             = local.shared.vpc_self_link
-  subnet_self_link              = local.shared.gke_subnet_self_link
-  pods_secondary_range_name     = local.shared.pods_secondary_range_name
-  services_secondary_range_name = local.shared.services_secondary_range_name
-  subnet_name                   = local.shared.gke_subnet_name
+  subnet_self_link              = local.shared.subnet_self_links[var.subnet_key]
+  pods_secondary_range_name     = local.shared.pods_secondary_range_names[var.subnet_key]
+  services_secondary_range_name = local.shared.services_secondary_range_names[var.subnet_key]
+  subnet_name                   = local.shared.subnet_names[var.subnet_key]
 
-  cluster_name           = var.cluster_name
-  master_authorized_cidr = local.shared.gke_subnet_cidr
+  cluster_name = var.cluster_name
+  master_authorized_cidrs = [
+    {
+      cidr_block   = local.shared.subnet_cidrs[var.subnet_key]
+      display_name = "gke-subnet"
+    },
+    {
+      cidr_block   = local.shared.subnet_cidrs[local.shared.infra_subnet_key]
+      display_name = "vpn-infra-subnet"
+    },
+  ]
   master_ipv4_cidr_block = var.master_ipv4_cidr_block
   labels                 = var.labels
 
