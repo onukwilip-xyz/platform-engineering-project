@@ -60,7 +60,7 @@ resource "google_compute_firewall" "workers_to_master" {
 # The NetBird routing peer already has implicit reachability to other VMs in
 # the host VPC, so this rule shouldn't be necessary. If browsing the Locust
 # UIs at ddos-plane.<private_domain>:{8089,8090,8091} fails after apply,
-# uncomment this resource to allow traffic from the GKE subnet to reach the
+# uncomment this resource to allow traffic from the target subnet to reach the
 # master's nic1 on the web UI ports.
 #
 resource "google_compute_firewall" "host_vpc_to_master_ui" {
@@ -70,7 +70,7 @@ resource "google_compute_firewall" "host_vpc_to_master_ui" {
   name     = "allow-ddos-plane-ui"
 
   direction          = "INGRESS"
-  source_ranges      = [data.terraform_remote_state.shared.outputs.gke_subnet_cidr]
+  source_ranges      = [data.terraform_remote_state.shared.outputs.subnet_cidrs[var.subnet_key]]
   destination_ranges = ["${google_compute_address.master_nic1.address}/32"]
 
   allow {

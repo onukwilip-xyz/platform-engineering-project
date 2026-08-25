@@ -13,7 +13,7 @@ on:
 
 jobs:
   deploy:
-    uses: ./.github/workflows/terraform-pipeline.yml
+    uses: ./.github/workflows/terraform-workflow-template.yaml
     secrets: inherit
     with:
       github-environment: "shared"

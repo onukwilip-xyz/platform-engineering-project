@@ -95,4 +95,10 @@ jobs:
 
       - name: Run Terragrunt
         if: inputs.iac-tool == 'terragrunt'
+        env:
+          TF_NETWORK_SA_EMAIL: ${{ vars.TF_NETWORK_SA_EMAIL }}
+          TF_PLATFORM_SA_EMAIL: ${{ vars.TF_PLATFORM_SA_EMAIL }}
+          SUBNET_KEY: ${{ vars.SUBNET_KEY }}
+          DDOS_PROTECTION: ${{ vars.DDOS_PROTECTION }}
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
         run: terragrunt run --all ${{ inputs.action }} --terragrunt-non-interactive

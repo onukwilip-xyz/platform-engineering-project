@@ -25,9 +25,9 @@ output "host_project_id" {
   value       = data.terraform_remote_state.shared.outputs.host_project_id
 }
 
-output "gke_subnet_self_link" {
-  description = "Self-link of the GKE subnet (from shared state). Re-exported for gateway unit static IP allocation."
-  value       = data.terraform_remote_state.shared.outputs.gke_subnet_self_link
+output "subnet_self_link" {
+  description = "Self-link of this environment's subnet (from shared state). Re-exported for gateway unit static IP allocation."
+  value       = data.terraform_remote_state.shared.outputs.subnet_self_links[var.subnet_key]
 }
 
 output "private_dns_zone_name" {

@@ -76,6 +76,7 @@ module "host_apis" {
     "cloudresourcemanager.googleapis.com",
     "dns.googleapis.com",
     # Required for VPN infrastructure
+    "secretmanager.googleapis.com",
     "parametermanager.googleapis.com",
     "logging.googleapis.com",
     "monitoring.googleapis.com",
@@ -94,19 +95,17 @@ module "host_networking" {
   host_project_id = module.host_project.project.project_id
   region          = var.region
 
-  vpc_name    = var.vpc_name
-  subnet_name = var.subnet_name
-  subnet_cidr = var.subnet_cidr
+  vpc_name = var.vpc_name
+  subnets  = var.subnets
 
-  pods_secondary_range_name     = var.pods_secondary_range_name
-  pods_secondary_cidr           = var.pods_secondary_cidr
-  services_secondary_range_name = var.services_secondary_range_name
-  services_secondary_cidr       = var.services_secondary_cidr
-  
-
-  ssh_network_tag = var.ssh_network_tag
+  ssh_network_tag            = var.ssh_network_tag
+  internal_access_subnet_key = var.infra_subnet_key
 
   depends_on = [module.host_apis]
+}
+
+locals {
+  infra_subnet = module.host_networking.subnets[var.infra_subnet_key]
 }
 
 # ──────────────────────────────────────────────
@@ -141,7 +140,7 @@ module "vpn_server_infra" {
   zone       = var.zone
   region     = var.region
   network    = module.host_networking.vpc.self_link
-  subnetwork = module.host_networking.gke_subnet.self_link
+  subnetwork = local.infra_subnet.self_link
 
   netbird_server_instance_name               = var.netbird_server_instance_name
   netbird_domain                             = var.netbird_domain
@@ -176,7 +175,7 @@ module "vpn_netbird_infra" {
   zone       = var.zone
   region     = var.region
   network    = module.host_networking.vpc.self_link
-  subnetwork = module.host_networking.gke_subnet.self_link
+  subnetwork = local.infra_subnet.self_link
 
   ssh_network_tag = var.ssh_network_tag
 
@@ -209,7 +208,7 @@ module "vpn_netbird_infra" {
   root_domain       = var.root_domain
   subdomain         = var.subdomain
   private_subdomain = var.private_subdomain
-  subnetwork_name   = module.host_networking.gke_subnet.name
+  subnetwork_name   = local.infra_subnet.name
 
   depends_on = [
     module.host_networking, # DNS inbound policy must exist before create_nameservers.sh runs

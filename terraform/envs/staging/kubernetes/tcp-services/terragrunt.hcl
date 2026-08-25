@@ -36,5 +36,5 @@ terraform {
 inputs = {
   service_project_id = dependency.gke.outputs.service_project_id
   region             = local.env.region
-  subnetwork         = dependency.gke.outputs.gke_subnet_self_link
+  subnetwork         = dependency.gke.outputs.subnet_self_link
 }

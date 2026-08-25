@@ -79,9 +79,12 @@ variable "master_ipv4_cidr_block" {
   description = "RFC1918 /28 CIDR range for the GKE control plane (must not overlap VPC/subnet/secondary ranges)."
 }
 
-variable "master_authorized_cidr" {
-  type        = string
-  description = "CIDR range allowed to access the Kubernetes API server endpoint (e.g., your GKE subnet CIDR)."
+variable "master_authorized_cidrs" {
+  type = list(object({
+    cidr_block   = string
+    display_name = string
+  }))
+  description = "CIDR ranges allowed to access the Kubernetes API server endpoint (the GKE subnet, plus any other subnet whose traffic reaches the master through it — e.g. the VPN routing peer's infra subnet)."
 }
 
 # Features

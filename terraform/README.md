@@ -37,6 +37,17 @@ export SECRET_SHARED="cicd-tfvars-shared"
 export SECRET_STAGING="cicd-tfvars-staging"
 export SECRET_PRODUCTION="cicd-tfvars-production"
 export SECRET_DDOS="cicd-tfvars-ddos"
+
+export CICD_SA_MICROSERVICES_STAGING="cicd-sa-ms-staging"
+export CICD_SA_MICROSERVICES_PRODUCTION="cicd-sa-ms-production"
+
+export CICD_SA_MICROSERVICES_STAGING_EMAIL="${CICD_SA_MICROSERVICES_STAGING}@${TF_PROJECT}.iam.gserviceaccount.com"
+export CICD_SA_MICROSERVICES_PRODUCTION_EMAIL="${CICD_SA_MICROSERVICES_PRODUCTION}@${TF_PROJECT}.iam.gserviceaccount.com"
+
+export GITHUB_REPO_MICROSERVICES="${GITHUB_ORG}/platform-engineering-microservices"
+
+export ARTIFACT_REGISTRY_REGION="us-central1"
+export ARTIFACT_REGISTRY_REPO="images"
 ```
 
 Create Terraform project
@@ -312,3 +323,73 @@ Apply Terraform
 ```bash
 terraform apply -var-file=".tfvars"
 ```
+
+---
+
+## Microservices CI/CD Service Accounts
+
+For the `platform-engineering-microservices` repo's pipelines (staging + production).
+
+Requires `terraform/envs/staging/project` and `terraform/envs/staging/artifact-registry` to already be applied. `terraform/envs/production/` is empty — skip the production AR grant until it exists.
+
+Create the SAs
+
+```bash
+gcloud iam service-accounts create "$CICD_SA_MICROSERVICES_STAGING" --project "$TF_PROJECT" --display-name "CI/CD Service Account (microservices - staging)"
+gcloud iam service-accounts create "$CICD_SA_MICROSERVICES_PRODUCTION" --project "$TF_PROJECT" --display-name "CI/CD Service Account (microservices - production)"
+```
+
+Resolve the per-environment service project IDs (Terraform outputs, not created here)
+
+```bash
+export STAGING_SERVICE_PROJECT_ID=$(cd terraform/envs/staging/project && terragrunt output -raw service_project_id)
+
+# once terraform/envs/production/project is applied:
+# export PRODUCTION_SERVICE_PROJECT_ID=$(cd terraform/envs/production/project && terragrunt output -raw service_project_id)
+```
+
+Grant read + write access to the `images` Artifact Registry repo (`roles/artifactregistry.writer` covers both)
+
+```bash
+gcloud artifacts repositories add-iam-policy-binding "$ARTIFACT_REGISTRY_REPO" \
+  --project "$STAGING_SERVICE_PROJECT_ID" \
+  --location "$ARTIFACT_REGISTRY_REGION" \
+  --member="serviceAccount:${CICD_SA_MICROSERVICES_STAGING_EMAIL}" \
+  --role="roles/artifactregistry.writer"
+
+# gcloud artifacts repositories add-iam-policy-binding "$ARTIFACT_REGISTRY_REPO" \
+#   --project "$PRODUCTION_SERVICE_PROJECT_ID" \
+#   --location "$ARTIFACT_REGISTRY_REGION" \
+#   --member="serviceAccount:${CICD_SA_MICROSERVICES_PRODUCTION_EMAIL}" \
+#   --role="roles/artifactregistry.writer"
+```
+
+Allow the WIF pool to impersonate the microservices CI/CD SAs (scoped per GitHub environment, same pool/provider as above)
+
+```bash
+gcloud iam service-accounts add-iam-policy-binding "$CICD_SA_MICROSERVICES_STAGING_EMAIL" \
+  --project "$TF_PROJECT" \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/attribute.environment/staging" \
+  --role="roles/iam.workloadIdentityUser"
+
+gcloud iam service-accounts add-iam-policy-binding "$CICD_SA_MICROSERVICES_PRODUCTION_EMAIL" \
+  --project "$TF_PROJECT" \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/attribute.environment/production" \
+  --role="roles/iam.workloadIdentityUser"
+```
+
+> Note: this binds on `attribute.environment` alone, same as the bindings above — any repo in the org with a `staging`/`production` GitHub Environment can impersonate these SAs. Was fine with one repo on the pool; with a second repo now sharing it, consider scoping these two bindings to `attribute.repository/${GITHUB_REPO_MICROSERVICES}` instead (mapping already exists on the provider, no provider change needed). Left loose here for consistency — flagging, not changing silently.
+
+Retrieve values for GitHub environment-level variables (`platform-engineering-microservices` repo)
+
+```bash
+echo "WIF_PROVIDER (org-level, same as platform-engineering-project) = projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/providers/${PROVIDER_ID}"
+echo ""
+echo "staging environment:"
+echo "  CICD_SA_EMAIL = $CICD_SA_MICROSERVICES_STAGING_EMAIL"
+echo ""
+echo "production environment:"
+echo "  CICD_SA_EMAIL = $CICD_SA_MICROSERVICES_PRODUCTION_EMAIL"
+```
+
+No `TF_VARS_SECRET` needed — these SAs never pull tfvars.

@@ -1,18 +1,26 @@
-resource "google_compute_subnetwork" "gke_subnet" {
+resource "google_compute_subnetwork" "subnet" {
+  for_each = { for s in var.subnets : s.subnet_name => s }
+
   project                  = var.host_project_id
   region                   = var.region
-  name                     = var.subnet_name
+  name                     = each.value.subnet_name
   network                  = google_compute_network.vpc.id
-  ip_cidr_range            = var.subnet_cidr
+  ip_cidr_range            = each.value.subnet_cidr
   private_ip_google_access = true
 
-  secondary_ip_range {
-    range_name    = var.pods_secondary_range_name
-    ip_cidr_range = var.pods_secondary_cidr
+  dynamic "secondary_ip_range" {
+    for_each = each.value.pods_secondary_range_name != null ? [1] : []
+    content {
+      range_name    = each.value.pods_secondary_range_name
+      ip_cidr_range = each.value.pods_secondary_cidr
+    }
   }
 
-  secondary_ip_range {
-    range_name    = var.services_secondary_range_name
-    ip_cidr_range = var.services_secondary_cidr
+  dynamic "secondary_ip_range" {
+    for_each = each.value.services_secondary_range_name != null ? [1] : []
+    content {
+      range_name    = each.value.services_secondary_range_name
+      ip_cidr_range = each.value.services_secondary_cidr
+    }
   }
 }

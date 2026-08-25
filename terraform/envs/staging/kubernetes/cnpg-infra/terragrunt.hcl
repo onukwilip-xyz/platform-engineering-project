@@ -61,4 +61,5 @@ inputs = {
   host_project_id       = dependency.gke.outputs.host_project_id
   private_dns_zone_name = dependency.gke.outputs.private_dns_zone_name
   shared_vip_address    = dependency.tcp_services.outputs.shared_vip_address
+  # environment           = local.env.env
 }

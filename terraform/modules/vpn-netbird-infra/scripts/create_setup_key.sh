@@ -56,6 +56,7 @@ if [ -n "${CICD_SETUP_KEY_SECRET_ID:-}" ]; then
           \"name\": \"$CICD_SETUP_KEY_NAME\",
           \"type\": \"reusable\",
           \"expires_in\": 86400,
+          \"ephemeral\": true,
           \"auto_groups\": [],
           \"usage_limit\": 0
         }")
