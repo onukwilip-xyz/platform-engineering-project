@@ -48,10 +48,15 @@ runs:
       env:
         SECRET_NAME: ${{ inputs.setup-key-secret }}
         PROJECT_ID: ${{ inputs.gcp-project-id }}
+        # tf-network already has Secret Admin on the host project; every CI/CD
+        # SA already has serviceAccountTokenCreator on it (terraform/README.md).
+        # Impersonating avoids needing a per-CI/CD-SA grant on this secret.
+        IMPERSONATE_SA: ${{ vars.TF_NETWORK_SA_EMAIL }}
       run: |
         KEY=$(gcloud secrets versions access latest \
           --secret="$SECRET_NAME" \
-          --project="$PROJECT_ID")
+          --project="$PROJECT_ID" \
+          --impersonate-service-account="$IMPERSONATE_SA")
         echo "::add-mask::$KEY"
         echo "key=$KEY" >> "$GITHUB_OUTPUT"
 

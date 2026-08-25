@@ -15,6 +15,11 @@ resource "google_compute_firewall" "allow_netbird_server_access" {
     ports    = ["80", "443"]
   }
 
+  allow {
+    protocol = "udp"
+    ports    = ["3478"]
+  }
+
   log_config {
     metadata = "INCLUDE_ALL_METADATA"
   }

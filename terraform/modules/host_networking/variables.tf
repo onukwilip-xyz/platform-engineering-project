@@ -41,3 +41,9 @@ variable "ssh_network_tag" {
   type        = string
   description = "Network tag for SSH firewall rule."
 }
+
+variable "internal_access_subnet_key" {
+  type        = string
+  default     = null
+  description = "If set, the key (subnet_name) of a subnet that should be allowed broad internal TCP access (all ports) to every other subnet in the VPC — e.g. a VPN/management subnet that needs to reach GKE nodes, the API server, etc."
+}

@@ -76,6 +76,7 @@ module "host_apis" {
     "cloudresourcemanager.googleapis.com",
     "dns.googleapis.com",
     # Required for VPN infrastructure
+    "secretmanager.googleapis.com",
     "parametermanager.googleapis.com",
     "logging.googleapis.com",
     "monitoring.googleapis.com",
@@ -97,7 +98,8 @@ module "host_networking" {
   vpc_name = var.vpc_name
   subnets  = var.subnets
 
-  ssh_network_tag = var.ssh_network_tag
+  ssh_network_tag            = var.ssh_network_tag
+  internal_access_subnet_key = var.infra_subnet_key
 
   depends_on = [module.host_apis]
 }

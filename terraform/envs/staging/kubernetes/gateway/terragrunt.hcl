@@ -85,5 +85,5 @@ inputs = {
   subnetwork            = dependency.gke.outputs.subnet_self_link
   private_dns_zone_name = dependency.gke.outputs.private_dns_zone_name
   public_dns_zone_name  = dependency.gke.outputs.public_dns_zone_name
-  environment           = local.env.env
+  # environment           = local.env.env
 }

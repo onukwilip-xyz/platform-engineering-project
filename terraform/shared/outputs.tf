@@ -12,6 +12,11 @@ output "vpc_self_link" {
   value       = module.host_networking.vpc.self_link
 }
 
+output "infra_subnet_key" {
+  description = "Key (subnet_name) in the subnet maps used for VPN/management infra — the source subnet for traffic routed through the Netbird routing peer (e.g. needs to be included in master_authorized_networks for private GKE clusters reached over the VPN)."
+  value       = var.infra_subnet_key
+}
+
 output "subnet_self_link" {
   description = "Self-link of the staging subnet ('gke-subnet'). Kept for backward compatibility; see subnet_self_links for other subnets."
   value       = module.host_networking.subnets["gke-subnet"].self_link

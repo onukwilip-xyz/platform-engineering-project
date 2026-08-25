@@ -31,8 +31,17 @@ module "gke" {
   services_secondary_range_name = local.shared.services_secondary_range_names[var.subnet_key]
   subnet_name                   = local.shared.subnet_names[var.subnet_key]
 
-  cluster_name           = var.cluster_name
-  master_authorized_cidr = local.shared.subnet_cidrs[var.subnet_key]
+  cluster_name = var.cluster_name
+  master_authorized_cidrs = [
+    {
+      cidr_block   = local.shared.subnet_cidrs[var.subnet_key]
+      display_name = "gke-subnet"
+    },
+    {
+      cidr_block   = local.shared.subnet_cidrs[local.shared.infra_subnet_key]
+      display_name = "vpn-infra-subnet"
+    },
+  ]
   master_ipv4_cidr_block = var.master_ipv4_cidr_block
   labels                 = var.labels
 
