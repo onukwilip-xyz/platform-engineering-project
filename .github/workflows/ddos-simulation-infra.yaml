@@ -1,0 +1,26 @@
+name: "DDoS Simulation"
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Action to perform"
+        type: choice
+        options:
+          - apply
+          - destroy
+        default: apply
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/terraform-workflow-template.yaml
+    secrets: inherit
+    with:
+      github-environment: "general"
+      connect-vpn: false
+      action: ${{ inputs.action }}
+      iac-tool: "terragrunt"
+      working-directory: "terraform/ddos-simulation/staging"
+      netbird-management-url: ${{ vars.NETBIRD_MANAGEMENT_URL }}
+      gcp-project-id: ${{ vars.TF_PROJECT }}
+      tfvars-secret-override: "cicd-tfvars-ddos"

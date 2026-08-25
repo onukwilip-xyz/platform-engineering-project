@@ -75,7 +75,7 @@ fi
 echo "Waiting for Netbird to be healthy..."
 MAX_ATTEMPTS=60
 for i in $(seq 1 $MAX_ATTEMPTS); do
-  if curl -sfk "https://$NETBIRD_DOMAIN/" -o /dev/null 2>&1; then
+  if curl -sf "https://$NETBIRD_DOMAIN/" -o /dev/null 2>&1; then
     echo "Netbird API is up after attempt $i."
     break
   fi

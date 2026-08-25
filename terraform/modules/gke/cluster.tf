@@ -45,9 +45,12 @@ resource "google_container_cluster" "gke_cluster" {
   }
 
   master_authorized_networks_config {
-    cidr_blocks {
-      cidr_block   = var.master_authorized_cidr
-      display_name = "gke-subnet-only"
+    dynamic "cidr_blocks" {
+      for_each = var.master_authorized_cidrs
+      content {
+        cidr_block   = cidr_blocks.value.cidr_block
+        display_name = cidr_blocks.value.display_name
+      }
     }
 
     private_endpoint_enforcement_enabled = true

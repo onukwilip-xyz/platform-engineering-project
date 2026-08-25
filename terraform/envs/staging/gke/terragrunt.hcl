@@ -55,4 +55,5 @@ inputs = {
   labels                 = local.env.labels
   state_bucket           = local.env.state_bucket
   shared_state_prefix    = local.env.shared_state_prefix
+  subnet_key             = local.env.subnet_key
 }

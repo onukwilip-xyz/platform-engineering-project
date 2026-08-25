@@ -8,12 +8,9 @@
 #   staging/gke/             → envs/staging/gke/terraform.tfstate
 #   staging/kubernetes/cert-manager/ → envs/staging/kubernetes/cert-manager/terraform.tfstate
 #
-# Set the bucket name via env var before running any terragrunt command:
-#   export TF_STATE_BUCKET=pe-tf-state-bucket
 
 locals {
-  # state_bucket = get_env("TF_STATE_BUCKET", "pe-tf-state-bucket")
-  state_bucket = get_env("TF_STATE_BUCKET", "pe-tf-state-bucket-1")
+  state_bucket = get_env("TF_STATE_BUCKET")
 }
 
 remote_state {

@@ -19,3 +19,28 @@ resource "google_compute_firewall" "allow_ssh_iap" {
     metadata = "INCLUDE_ALL_METADATA"
   }
 }
+
+resource "google_compute_firewall" "allow_internal_access_subnet" {
+  count = var.internal_access_subnet_key != null ? 1 : 0
+
+  name    = "allow-${var.internal_access_subnet_key}-internal-tcp"
+  project = var.host_project_id
+  network = google_compute_network.vpc.name
+
+  direction     = "INGRESS"
+  priority      = 1000
+  source_ranges = [google_compute_subnetwork.subnet[var.internal_access_subnet_key].ip_cidr_range]
+
+  allow {
+    protocol = "tcp"
+    ports    = ["0-65535"]
+  }
+
+  allow {
+    protocol = "icmp"
+  }
+
+  log_config {
+    metadata = "INCLUDE_ALL_METADATA"
+  }
+}

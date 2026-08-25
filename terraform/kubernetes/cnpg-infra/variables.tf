@@ -65,3 +65,8 @@ variable "shared_vip_address" {
   type        = string
   description = "IP address of the tcp-services shared VIP. Used for the postgres DNS A record."
 }
+
+variable "environment" {
+  type        = string
+  description = "Environment name (e.g. 'staging', 'production'). Prefixed onto DNS record names for every environment except 'production', which stays unprefixed."
+}

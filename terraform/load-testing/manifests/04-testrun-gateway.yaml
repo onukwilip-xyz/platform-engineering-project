@@ -28,8 +28,8 @@ spec:
         effect: NoExecute
     env:
       - name: BASE_URL
-        value: "https://users.internal.pe.onukwilip.me"
-      - name: SSL_CERT_FILE                         # k6/Go reads this env var
+        value: "https://users.internal.pe.princeonuk.xyz"
+      - name: SSL_CERT_FILE # k6/Go reads this env var
         value: "/etc/ssl/trust/ca.crt"
       - name: DURATION
         value: "75m"

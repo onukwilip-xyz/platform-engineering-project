@@ -3,18 +3,18 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 locals {
-  # state_bucket = get_env("TF_STATE_BUCKET", "pe-tf-state-bucket")
-  state_bucket = get_env("TF_STATE_BUCKET", "pe-tf-state-bucket-1")
+  state_bucket = get_env("TF_STATE_BUCKET")
   env    = "staging"
   region = "us-central1"
   zone   = "us-central1-a"
 
-  # tf_network_sa_email  = "tf-network@pe-terraform-project.iam.gserviceaccount.com"
-  # tf_platform_sa_email = "tf-platform@pe-terraform-project.iam.gserviceaccount.com"
-  tf_network_sa_email  = get_env("TF_NETWORK_SA", "tf-network@pe-terraform-project-1.iam.gserviceaccount.com")
-  tf_platform_sa_email = get_env("TF_PLATFORM_SA", "tf-platform@pe-terraform-project-1.iam.gserviceaccount.com")
+  tf_network_sa_email  = get_env("TF_NETWORK_SA_EMAIL")
+  tf_platform_sa_email = get_env("TF_PLATFORM_SA_EMAIL")
   shared_state_prefix  = "shared"
   gateway_state_prefix = "${local.env}/kubernetes/gateway/terraform.tfstate"
+
+  # Key into the shared layer's subnet maps identifying this environment's subnet.
+  subnet_key = get_env("SUBNET_KEY")
 }
 
 # Inline state backend — independent prefix so destroys don't touch envs/ state.
@@ -64,7 +64,9 @@ inputs = {
   state_bucket         = local.state_bucket
   shared_state_prefix  = local.shared_state_prefix
   gateway_state_prefix = local.gateway_state_prefix
-  gke_subnet_region = local.region
+  subnet_region     = local.region
+  subnet_key        = local.subnet_key
+  environment       = local.env
   attack_region     = local.region
   attack_zone       = local.zone
 }

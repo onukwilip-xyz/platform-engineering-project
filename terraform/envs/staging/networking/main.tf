@@ -16,6 +16,6 @@ module "service_networking" {
   service_project_id     = var.service_project_id
   service_project_number = var.service_project_number
   region                 = var.region
-  subnet_name            = data.terraform_remote_state.shared.outputs.gke_subnet_name
+  subnet_name            = data.terraform_remote_state.shared.outputs.subnet_names[var.subnet_key]
   tf_platform_sa_email   = var.tf_platform_sa_email
 }

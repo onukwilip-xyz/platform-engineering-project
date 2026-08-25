@@ -82,7 +82,8 @@ inputs = {
   host_project_id       = dependency.gke.outputs.host_project_id
   service_project_id    = dependency.gke.outputs.service_project_id
   region                = local.env.region
-  subnetwork            = dependency.gke.outputs.gke_subnet_self_link
+  subnetwork            = dependency.gke.outputs.subnet_self_link
   private_dns_zone_name = dependency.gke.outputs.private_dns_zone_name
   public_dns_zone_name  = dependency.gke.outputs.public_dns_zone_name
+  # environment           = local.env.env
 }
