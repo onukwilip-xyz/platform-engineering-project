@@ -126,7 +126,7 @@ jobs:
         with:
           management-url: ${{ vars.NETBIRD_MANAGEMENT_URL }}
           setup-key-secret: ${{ vars.NETBIRD_CICD_KEY_SECRET }}
-          gcp-project-id: ${{ vars.TF_PROJECT }}
+          secret-project-id: ${{ vars.HOST_PROJECT_ID }}
           tf-network-sa-email: ${{ vars.TF_NETWORK_SA_EMAIL }}
 
       - name: Terragrunt apply (targeted)
