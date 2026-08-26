@@ -16,7 +16,7 @@ locals {
   # Prefix for the existing terraform/shared state (read via terraform_remote_state).
   shared_state_prefix = "shared"
 
-  # Key into the shared layer's subnet maps (subnet_names, subnet_self_links, ...)
+  # Key into the shared layer's subnet maps (subnet_names, subnet_self_links, ...)...
   # identifying this environment's subnet.
   subnet_key = get_env("SUBNET_KEY")
 
