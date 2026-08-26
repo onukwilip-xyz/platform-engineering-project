@@ -188,6 +188,12 @@ variable "node_pools" {
     max_surge       = optional(number)
     max_unavailable = optional(number)
 
+    # Spot VMs — GCP's recommended discount-VM mechanism (no forced 24h
+    # lifetime, unlike the older "preemptible" node flag, which this module
+    # does not expose). Same ~60-91% discount; nodes can be reclaimed at any
+    # time GCP needs capacity back.
+    spot = optional(bool, false)
+
     taints = optional(list(object({
       key    = string
       value  = string

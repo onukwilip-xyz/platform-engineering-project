@@ -36,6 +36,7 @@ resource "google_container_node_pool" "pools" {
     disk_size_gb    = var.node_disk_size_gb
     image_type      = var.node_image_type
     service_account = google_service_account.node_sa.email
+    spot            = try(each.value.spot, false)
 
     oauth_scopes = var.node_oauth_scopes
 
