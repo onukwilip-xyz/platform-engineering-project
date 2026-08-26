@@ -138,6 +138,5 @@ jobs:
           DDOS_PROTECTION: ${{ vars.DDOS_PROTECTION }}
           TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
         run: |
-          terragrunt apply \
-            -target="${{ inputs.terraform-resource-address }}" \
-            --terragrunt-non-interactive
+          terragrunt --non-interactive apply \
+            -target="${{ inputs.terraform-resource-address }}"

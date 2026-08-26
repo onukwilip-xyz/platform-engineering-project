@@ -108,4 +108,4 @@ jobs:
           SUBNET_KEY: ${{ vars.SUBNET_KEY }}
           DDOS_PROTECTION: ${{ vars.DDOS_PROTECTION }}
           TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-        run: terragrunt run --all ${{ inputs.action }} --terragrunt-non-interactive
+        run: terragrunt --non-interactive run --all ${{ inputs.action }}
