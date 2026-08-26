@@ -175,6 +175,26 @@ gcloud iam service-accounts add-iam-policy-binding "$TF_PLATFORM_SA_EMAIL" \
   --role="roles/iam.serviceAccountTokenCreator"
 ```
 
+Grant the CI/CD SAs access to the Terraform state bucket
+
+```bash
+gcloud storage buckets add-iam-policy-binding "gs://$TF_STATE_BUCKET" \
+  --member="serviceAccount:${CICD_SA_SHARED_EMAIL}" \
+  --role="roles/storage.objectAdmin"
+
+gcloud storage buckets add-iam-policy-binding "gs://$TF_STATE_BUCKET" \
+  --member="serviceAccount:${CICD_SA_STAGING_EMAIL}" \
+  --role="roles/storage.objectAdmin"
+
+gcloud storage buckets add-iam-policy-binding "gs://$TF_STATE_BUCKET" \
+  --member="serviceAccount:${CICD_SA_PRODUCTION_EMAIL}" \
+  --role="roles/storage.objectAdmin"
+
+gcloud storage buckets add-iam-policy-binding "gs://$TF_STATE_BUCKET" \
+  --member="serviceAccount:${CICD_SA_GENERAL_EMAIL}" \
+  --role="roles/storage.objectAdmin"
+```
+
 Create the secrets for each environment TF vars
 
 ```bash
