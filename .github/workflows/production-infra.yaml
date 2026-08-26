@@ -50,7 +50,7 @@ jobs:
     secrets: inherit
     with:
       github-environment: "production"
-      connect-vpn: false
+      connect-vpn: true
       action: ${{ inputs.action || 'apply' }}
       iac-tool: "terragrunt"
       working-directory: "terraform/envs/production"
