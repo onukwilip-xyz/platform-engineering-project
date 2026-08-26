@@ -212,28 +212,28 @@ Grant the CI/CD SAs access to their respective secrets
 gcloud secrets add-iam-policy-binding "$SECRET_SHARED" \
   --project "$TF_PROJECT" \
   --member="serviceAccount:${CICD_SA_SHARED_EMAIL}" \
-  --role="roles/secretmanager.secretAccessor"
+  --role="roles/secretmanager.secretVersionManager"
 
 gcloud secrets add-iam-policy-binding "$SECRET_STAGING" \
   --project "$TF_PROJECT" \
   --member="serviceAccount:${CICD_SA_STAGING_EMAIL}" \
-  --role="roles/secretmanager.secretAccessor"
+  --role="roles/secretmanager.secretVersionManager"
 
 gcloud secrets add-iam-policy-binding "$SECRET_PRODUCTION" \
   --project "$TF_PROJECT" \
   --member="serviceAccount:${CICD_SA_PRODUCTION_EMAIL}" \
-  --role="roles/secretmanager.secretAccessor"
+  --role="roles/secretmanager.secretVersionManager"
 
 gcloud secrets add-iam-policy-binding "$SECRET_GENERAL" \
   --project "$TF_PROJECT" \
   --member="serviceAccount:${CICD_SA_GENERAL_EMAIL}" \
-  --role="roles/secretmanager.secretAccessor"
+  --role="roles/secretmanager.secretVersionManager"
 
 # Special cases
 gcloud secrets add-iam-policy-binding "$SECRET_DDOS" \
   --project "$TF_PROJECT" \
   --member="serviceAccount:${CICD_SA_GENERAL_EMAIL}" \
-  --role="roles/secretmanager.secretAccessor"
+  --role="roles/secretmanager.secretVersionManager"
 ```
 
 Create the Workload Identity Pool

@@ -1429,7 +1429,7 @@ resource "kubernetes_manifest" "users_microservice" {
             values = yamlencode({
               service = {
                 name         = "${local.users_microservice}-service"
-                externalHost = "users.internal.pe.onukwilip.xyz"
+                externalHost = "users.staging.internal.pe.princeonuk.xyz"
               }
               gateways = ["mesh", "istio-ingress-internal/private"]
               destinationRule = {
