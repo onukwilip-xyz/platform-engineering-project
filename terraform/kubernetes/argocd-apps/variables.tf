@@ -183,6 +183,24 @@ variable "users_microservice_image_tag" {
   default     = "v1"
 }
 
+variable "cart_microservice_image_tag" {
+  type        = string
+  description = "Tag of the cart microservice Docker image to deploy. Bump here to roll out a new version."
+  default     = "v1"
+}
+
+variable "products_microservice_image_tag" {
+  type        = string
+  description = "Tag of the products microservice Docker image to deploy. Bump here to roll out a new version."
+  default     = "v1"
+}
+
+variable "search_microservice_image_tag" {
+  type        = string
+  description = "Tag of the search microservice Docker image to deploy. Bump here to roll out a new version."
+  default     = "v1"
+}
+
 variable "store_ui_image_tag" {
   type        = string
   description = "Tag of the store-ui Docker image to deploy. Bump here to roll out a new version."
