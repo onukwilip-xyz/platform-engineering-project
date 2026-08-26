@@ -93,23 +93,15 @@ jobs:
         if: inputs.iac-tool == 'terraform'
         env:
           TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-          # Read only by Terraform's google-auth library (provider + native gcs
-          # backend), not by the bare gcloud CLI. The backend resolves its own
-          # credentials independently of any provider-level
-          # impersonate_service_account, so it needs this set explicitly.
-          GOOGLE_IMPERSONATE_SERVICE_ACCOUNT: ${{ vars.TF_NETWORK_SA_EMAIL }}
         run: terraform init -backend-config="bucket=$TF_STATE_BUCKET"
 
       - name: Run Terraform
         if: inputs.iac-tool == 'terraform'
-        env:
-          GOOGLE_IMPERSONATE_SERVICE_ACCOUNT: ${{ vars.TF_NETWORK_SA_EMAIL }}
         run: terraform ${{ inputs.action }} -var-file=terraform.tfvars -auto-approve
 
       - name: Run Terragrunt
         if: inputs.iac-tool == 'terragrunt'
         env:
-          GOOGLE_IMPERSONATE_SERVICE_ACCOUNT: ${{ vars.TF_NETWORK_SA_EMAIL }}
           TF_NETWORK_SA_EMAIL: ${{ vars.TF_NETWORK_SA_EMAIL }}
           TF_PLATFORM_SA_EMAIL: ${{ vars.TF_PLATFORM_SA_EMAIL }}
           SUBNET_KEY: ${{ vars.SUBNET_KEY }}
