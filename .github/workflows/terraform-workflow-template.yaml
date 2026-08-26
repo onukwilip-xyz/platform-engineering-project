@@ -117,14 +117,17 @@ jobs:
 
       - name: Fetch GKE credentials for kubectl
         if: inputs.iac-tool == 'terragrunt' && steps.check-gke.outputs.service-project-id != '' && steps.check-gke.outputs.cluster-name != ''
-        uses: google-github-actions/get-gke-credentials@v2
+        shell: bash
         env:
-          CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT: ${{ vars.TF_PLATFORM_SA_EMAIL }}
-        with:
-          cluster_name: ${{ steps.check-gke.outputs.cluster-name }}
-          location: ${{ vars.GKE_REGION }}
-          project_id: ${{ steps.check-gke.outputs.service-project-id }}
-          use_internal_ip: true
+          CLUSTER_NAME: ${{ steps.check-gke.outputs.cluster-name }}
+          SERVICE_PROJECT_ID: ${{ steps.check-gke.outputs.service-project-id }}
+          GKE_REGION: ${{ vars.GKE_REGION }}
+        run: |
+          gcloud container clusters get-credentials "$CLUSTER_NAME" \
+            --region "$GKE_REGION" \
+            --project "$SERVICE_PROJECT_ID" \
+            --internal-ip \
+            --impersonate-service-account="$TF_PLATFORM_SA_EMAIL"
 
       - name: Terraform init
         if: inputs.iac-tool == 'terraform'
