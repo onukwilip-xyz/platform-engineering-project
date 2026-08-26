@@ -111,8 +111,9 @@ jobs:
 
       - name: Install gke-gcloud-auth-plugin
         if: inputs.iac-tool == 'terragrunt' && steps.check-gke.outputs.service-project-id != '' && steps.check-gke.outputs.cluster-name != ''
-        shell: bash
-        run: sudo apt-get update && sudo apt-get install -y google-cloud-cli-gke-gcloud-auth-plugin
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          install_components: "gke-gcloud-auth-plugin"
 
       - name: Fetch GKE credentials for kubectl
         if: inputs.iac-tool == 'terragrunt' && steps.check-gke.outputs.service-project-id != '' && steps.check-gke.outputs.cluster-name != ''
