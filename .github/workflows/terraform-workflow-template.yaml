@@ -49,12 +49,6 @@ jobs:
       SUBNET_KEY: ${{ vars.SUBNET_KEY }}
       DDOS_PROTECTION: ${{ vars.DDOS_PROTECTION }}
       TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-      # terragrunt: anchored at the environment root so find_in_parent_folders(".tfvars")
-      # resolves for every unit regardless of this job's own working-directory scope
-      # (whole env vs just its kubernetes/ subtree), and so the "project"/"gke" readiness
-      # check below (which always targets those units directly) can find it too.
-      # terraform (shared layer only): no env/kubernetes split to worry about, so it
-      # just writes relative to its own working-directory, as before.
       ENV_TFVARS_PATH: ${{ inputs.iac-tool == 'terragrunt' && format('{0}/terraform/envs/{1}/.tfvars', github.workspace, inputs.github-environment) || '.tfvars' }}
 
     defaults:
@@ -110,8 +104,8 @@ jobs:
         shell: bash
         run: |
           ENV_DIR="$(dirname "$ENV_TFVARS_PATH")"
-          SERVICE_PROJECT_ID=$(terragrunt --working-dir "$ENV_DIR/project" run output -raw service_project_id 2>/dev/null || true)
-          CLUSTER_NAME=$(terragrunt --working-dir "$ENV_DIR/gke" run output -raw gke_cluster_name 2>/dev/null || true)
+          SERVICE_PROJECT_ID=$(terragrunt --working-dir "$ENV_DIR/project" run output -- -raw service_project_id 2>/dev/null || true)
+          CLUSTER_NAME=$(terragrunt --working-dir "$ENV_DIR/gke" run output -- -raw gke_cluster_name 2>/dev/null || true)
           echo "service-project-id=$SERVICE_PROJECT_ID" >> "$GITHUB_OUTPUT"
           echo "cluster-name=$CLUSTER_NAME" >> "$GITHUB_OUTPUT"
 
