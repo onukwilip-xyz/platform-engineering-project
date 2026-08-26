@@ -79,7 +79,7 @@ jobs:
         run: |
           gcloud secrets versions access latest \
             --secret="$SECRET_NAME" \
-            --project="$PROJECT_ID" > terraform.tfvars
+            --project="$PROJECT_ID" > .tfvars
 
       - name: Connect to NetBird VPN
         if: inputs.connect-vpn == true
@@ -87,15 +87,18 @@ jobs:
         with:
           management-url: ${{ inputs.netbird-management-url }}
           setup-key-secret: ${{ vars.NETBIRD_CICD_KEY_SECRET }}
-          gcp-project-id: ${{ inputs.gcp-project-id }}
+          secret-project-id: ${{ vars.HOST_PROJECT_ID }}
+          tf-network-sa-email: ${{ vars.TF_NETWORK_SA_EMAIL }}
 
       - name: Terraform init
         if: inputs.iac-tool == 'terraform'
-        run: terraform init
+        env:
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+        run: terraform init -backend-config="bucket=$TF_STATE_BUCKET"
 
       - name: Run Terraform
         if: inputs.iac-tool == 'terraform'
-        run: terraform ${{ inputs.action }} -var-file=terraform.tfvars -auto-approve
+        run: terraform ${{ inputs.action }} -var-file=.tfvars -auto-approve
 
       - name: Run Terragrunt
         if: inputs.iac-tool == 'terragrunt'
@@ -105,4 +108,4 @@ jobs:
           SUBNET_KEY: ${{ vars.SUBNET_KEY }}
           DDOS_PROTECTION: ${{ vars.DDOS_PROTECTION }}
           TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-        run: terragrunt run --all ${{ inputs.action }} --terragrunt-non-interactive
+        run: terragrunt --non-interactive run --all ${{ inputs.action }}

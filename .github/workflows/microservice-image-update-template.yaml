@@ -1,0 +1,142 @@
+name: "Microservice Image Update"
+
+permissions:
+  contents: read
+  id-token: write
+
+on:
+  workflow_call:
+    inputs:
+      github-environment:
+        description: "GitHub Environment to run in (e.g. 'staging', 'production'). Also used as the tfvars-secret concurrency scope."
+        type: string
+        required: true
+      tfvars-variable-name:
+        description: "Exact tfvars variable name to update, e.g. users_microservice_image_tag, store_ui_image_tag."
+        type: string
+        required: true
+      terraform-resource-address:
+        description: "Exact Terraform resource address to target, e.g. kubernetes_manifest.users_microservice."
+        type: string
+        required: true
+      image-tag:
+        description: "New image tag value to write into tfvars-variable-name."
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      github-environment:
+        description: "GitHub Environment to run in (e.g. 'staging', 'production'). Also used as the tfvars-secret concurrency scope."
+        type: string
+        required: true
+      tfvars-variable-name:
+        description: "Exact tfvars variable name to update, e.g. users_microservice_image_tag, store_ui_image_tag."
+        type: string
+        required: true
+      terraform-resource-address:
+        description: "Exact Terraform resource address to target, e.g. kubernetes_manifest.users_microservice."
+        type: string
+        required: true
+      image-tag:
+        description: "New image tag value to write into tfvars-variable-name."
+        type: string
+        required: true
+
+# Serializes runs per environment, not per microservice: every microservice's
+# image tag lives in the same shared tfvars secret, so any two deploys
+# targeting the same environment race on the same read-modify-write cycle
+# regardless of which service triggered them. Queue, don't cancel — a
+# cancelled mid-write run is exactly the failure mode this is meant to avoid.
+concurrency:
+  group: tfvars-update-${{ inputs.github-environment }}
+  cancel-in-progress: false
+
+jobs:
+  update-image:
+    name: "Update ${{ inputs.tfvars-variable-name }} (${{ inputs.github-environment }})"
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.github-environment }}
+
+    defaults:
+      run:
+        working-directory: terraform/envs/${{ inputs.github-environment }}/kubernetes/argocd-apps
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP via WIF
+        uses: google-github-actions/auth@v2
+        with:
+          service_account: ${{ vars.CICD_SA_EMAIL }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Install Terragrunt
+        shell: bash
+        run: |
+          curl -fsSL \
+            "https://github.com/gruntwork-io/terragrunt/releases/latest/download/terragrunt_linux_amd64" \
+            -o /usr/local/bin/terragrunt
+          chmod +x /usr/local/bin/terragrunt
+
+      - name: Read-modify-write tfvars in Secret Manager
+        shell: bash
+        env:
+          SECRET_NAME: ${{ vars.TF_VARS_SECRET }}
+          PROJECT_ID: ${{ vars.TF_PROJECT }}
+          VAR_NAME: ${{ inputs.tfvars-variable-name }}
+          NEW_VALUE: ${{ inputs.image-tag }}
+          # Two levels above this unit (terraform/envs/<env>/kubernetes/argocd-apps)
+          # is where find_in_parent_folders(".tfvars") resolves the file from.
+          ENV_TFVARS_PATH: ${{ github.workspace }}/terraform/envs/${{ inputs.github-environment }}/.tfvars
+        run: |
+          gcloud secrets versions access latest \
+            --secret="$SECRET_NAME" \
+            --project="$PROJECT_ID" > current.tfvars
+
+          awk -v var="$VAR_NAME" -v val="$NEW_VALUE" '
+            BEGIN { pattern = "^[[:space:]]*" var "[[:space:]]*="; found = 0 }
+            $0 ~ pattern {
+              print var " = \"" val "\""
+              found = 1
+              next
+            }
+            { print }
+            END {
+              if (found == 0) {
+                print "ERROR: variable " var " not found in tfvars" > "/dev/stderr"
+                exit 1
+              }
+            }
+          ' current.tfvars > updated.tfvars
+
+          gcloud secrets versions add "$SECRET_NAME" \
+            --project="$PROJECT_ID" \
+            --data-file=updated.tfvars
+
+          cp updated.tfvars "$ENV_TFVARS_PATH"
+
+      - name: Connect to NetBird VPN
+        uses: ./.github/actions/netbird-connect
+        with:
+          management-url: ${{ vars.NETBIRD_MANAGEMENT_URL }}
+          setup-key-secret: ${{ vars.NETBIRD_CICD_KEY_SECRET }}
+          secret-project-id: ${{ vars.HOST_PROJECT_ID }}
+          tf-network-sa-email: ${{ vars.TF_NETWORK_SA_EMAIL }}
+
+      - name: Terragrunt apply (targeted)
+        shell: bash
+        env:
+          TF_NETWORK_SA_EMAIL: ${{ vars.TF_NETWORK_SA_EMAIL }}
+          TF_PLATFORM_SA_EMAIL: ${{ vars.TF_PLATFORM_SA_EMAIL }}
+          SUBNET_KEY: ${{ vars.SUBNET_KEY }}
+          DDOS_PROTECTION: ${{ vars.DDOS_PROTECTION }}
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+        run: |
+          terragrunt --non-interactive apply \
+            -target="${{ inputs.terraform-resource-address }}"

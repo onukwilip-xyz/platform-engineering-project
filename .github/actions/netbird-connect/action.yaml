@@ -7,7 +7,17 @@
 #       netbird-version: "0.67.0"
 #       management-url: ${{ vars.NETBIRD_MANAGEMENT_URL }}
 #       setup-key-secret: ${{ vars.NETBIRD_CICD_KEY_SECRET }}
-#       gcp-project-id: ${{ vars.TF_PROJECT }}
+#       secret-project-id: ${{ vars.HOST_PROJECT_ID }}
+#       tf-network-sa-email: ${{ vars.TF_NETWORK_SA_EMAIL }}
+#
+# Note: composite actions can't read the vars/secrets context directly — every
+# vars.* reference has to be resolved by the calling workflow and passed in
+# via `with:`, which is why this (and every other value here) is an input.
+#
+# secret-project-id must be the HOST project (vars.HOST_PROJECT_ID), not the
+# Terraform/CI-CD project (vars.TF_PROJECT) — vpn-netbird-infra creates the
+# netbird-cicd-setup-key secret in the host project (terraform/shared/main.tf,
+# module.vpn_netbird_infra's project_id = module.host_project.project.project_id).
 
 name: "NetBird Connect"
 description: "Installs the NetBird client, retrieves the setup key from GSM, and connects the runner to the NetBird mesh network."
@@ -23,8 +33,11 @@ inputs:
   setup-key-secret:
     description: "Bare secret name in GSM holding the NetBird CI/CD setup key"
     required: true
-  gcp-project-id:
-    description: "GCP project ID where the GSM secret lives"
+  secret-project-id:
+    description: "GCP project ID where the netbird-cicd-setup-key GSM secret lives (the host project, not the Terraform/CI-CD project)"
+    required: true
+  tf-network-sa-email:
+    description: "Email of the tf-network Terraform SA. Impersonated to read the CI/CD setup key secret (that SA already has Secret Admin on the host project, covering every environment's CI/CD SA via serviceAccountTokenCreator)."
     required: true
 
 runs:
@@ -47,11 +60,11 @@ runs:
       shell: bash
       env:
         SECRET_NAME: ${{ inputs.setup-key-secret }}
-        PROJECT_ID: ${{ inputs.gcp-project-id }}
+        PROJECT_ID: ${{ inputs.secret-project-id }}
         # tf-network already has Secret Admin on the host project; every CI/CD
         # SA already has serviceAccountTokenCreator on it (terraform/README.md).
         # Impersonating avoids needing a per-CI/CD-SA grant on this secret.
-        IMPERSONATE_SA: ${{ vars.TF_NETWORK_SA_EMAIL }}
+        IMPERSONATE_SA: ${{ inputs.tf-network-sa-email }}
       run: |
         KEY=$(gcloud secrets versions access latest \
           --secret="$SECRET_NAME" \

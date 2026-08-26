@@ -55,7 +55,7 @@ if [ -n "${CICD_SETUP_KEY_SECRET_ID:-}" ]; then
         -d "{
           \"name\": \"$CICD_SETUP_KEY_NAME\",
           \"type\": \"reusable\",
-          \"expires_in\": 86400,
+          \"expires_in\": 31536000,
           \"ephemeral\": true,
           \"auto_groups\": [],
           \"usage_limit\": 0
@@ -148,7 +148,7 @@ else
     -d "{
       \"name\": \"$SETUP_KEY_NAME\",
       \"type\": \"reusable\",
-      \"expires_in\": 86400,
+      \"expires_in\": 31536000,
       \"auto_groups\": [\"$GROUP_ID\"],
       \"usage_limit\": 0
     }")

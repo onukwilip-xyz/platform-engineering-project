@@ -175,6 +175,26 @@ gcloud iam service-accounts add-iam-policy-binding "$TF_PLATFORM_SA_EMAIL" \
   --role="roles/iam.serviceAccountTokenCreator"
 ```
 
+Grant the CI/CD SAs access to the Terraform state bucket
+
+```bash
+gcloud storage buckets add-iam-policy-binding "gs://$TF_STATE_BUCKET" \
+  --member="serviceAccount:${CICD_SA_SHARED_EMAIL}" \
+  --role="roles/storage.objectAdmin"
+
+gcloud storage buckets add-iam-policy-binding "gs://$TF_STATE_BUCKET" \
+  --member="serviceAccount:${CICD_SA_STAGING_EMAIL}" \
+  --role="roles/storage.objectAdmin"
+
+gcloud storage buckets add-iam-policy-binding "gs://$TF_STATE_BUCKET" \
+  --member="serviceAccount:${CICD_SA_PRODUCTION_EMAIL}" \
+  --role="roles/storage.objectAdmin"
+
+gcloud storage buckets add-iam-policy-binding "gs://$TF_STATE_BUCKET" \
+  --member="serviceAccount:${CICD_SA_GENERAL_EMAIL}" \
+  --role="roles/storage.objectAdmin"
+```
+
 Create the secrets for each environment TF vars
 
 ```bash
@@ -192,28 +212,28 @@ Grant the CI/CD SAs access to their respective secrets
 gcloud secrets add-iam-policy-binding "$SECRET_SHARED" \
   --project "$TF_PROJECT" \
   --member="serviceAccount:${CICD_SA_SHARED_EMAIL}" \
-  --role="roles/secretmanager.secretAccessor"
+  --role="roles/secretmanager.secretVersionManager"
 
 gcloud secrets add-iam-policy-binding "$SECRET_STAGING" \
   --project "$TF_PROJECT" \
   --member="serviceAccount:${CICD_SA_STAGING_EMAIL}" \
-  --role="roles/secretmanager.secretAccessor"
+  --role="roles/secretmanager.secretVersionManager"
 
 gcloud secrets add-iam-policy-binding "$SECRET_PRODUCTION" \
   --project "$TF_PROJECT" \
   --member="serviceAccount:${CICD_SA_PRODUCTION_EMAIL}" \
-  --role="roles/secretmanager.secretAccessor"
+  --role="roles/secretmanager.secretVersionManager"
 
 gcloud secrets add-iam-policy-binding "$SECRET_GENERAL" \
   --project "$TF_PROJECT" \
   --member="serviceAccount:${CICD_SA_GENERAL_EMAIL}" \
-  --role="roles/secretmanager.secretAccessor"
+  --role="roles/secretmanager.secretVersionManager"
 
 # Special cases
 gcloud secrets add-iam-policy-binding "$SECRET_DDOS" \
   --project "$TF_PROJECT" \
   --member="serviceAccount:${CICD_SA_GENERAL_EMAIL}" \
-  --role="roles/secretmanager.secretAccessor"
+  --role="roles/secretmanager.secretVersionManager"
 ```
 
 Create the Workload Identity Pool
