@@ -19,6 +19,13 @@ on:
           - apply
           - destroy
         default: apply
+      scope:
+        description: "What to run: the entire environment, or just kubernetes/"
+        type: choice
+        options:
+          - all
+          - kubernetes
+        default: all
 
 jobs:
   detect:
@@ -44,7 +51,7 @@ jobs:
   infra:
     needs: detect
     if: |
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && inputs.scope == 'all') ||
       needs.detect.outputs.run-infra == 'true'
     uses: ./.github/workflows/terraform-workflow-template.yaml
     secrets: inherit
@@ -60,9 +67,10 @@ jobs:
   kubernetes:
     needs: detect
     if: |
-      needs.detect.outputs.run-kubernetes == 'true' &&
-      needs.detect.outputs.run-infra != 'true' &&
-      github.event_name != 'workflow_dispatch'
+      (github.event_name == 'workflow_dispatch' && inputs.scope == 'kubernetes') ||
+      (needs.detect.outputs.run-kubernetes == 'true' &&
+        needs.detect.outputs.run-infra != 'true' &&
+        github.event_name != 'workflow_dispatch')
     uses: ./.github/workflows/terraform-workflow-template.yaml
     secrets: inherit
     with:
