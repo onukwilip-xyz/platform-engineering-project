@@ -19,6 +19,8 @@ resource "google_compute_firewall" "allow_master_to_istio_webhook" {
 }
 
 resource "google_compute_firewall" "gke_alb_and_healthcheck_istio" {
+  provider = google.net
+
   name    = "gke-allow-alb-and-healthcheck-istio"
   network = var.network_self_link
   project = var.host_project_id
