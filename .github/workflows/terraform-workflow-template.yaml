@@ -91,6 +91,8 @@ jobs:
 
       - name: Terraform init
         if: inputs.iac-tool == 'terraform'
+        env:
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
         run: terraform init -backend-config="bucket=$TF_STATE_BUCKET"
 
       - name: Run Terraform
