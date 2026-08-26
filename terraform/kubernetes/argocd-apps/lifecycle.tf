@@ -20,6 +20,10 @@ resource "null_resource" "pre_destroy_cleanup" {
   provisioner "local-exec" {
     when    = destroy
     command = <<-CMD
+      # Phase 0 — delete operator-managed CRs while their operators are still alive
+      # Kiali CR must be deleted before the kiali-operator gets torn down
+      kubectl delete kiali --all -n tracing --wait=true --timeout=120s 2>/dev/null || true
+
       # Phase 1 — strip ArgoCD Application finalizers
       kubectl get applications.argoproj.io \
         -n ${self.triggers.argocd_namespace} -o name 2>/dev/null \
