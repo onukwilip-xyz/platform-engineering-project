@@ -88,6 +88,7 @@ jobs:
           management-url: ${{ inputs.netbird-management-url }}
           setup-key-secret: ${{ vars.NETBIRD_CICD_KEY_SECRET }}
           gcp-project-id: ${{ inputs.gcp-project-id }}
+          tf-network-sa-email: ${{ vars.TF_NETWORK_SA_EMAIL }}
 
       - name: Terraform init
         if: inputs.iac-tool == 'terraform'

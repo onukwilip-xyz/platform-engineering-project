@@ -1,6 +1,6 @@
 service:
   name: users-microservice-service
-  externalHost: users.internal.pe.onukwilip.xyz
+  externalHost: users.internal.pe.princeonuk.xyz
 
 gateways:
   - mesh
