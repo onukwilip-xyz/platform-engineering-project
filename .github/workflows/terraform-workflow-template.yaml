@@ -43,6 +43,20 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.github-environment }}
 
+    env:
+      TF_NETWORK_SA_EMAIL: ${{ vars.TF_NETWORK_SA_EMAIL }}
+      TF_PLATFORM_SA_EMAIL: ${{ vars.TF_PLATFORM_SA_EMAIL }}
+      SUBNET_KEY: ${{ vars.SUBNET_KEY }}
+      DDOS_PROTECTION: ${{ vars.DDOS_PROTECTION }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      # terragrunt: anchored at the environment root so find_in_parent_folders(".tfvars")
+      # resolves for every unit regardless of this job's own working-directory scope
+      # (whole env vs just its kubernetes/ subtree), and so the "project"/"gke" readiness
+      # check below (which always targets those units directly) can find it too.
+      # terraform (shared layer only): no env/kubernetes split to worry about, so it
+      # just writes relative to its own working-directory, as before.
+      ENV_TFVARS_PATH: ${{ inputs.iac-tool == 'terragrunt' && format('{0}/terraform/envs/{1}/.tfvars', github.workspace, inputs.github-environment) || '.tfvars' }}
+
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -79,7 +93,7 @@ jobs:
         run: |
           gcloud secrets versions access latest \
             --secret="$SECRET_NAME" \
-            --project="$PROJECT_ID" > .tfvars
+            --project="$PROJECT_ID" > "$ENV_TFVARS_PATH"
 
       - name: Connect to NetBird VPN
         if: inputs.connect-vpn == true
@@ -90,22 +104,41 @@ jobs:
           secret-project-id: ${{ vars.HOST_PROJECT_ID }}
           tf-network-sa-email: ${{ vars.TF_NETWORK_SA_EMAIL }}
 
+      - name: Check whether project/gke units are already applied
+        id: check-gke
+        if: inputs.iac-tool == 'terragrunt'
+        shell: bash
+        run: |
+          ENV_DIR="$(dirname "$ENV_TFVARS_PATH")"
+          SERVICE_PROJECT_ID=$(terragrunt --working-dir "$ENV_DIR/project" run output -raw service_project_id 2>/dev/null || true)
+          CLUSTER_NAME=$(terragrunt --working-dir "$ENV_DIR/gke" run output -raw gke_cluster_name 2>/dev/null || true)
+          echo "service-project-id=$SERVICE_PROJECT_ID" >> "$GITHUB_OUTPUT"
+          echo "cluster-name=$CLUSTER_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Install gke-gcloud-auth-plugin
+        if: inputs.iac-tool == 'terragrunt' && steps.check-gke.outputs.service-project-id != '' && steps.check-gke.outputs.cluster-name != ''
+        shell: bash
+        run: sudo apt-get update && sudo apt-get install -y google-cloud-cli-gke-gcloud-auth-plugin
+
+      - name: Fetch GKE credentials for kubectl
+        if: inputs.iac-tool == 'terragrunt' && steps.check-gke.outputs.service-project-id != '' && steps.check-gke.outputs.cluster-name != ''
+        uses: google-github-actions/get-gke-credentials@v2
+        env:
+          CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT: ${{ vars.TF_PLATFORM_SA_EMAIL }}
+        with:
+          cluster_name: ${{ steps.check-gke.outputs.cluster-name }}
+          location: ${{ vars.GKE_REGION }}
+          project_id: ${{ steps.check-gke.outputs.service-project-id }}
+          use_internal_ip: true
+
       - name: Terraform init
         if: inputs.iac-tool == 'terraform'
-        env:
-          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
         run: terraform init -backend-config="bucket=$TF_STATE_BUCKET"
 
       - name: Run Terraform
         if: inputs.iac-tool == 'terraform'
-        run: terraform ${{ inputs.action }} -var-file=.tfvars -auto-approve
+        run: terraform ${{ inputs.action }} -var-file="$ENV_TFVARS_PATH" -auto-approve
 
       - name: Run Terragrunt
         if: inputs.iac-tool == 'terragrunt'
-        env:
-          TF_NETWORK_SA_EMAIL: ${{ vars.TF_NETWORK_SA_EMAIL }}
-          TF_PLATFORM_SA_EMAIL: ${{ vars.TF_PLATFORM_SA_EMAIL }}
-          SUBNET_KEY: ${{ vars.SUBNET_KEY }}
-          DDOS_PROTECTION: ${{ vars.DDOS_PROTECTION }}
-          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
         run: terragrunt --non-interactive run --all ${{ inputs.action }}
