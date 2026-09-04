@@ -1,8 +1,46 @@
 # Platform Engineering Project
 
-A production-grade Kubernetes platform on GCP, built with Terraform and Terragrunt, that provisions raw cloud infrastructure, manages GitOps deployments via ArgoCD, enforces service mesh security via Istio Ambient, and delivers full-stack observability through the Grafana LGTM stack.
+A Kubernetes platform on Google Kubernetes Engine, built with Terraform and Terragrunt, that provisions raw cloud infrastructure, manages GitOps deployments via ArgoCD, enforces service mesh security via Istio Ambient, and delivers full-stack observability through the Grafana LGTM stack.
 
 ---
+
+## Case Studies from this project
+
+### SITE RELIABILITY ENGINEERING
+
+[![Observability banner](<assets/Observability banner.png>)](https://confirmed-aardwolf-b44.notion.site/3c48d3a8561880c59302d7d39da3733e)
+
+Monitored an entire Kubernetes infrastructure end-to-end, configured SLO and error budgets, measured app Service Level indicator metrics, and implemented Incident response in Google Cloud
+
+### PLATFORM ENGINEERING
+
+[![Built GKE Cluster to withstand 160k+ reqs in 1 hour](<assets/Built GKE Cluster to withstand 160k+ reqs in 1 hour.png>)](https://confirmed-aardwolf-b44.notion.site/3568d3a8561880aabc52cfccfa6d3f9b?v=3568d3a8561880d59927000c694afe94)
+
+Achieved 99.99% success rate + availability on GKE infrastructure while successfully processing 𝟭𝟲𝟬𝗸+ 𝗿𝗲𝗾𝘀 𝗶𝗻 𝟭 𝗵𝗿 (~𝟯.𝟴𝗠+ 𝗿𝗲𝗾𝘀/𝗱𝗮𝘆); Also scaling PostgreSQL cluster to support 𝟭𝟴𝟬+ 𝗧𝗿𝗮𝗻𝘀𝗮𝗰𝘁𝗶𝗼𝗻𝘀/𝘀𝗲𝗰𝗼𝗻𝗱
+
+### DEVSECOPS
+
+[![Simulated DDoS Attack Against GKE Infra, Protecting With Cloudflare And GCP Firewall](<assets/Simulated DDoS Attack Against Gke Infra, Protecting With Cloudlfare And GCP Firewall.png>)](https://confirmed-aardwolf-b44.notion.site/3608d3a8561880a5ae6ac379cc8fecc0)
+
+Protected GKE infras against a simulated DDoS attack; Blocked up to 𝟴𝟬% - 𝟭𝟬𝟬% of the attack traffic; While achieving a 𝟭𝟬𝟬% 𝗦𝗨𝗖𝗖𝗘𝗦𝗦 𝗥𝗔𝗧𝗘 𝗢𝗡 𝗕𝗔𝗦𝗘𝗟𝗜𝗡𝗘 (”𝗡𝗼𝗿𝗺𝗮𝗹”) REQUESTS; Protected infra 𝘂𝘀𝗶𝗻𝗴 𝗖𝗹𝗼𝘂𝗱𝗳𝗹𝗮𝗿𝗲 𝗮𝗻𝗱 𝗚𝗖𝗣 𝗙𝗶𝗿𝗲𝘄𝗮𝗹𝗹 𝗥𝘂𝗹𝗲𝘀
+
+### PLATFORM ENGINEERING
+
+[![CNPG on GKE case study banner](<assets/CNPG on GKE case study banner.png>)](https://app.notion.com/p/3468d3a8561880b38535ea709788499f?v=3468d3a8561880bcb481000c80a75582)
+
+Architected a PostgreSQL cluster on GKE to 𝗪𝗜𝗧𝗛𝗦𝗧𝗔𝗡𝗗 𝗧𝗥𝗔𝗙𝗙𝗜𝗖 𝗕𝗨𝗥𝗦𝗧𝗦, properly 𝗥𝗘𝗖𝗢𝗩𝗘𝗥 𝗙𝗥𝗢𝗠 𝗗𝗜𝗦𝗔𝗦𝗧𝗘𝗥, 𝗘𝗡𝗖𝗥𝗬𝗣𝗧 𝗗𝗔𝗧𝗔 𝗔𝗧 𝗥𝗘𝗦𝗧 & 𝗜𝗡 𝗧𝗥𝗔𝗙𝗙𝗜𝗖, implement 𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗜𝗢𝗡 𝗣𝗢𝗢𝗟𝗜𝗡𝗚, and 𝗛𝗢𝗪 𝗜𝗧 𝗖𝗔𝗡 𝗕𝗘𝗡𝗘𝗙𝗜𝗧 𝗬𝗢𝗨𝗥 𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗜𝗡𝗙𝗥𝗔
+
+### DEVSECOPS
+
+[![Netbird case study banner](<assets/Netbird case study banner.png>)](https://app.notion.com/p/3238d3a85618806b8946cd95cb3b7774?v=3238d3a85618805ebd57000c8d8a8caf)
+
+Provided remote team members with 𝗣𝗥𝗜𝗩𝗔𝗧𝗘 + 𝗦𝗘𝗖𝗨𝗥𝗘 access to internal Cloud VPC resources — Netbird
+
+### DEVSECOPS
+
+[![Private + Public Key Infrastructure](<assets/PKI.png>)](https://app.notion.com/p/33c8d3a8561880ce884ad815ac69185f?v=33c8d3a8561880b99023000c43b19f3c)
+
+How I 𝘀𝗲𝗰𝘂𝗿𝗲𝗹𝘆 𝗺𝗮𝗻𝗮𝗴𝗲𝗱 𝗜𝗻𝘁𝗲𝗿𝗻𝗮𝗹 & 𝗘𝘅𝘁𝗲𝗿𝗻𝗮𝗹 𝗿𝗼𝗼𝘁 𝗖𝗔𝘀 for apps 𝗶𝗻 𝗞𝘂𝗯𝗲𝗿𝗻𝗲𝘁𝗲𝘀 clusters — Self Managed TLS (internal CA) & ACME Let’s Encrypt (external CA), 𝘂𝘀𝗶𝗻𝗴 𝗖𝗲𝗿𝘁 𝗠𝗮𝗻𝗮𝗴𝗲𝗿
 
 ## Table of Contents
 
@@ -11,7 +49,9 @@ A production-grade Kubernetes platform on GCP, built with Terraform and Terragru
 - [Repository Structure](#repository-structure)
 - [Terraform Modules](#terraform-modules)
 - [Networking Architecture](#networking-architecture)
+- [Multi-Environment Support](#multi-environment-support)
 - [GKE Cluster](#gke-cluster)
+- [FinOps](#finops)
 - [Kubernetes Platform Layer](#kubernetes-platform-layer)
 - [Observability Stack](#observability-stack)
 - [Security Model](#security-model)
@@ -59,13 +99,15 @@ GCP Host Project (Shared VPC)
 
 | Resource                   | Value                                                                            |
 | -------------------------- | -------------------------------------------------------------------------------- |
-| GCP Organization ID        | `318156556060`                                                                   |
-| Billing Account            | `017973-4DC748-6CE712`                                                           |
+| GCP Organization ID        | `***`                                                                            |
+| Billing Account            | `***`                                                                            |
 | Terraform State Bucket     | `pe-tf-state-bucket-2` (GCS, US, versioned + KMS)                                |
 | Terraform Service Accounts | `tf-network`, `tf-platform` (in `pe-terraform-project-2`)                        |
 | Staging Service Project    | `pe-staging-project`                                                             |
 | Staging Cluster            | `pe-staging-cluster`, `us-central1`                                              |
 | Container Registry         | GCP Artifact Registry (`us-central1-docker.pkg.dev/pe-staging-project-*/images`) |
+
+Production has its own service project, cluster, and Artifact Registry repo, provisioned from the same modules but fully isolated from staging — see [Multi-Environment Support](#multi-environment-support). Environment-specific values (project IDs, cluster names) live in GCP Secret Manager tfvars secrets, not in Git.
 
 ---
 
@@ -74,10 +116,22 @@ GCP Host Project (Shared VPC)
 ```
 .
 ├── terraform/
+│   ├── shared/                   # One-time shared layer (host project, VPC, DNS) — plain Terraform
 │   ├── modules/                  # Reusable Terraform modules (networking, GKE, DNS, VPN, etc.)
 │   ├── envs/
-│   │   └── staging/              # Terragrunt environment config for staging
-│   ├── kubernetes/               # Kubernetes-level Terraform (ArgoCD apps, operators, manifests)
+│   │   ├── root.hcl              # Root Terragrunt config — single source of truth for the GCS backend
+│   │   ├── staging/               # Terragrunt units for the staging environment
+│   │   │   ├── env.hcl            # Staging locals (region, SA emails, subnet key, labels, ...)
+│   │   │   ├── project/           # Service project + peering
+│   │   │   ├── networking/        # Env-specific subnet/firewall config
+│   │   │   ├── cloud-armor/       # Cloud Armor security policy
+│   │   │   ├── artifact-registry/ # Artifact Registry repos for this environment
+│   │   │   ├── gke/               # GKE cluster
+│   │   │   ├── microservice-chart/# Microservices Helm release
+│   │   │   └── kubernetes/        # Platform-layer units (see terraform/kubernetes/ below)
+│   │   └── production/            # Mirrors staging/ 1:1 — isolated project, cluster, state, secrets
+│   ├── kubernetes/               # Shared Kubernetes-layer Terraform, sourced by BOTH staging and
+│   │   │                         # production Terragrunt units (parameterized via env.hcl inputs)
 │   │   ├── argocd/               # ArgoCD Helm deployment
 │   │   ├── argocd-apps/          # All ArgoCD Application resources + Alloy config
 │   │   │   ├── config/           # Alloy log collection config
@@ -94,6 +148,7 @@ GCP Host Project (Shared VPC)
 │   │   └── manifests/            # Raw Kubernetes manifests (postgres, users, istio-monitors)
 │   ├── load-testing/             # Load testing runbooks and JMeter/K6 configs
 │   └── ddos-simulation/          # Locust-based DDoS simulation on Compute Engine MIGs
+├── .github/workflows/            # shared-infra / staging-infra / production-infra + reusable template
 └── helm/                         # Custom Helm charts
 ```
 
@@ -150,15 +205,64 @@ GCP Host Project (Shared VPC)
 
 ---
 
+## Multi-Environment Support
+
+The platform now runs **staging** and **production** as structurally identical, fully isolated environments, orchestrated with Terragrunt.
+
+### Environment Layout
+
+- `terraform/envs/root.hcl` is the single Terragrunt root config — it defines the GCS remote-state backend once, and every unit under `envs/` inherits it. State is automatically prefixed per unit path (e.g. `envs/staging/gke/terraform.tfstate`, `envs/production/gke/terraform.tfstate`), so staging and production never share state.
+- `terraform/envs/staging/env.hcl` and `terraform/envs/production/env.hcl` hold each environment's locals — region/zone, Terraform SA emails, subnet key, DDoS protection toggle, and resource labels. These are the only files that differ structurally between environments.
+- Environment-specific layers (`project`, `networking`, `cloud-armor`, `artifact-registry`, `gke`, `microservice-chart`) are duplicated per environment under `envs/<env>/` — each provisions its own GCP service project, subnet, cluster, and registry.
+- Platform-layer units (`kubernetes/argocd`, `argocd-apps`, `istio`, `eso-infra`, `cnpg-infra`, `observability-infra`, `tcp-services`, `priority-classes`) are **shared** — both environments' Terragrunt configs point at the same source in `terraform/kubernetes/`, parameterized per environment via `env.hcl` inputs and dependency outputs.
+- `terraform/shared/` remains a one-time, plain-Terraform layer (host project, Shared VPC, DNS delegation) that both environments peer into.
+
+### Secrets & Identity per Environment
+
+Each environment has its own GitHub Environment (`staging`, `production`, plus `shared` and `general`), each bound to its own CI/CD service account (`cicd-sa-staging`, `cicd-sa-production`, ...) via Workload Identity Federation scoped to `attribute.environment`, and its own tfvars secret in Secret Manager (`cicd-tfvars-staging`, `cicd-tfvars-production`, `cicd-tfvars-shared`). No environment can read another's credentials or variables.
+
+### CI/CD Pipelines
+
+| Workflow                             | Trigger                                                                          | Applies                       |
+| ------------------------------------ | --------------------------------------------------------------------------------- | ------------------------------ |
+| `shared-infra.yaml`                  | Manual dispatch only                                                             | `terraform/shared/`            |
+| `staging-infra.yaml`                 | Push to `staging` touching `terraform/envs/staging/**`, or manual dispatch       | `terraform/envs/staging/`      |
+| `production-infra.yaml`              | Push to `main` touching `terraform/envs/production/**`, or manual dispatch       | `terraform/envs/production/`   |
+| `terraform-workflow-template.yaml`   | Reusable — called by all three above                                            | —                               |
+
+Both `staging-infra.yaml` and `production-infra.yaml` use `dorny/paths-filter` to detect whether a push touched the environment-level layers or only `kubernetes/**`, and run just the affected job — an infra-only change doesn't redeploy the platform layer and vice versa. A manual `workflow_dispatch` accepts `action` (`apply`/`destroy`) and `scope` (`all`/`kubernetes`) inputs for ad-hoc runs.
+
+The shared reusable workflow:
+
+- Authenticates to GCP via WIF using the service account scoped to the target GitHub Environment.
+- Resolves the tfvars path dynamically from `github-environment` and `iac-tool`, then pulls that environment's tfvars from Secret Manager just-in-time — nothing sensitive is ever committed to Git.
+- Optionally connects to the Netbird VPN before running Terraform/Terragrunt, since both environments' GKE control planes are only reachable privately.
+- For Terragrunt runs, checks whether the environment's `project`/`gke` units are **already applied** (via `terragrunt ... output`) before installing the GKE auth plugin and fetching `kubectl` credentials — so bootstrapping a brand-new environment (no cluster yet) doesn't fail the pipeline on that step.
+- Runs `terragrunt run --all <action>` (or plain `terraform <action>` for the shared layer).
+
+---
+
 ## GKE Cluster
 
 **Cluster:** `pe-staging-cluster` — `us-central1` — VPC-native, private, workload identity enabled
 
-| Node Pool | Machine Type       | Max Nodes | Use                        |
-| --------- | ------------------ | --------- | -------------------------- |
-| `large`   | `e2-standard-4`    | 6         | General workloads          |
-| `small`   | `e2-standard-2`    | 3         | Light workloads            |
-| `default` | `e2-custom-2-16GB` | 3         | Memory-intensive workloads |
+| Node Pool | Machine Type       | Max Nodes | VM Provisioning | Use                        |
+| --------- | ------------------ | --------- | ---------------- | --------------------------- |
+| `large`   | `e2-standard-4`    | 6         | Spot              | General workloads          |
+| `small`   | `e2-standard-2`    | 3         | Spot              | Light workloads             |
+| `default` | `e2-custom-2-16GB` | 3         | Spot              | Memory-intensive workloads |
+
+All staging node pools run on GCE **Spot VMs** rather than on-demand instances — see [FinOps](#finops) for the cost rationale and how interruptions are handled.
+
+---
+
+## FinOps
+
+The staging environment's GKE node pools are provisioned as **Spot VMs** (`spot = true` on each pool in `terraform/envs/staging/gke`'s `.tfvars`, wired through to `google_container_node_pool.node_config.spot` in [`terraform/modules/gke/node-pools.tf`](terraform/modules/gke/node-pools.tf)) instead of standard on-demand nodes.
+
+- **Why Spot:** GCP prices Spot VMs at roughly 60–91% below on-demand for the same machine type, with no fixed lifetime cap (unlike the older "preemptible" flag). Staging runs interruptible, non-customer-facing workloads, so it's a direct infra cost cut with no availability guarantee to trade against.
+- **Handling reclamation:** GCP can reclaim a Spot node at any time it needs the capacity back. Each node pool has `management { auto_repair = true, auto_upgrade = true }` and cluster autoscaling (`min_node_count`/`max_node_count`), so GKE re-provisions a replacement node automatically. Application-level resilience comes from the microservices' own `PodDisruptionBudget`s (`helm/custom-charts/microservice/templates/pdb.yaml`), which keep a minimum number of replicas available while a reclaimed node's pods are rescheduled elsewhere.
+- **Module support:** the `spot` field is a per-node-pool boolean (`terraform/modules/gke/variables.tf`), so it can be toggled independently for each pool and each environment — it isn't an all-or-nothing cluster setting.
 
 ---
 
@@ -278,6 +382,24 @@ ESO syncs secrets from GCP Secret Manager into Kubernetes `Secret` resources. St
 | `loki-gcs`        | `loki-gcs@<project>.iam.gserviceaccount.com`        | `storage.objectUser`, `storage.legacyBucketReader` |
 | `tempo-gcs`       | `tempo-gcs@<project>.iam.gserviceaccount.com`       | `storage.objectUser`, `storage.legacyBucketReader` |
 | `postgres-backup` | `postgres-backup@<project>.iam.gserviceaccount.com` | `storage.objectAdmin`                              |
+
+### Alerting & Incident Response
+
+Grafana Alerting is provisioned entirely as code (contact points, notification policies, and rules — see [`grafana-alerting/`](terraform/kubernetes/argocd-apps/grafana-alerting)) and every rule carries an explicit `channel` label used purely for routing:
+
+| Contact point           | Type      | Used for                                                          |
+| ------------------------ | --------- | ------------------------------------------------------------------ |
+| `default-catchall`       | Slack     | Unrouted / unmatched alerts                                        |
+| `scale-workloads`        | Slack     | Capacity signals — CPU/memory near limit, throttling, PVC near full |
+| `warning`                | Slack     | Low-urgency issues (unschedulable pods, node memory pressure)      |
+| `error`                  | Slack     | Service-impacting failures (crash loops, zero-replica workloads)   |
+| `critical`               | Slack     | Full outages in critical namespaces (`postgres`, `cnpg-system`)    |
+| `datasource-errors`      | Slack     | Grafana datasource health (Prometheus/Loki/Tempo failures)         |
+| `pagerduty-high-priority`| PagerDuty | SLO fast-burn alerts — pages a human, doesn't just post a message  |
+
+**PagerDuty escalation.** Alerts carrying the `incident-response = "true"` label — currently the Sloth-generated SLO fast-burn burn-rate alerts — are routed to the `pagerduty-high-priority` contact point in addition to their Slack channel (`continue: true` in [`policies.yaml`](terraform/kubernetes/argocd-apps/grafana-alerting/policies.yaml)). This contact point fires a PagerDuty Events API v2 event via an integration/routing key (`PAGERDUTY_ROUTING_KEY`, injected from a Kubernetes Secret sourced from `var.pagerduty_routing_key` — see [`secrets.tf`](terraform/kubernetes/argocd-apps/secrets.tf)), tagged with `severity: critical`, `class: slo-fast-burn`, and the offending `sloth_service`/`sloth_slo` labels so responders land on the right service immediately.
+
+**On-call rotation & Slack incident channels.** The on-call schedule and escalation policy that the routing key points to, along with PagerDuty's Slack integration that automatically spins up a dedicated incident channel per triggered PagerDuty incident, are configured directly in the PagerDuty and Slack dashboards rather than as Terraform — they sit outside this repo's IaC boundary, the same way the underlying Slack webhook URLs and PagerDuty integration key are provisioned out-of-band and only referenced here as secrets.
 
 ---
 
@@ -401,28 +523,23 @@ Runbooks in `terraform/load-testing/`:
 
 ### Terraform Initialization
 
+Infrastructure is normally applied through the [CI/CD pipelines](#multi-environment-support) (`staging-infra.yaml` / `production-infra.yaml`), which handle WIF auth, tfvars retrieval from Secret Manager, and VPN connectivity automatically. To run Terragrunt locally against an environment, pick `staging` or `production`:
+
 ```bash
-# Initialize state backend and providers
-cd terraform/envs/staging
-terragrunt run-all init
-
-# Plan infrastructure changes
-terragrunt run-all plan
-
-# Apply
-terragrunt run-all apply
+# Environment-level layers (project, networking, cloud-armor, artifact-registry, gke, microservice-chart)
+cd terraform/envs/staging   # or: terraform/envs/production
+terragrunt run --all init
+terragrunt run --all plan
+terragrunt run --all apply
 ```
 
 ### Applying Kubernetes Platform Layer
 
 ```bash
-# Deploy ArgoCD first
-cd terraform/kubernetes/argocd
-terraform init && terraform apply
-
-# Deploy all ArgoCD Applications
-cd terraform/kubernetes/argocd-apps
-terraform init && terraform apply
+# Deploy the shared platform-layer units for the same environment
+cd terraform/envs/staging/kubernetes   # or: terraform/envs/production/kubernetes
+terragrunt run --all init
+terragrunt run --all apply
 ```
 
 ArgoCD will sync all declared Applications from Git automatically after this point.
