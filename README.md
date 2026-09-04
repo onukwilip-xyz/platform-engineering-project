@@ -5,6 +5,7 @@ A Kubernetes platform on Google Kubernetes Engine, built with Terraform and Terr
 ---
 
 ## Case Studies from this project
+| **Clicking the images will direct you to its case study**
 
 ### SITE RELIABILITY ENGINEERING
 
