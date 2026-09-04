@@ -4,7 +4,7 @@
 export DDOS_PROTECTION="cloudflare"
 export TF_PROJECT="pe-terraform-project-2"
 export TF_PROJECT_NAME="terraform-project"
-export ORG_ID="318156556060"
+export ORG_ID="***"
 
 export TF_NETWORK_SA="tf-network"
 export TF_PLATFORM_SA="tf-platform"
@@ -12,7 +12,7 @@ export TF_PLATFORM_SA="tf-platform"
 export TF_NETWORK_SA_EMAIL="$TF_NETWORK_SA@${TF_PROJECT}.iam.gserviceaccount.com"
 export TF_PLATFORM_SA_EMAIL="$TF_PLATFORM_SA@${TF_PROJECT}.iam.gserviceaccount.com"
 
-export BILLING_ACCOUNT_ID="017973-4DC748-6CE712"
+export BILLING_ACCOUNT_ID="***"
 export USER="prince@princeonuk.xyz"
 
 export TF_STATE_BUCKET="pe-tf-state-bucket-2"
@@ -365,7 +365,7 @@ Resolve the per-environment service project IDs (Terraform outputs, not created 
 export STAGING_SERVICE_PROJECT_ID=$(cd terraform/envs/staging/project && terragrunt output -raw service_project_id)
 
 # once terraform/envs/production/project is applied:
-# export PRODUCTION_SERVICE_PROJECT_ID=$(cd terraform/envs/production/project && terragrunt output -raw service_project_id)
+export PRODUCTION_SERVICE_PROJECT_ID=$(cd terraform/envs/production/project && terragrunt output -raw service_project_id)
 ```
 
 Grant read + write access to the `images` Artifact Registry repo (`roles/artifactregistry.writer` covers both)
@@ -377,11 +377,11 @@ gcloud artifacts repositories add-iam-policy-binding "$ARTIFACT_REGISTRY_REPO" \
   --member="serviceAccount:${CICD_SA_MICROSERVICES_STAGING_EMAIL}" \
   --role="roles/artifactregistry.writer"
 
-# gcloud artifacts repositories add-iam-policy-binding "$ARTIFACT_REGISTRY_REPO" \
-#   --project "$PRODUCTION_SERVICE_PROJECT_ID" \
-#   --location "$ARTIFACT_REGISTRY_REGION" \
-#   --member="serviceAccount:${CICD_SA_MICROSERVICES_PRODUCTION_EMAIL}" \
-#   --role="roles/artifactregistry.writer"
+gcloud artifacts repositories add-iam-policy-binding "$ARTIFACT_REGISTRY_REPO" \
+  --project "$PRODUCTION_SERVICE_PROJECT_ID" \
+  --location "$ARTIFACT_REGISTRY_REGION" \
+  --member="serviceAccount:${CICD_SA_MICROSERVICES_PRODUCTION_EMAIL}" \
+  --role="roles/artifactregistry.writer"
 ```
 
 Allow the WIF pool to impersonate the microservices CI/CD SAs (scoped per GitHub environment, same pool/provider as above)
